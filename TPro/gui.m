@@ -1,4 +1,4 @@
-% TPro1.3c 2017-02-08
+% TPro1.4 2017-04-22
 % add total distance output
 % add create movie button
 % standard file name is now '%05d'
@@ -63,8 +63,12 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
-set(handles.edit1, 'String','Welcome! Please click the buttons on the left to run')
+% set window title
+versionNumber = '1.4';
+set(gcf, 'name', ['TPro version ', versionNumber]);
 
+% set initialized message
+set(handles.edit1, 'String','Welcome! Please click the buttons on the left to run')
 
 % UIWAIT makes gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
@@ -93,62 +97,70 @@ addpath(genpath('input'));
 addpath(genpath('multi'));
 addpath(genpath('../input_share'));
 
-[filename, pathname, filterindex] = uigetfile( {  ...
+[fileNames, pathName, filterIndex] = uigetfile( {  ...
     '*.*',  'All Files (*.*)'}, ...
     'Pick a file', ...
     'MultiSelect', 'on', '../input_share');
 
-if filterindex
-    
-    tic
-    
-    fileoutput = './input/input_video_control.xlsx';
-    A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', 'TH_peak', 'ROI', 'rej_dist', 'frame_limit'};
-    for i = 1:size(filename,2)
-        
-        shuttleVideo = VideoReader(filename{i});
-        name = shuttleVideo.Name;
-        frame_num = shuttleVideo.NumberOfFrames;
-        frame_rate = shuttleVideo.FrameRate;
-        
-        B = {'0', name, '', '1', frame_num, frame_num, frame_rate, '0.8', '0.8', '1', '200', '2000'};
-        A = vertcat(A,B);
-        
-    end
-    
-    sheet = 1;
-    xlRange = 'A1';
-    xlswrite(fileoutput,A,sheet,xlRange)
-    
-    time = toc;
-    set(handles.edit1, 'String',strcat('prepare.m done!     t =',num2str(time),'s'))
+if ~filterIndex
+    set(handles.text9,'String', 'Canceled', 'BackgroundColor', 'red');
+    return;
 end
 
-set(handles.text9,'String','Ready','BackgroundColor','green');
+% show starting message
+set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
+tic
+    
+outputFileName = './input/input_video_control.xlsx';
+A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', 'TH_peak', 'ROI', 'rej_dist', 'frame_limit', 'G_Strength','G_Radius', 'AreaPixel', 'Step'};
+if ischar(fileNames)
+    fileCount = 1;
+else
+    fileCount = size(fileNames,2);
+end
 
+% process all selected files
+for i = 1:fileCount
+    if fileCount > 1
+        fileName = fileNames{i};
+    else
+        fileName = fileNames;
+    end
+    shuttleVideo = VideoReader(fileName);
+    name = shuttleVideo.Name;
+    frameNum = shuttleVideo.NumberOfFrames;
+    frameRate = shuttleVideo.FrameRate;
+
+    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0.6', '1', '200', '2000', '12', '4', '50', '1'};
+    A = vertcat(A,B);
+end
+
+% remove file first and output excel file
+delete(outputFileName);
+status = xlswrite(outputFileName,A,1,'A1');
+time = toc;
+
+% show result message
+if status 
+    set(handles.edit1, 'String',strcat('creating configuration file (xlsx) ... done!     t =',num2str(time),'s'));
+    set(handles.text9,'String','Ready','BackgroundColor','green');
+else
+    set(handles.edit1, 'String',strcat('can not output configuration file (xlsx)'));
+    set(handles.text9,'String','Failed','BackgroundColor','red');
+end
 
 % bg--- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% set(handles.edit1, 'String','bg_detection.m done!')
-tic
-set(handles.text9,'String','Running','BackgroundColor','red');
-pause(0.01)
-bg_frame = get(handles.edit3,'String');
-bg_frame = str2num(bg_frame);
 
-figure('name','bg_detection.m','NumberTitle','off')
-% run('./bg_detection.m')
 addpath(genpath('function'));
 addpath(genpath('input'));
 addpath(genpath('parameter'));
 addpath(genpath('multi'));
 addpath(genpath('detect_output'));
 addpath(genpath('../input_share'));
-
-img_num = bg_frame;  % how many images to consider
 
 file_list =  dir('./input/*png');
 if isempty(file_list)
@@ -161,133 +173,98 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    file_list = [];
+    %     file_list = [];
     file_list3 = dir('./input/input_video_control.xlsx');
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    else
+        disp('please put input xlsx files into the folder')
+        return
     end
+else
+    disp('please put input video files into the folder')
+    return
 end
 
-% load parameters
-% run('./parameter/mot_parameter.m');
-if ~isempty(file_list2) && ~isempty(file_list3)
-    for data_th = 1:(size(raw,1)-1)
-        if num(data_th,1)
-            
-            shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-            
-            % make output folder
-            mkdir(strcat('./bg_output/',shuttleVideo.name));
-            range = num(data_th, 6);
-            r = randperm(range);
-            r = r(1:img_num);
-            
-            for i = 1 : img_num
-                set(handles.text9, 'String',[num2str(100*i/img_num) ' %']);
-                pause(0.01)
-                img_real = read(shuttleVideo,r(i));
-                img_gray = rgb2gray(img_real);
-                img(:,:,i) = img_gray;
-            end
-            
-            bg_img = mode(img,3);
-            clf
-            imshow(bg_img)
-            
-            %             f=getframe;
-            imwrite(bg_img,strcat('./bg_output/',shuttleVideo.name,'/',shuttleVideo.name,'bg.png'));
-            disp(num2str(data_th));
-            clear img
+tic % start timer
+
+% how many images to consider
+str = get(handles.edit3, 'String');
+calcFramesNumber = str2num(str);
+
+% show start text
+set(handles.edit1, 'String','detecting background ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+
+% background detection for active movie
+for data_th = 1:(size(raw,1)-1)
+    if num(data_th,1)
+        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+
+        % show detecting message
+        set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name])
+
+        % make output folder
+        pathName = strcat('./bg_output/',shuttleVideo.name);
+        backgroundFileName = strcat(pathName,'/',shuttleVideo.name,'bg.png');
+        if ~exist(pathName, 'dir')
+            mkdir(pathName);
         end
+        
+        range = num(data_th, 6);
+        r = randperm(range);
+        r = r(1:calcFramesNumber);
+
+        % initialize output matrix 
+        frameImage = read(shuttleVideo,1);
+        [m,n,l] = size(frameImage);
+        grayImages = uint8(zeros(m,n,calcFramesNumber));
+
+        % find appropriate background pixels
+        for i = 1 : calcFramesNumber
+            set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
+            frameImage = read(shuttleVideo,r(i));
+            grayImage = rgb2gray(frameImage);
+            grayImages(:,:,i) = grayImage;
+        end
+        bgImage = mode(grayImages,3);
+
+        % create new background window if it does not exist
+        if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+            figureWindow = figure('name','detecting ','NumberTitle','off');
+        end
+        
+        % show background image
+        figure(figureWindow);
+        clf
+        imshow(bgImage);
+        set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
+
+        % output png file
+        imwrite(bgImage, backgroundFileName);
+        disp(num2str(data_th));
+        clear img
     end
-    
 end
 
-time = toc;
-close 'bg_detection.m'
-set(handles.edit1, 'String',strcat('bg_detection.m done!     t =',num2str(time),'s'))
-set(handles.text9,'String','Ready','BackgroundColor','green');
+% close background image window
+if exist('figureWindow','var') && ~isempty(figureWindow) && ishandle(figureWindow)
+    pause(2);
+    close(figureWindow);
+end
 
-% check_threshold--- Executes on button press in pushbutton3.
+% show end text
+time = toc;
+set(handles.edit1, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
+
+
+% check_threshold--- Executes on button press in pushbutton3
 function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % set(handles.edit1, 'String','check_threshold.m done!')
-tic
-%% parameters setting
-
-%% parameters setting
-
-% blobfilter parameters
-h = 30;
-sigma = 6;
-blob_threshold = 0.8;
-
-% near point average
-npa_radius = 12; % set 0 to skip
-
-% for checking in check_blob_threshold.m
-frame_num = 10;
-
-% reject distance
-reject_dist = 200;
-% reject_dist = 200;
-
-% for strike track
-strike_track_threshold = 6;
-
-% assignment for no assignment
-assign_for_noassign = 1;
-
-% output figure enable
-detect_fig_enable = 1; % in detection.m
-figure_enable = 1;  % in tracker_savefig_op.m
-line_length = 19;
-
-
-% velocity threshold enable
-velocity_thres_enable = 0;
-
-% velocity threshold
-velocity_thres = 50;
-
-% velocity graph enable (0)
-velocity_graph_enable = 0;
-
-% blob analysis enable (detection) (1)
-ba_enable = 1;  % inside extrema
-
-% minimum distance threshold
-min_dist_threshold = 50;
-
-% output number eneable
-num_text_enable = 1;
-
-% blob center detection (1)
-blob_center_enable = 1;
-
-% extrema detection (0)
-extrema_enable = 0;
-
-% background subtraction
-bg_subtract_enable = 1;
-
-% the closest neighbour approach
-cna_enable = 1;
-
-% check direction
-check_direction_enable = 1;
-
-% Kalman only
-kalman_only_enable = 0;
-
-% shift the intensity
-intensity_shift = -20;
-
-figure('name','check_threshold.m','NumberTitle','off')
-% run('./check_threshold.m')
-
 
 addpath(genpath('function'));
 addpath(genpath('input'));
@@ -302,7 +279,6 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    %     file_list = [];
     file_list3 = dir('./input/input_video_control.xlsx');
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
@@ -315,184 +291,29 @@ else
     return
 end
 
-% load parameters
-% run('./parameter/mot_parameter.m');
+% show start text
+set(handles.edit1, 'String','checking detection threashold ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
 
-%%
-H = vision.BlobAnalysis;
-H.OrientationOutputPort = 1;
-H.EccentricityOutputPort = 1;
-H.ExtentOutputPort = 1;
-H.MaximumCount = 100;
+% loop for every movies
+for i = 1 : size(num)
+    % set env value and run script
+    setenv('TPRO_RUNOPTM', '1');
+    setenv('TPRO_ROWNUM', num2str(i));
+    run('detectoptimizer.m');
 
-keep_i = [];
-keep_count = [];
-
-% added on 2016-07-28
-if ~isempty(file_list2) && ~isempty(file_list3)
-    for data_th = 1:(size(raw,1)-1)
-        if num(data_th,1)
-            
-            blob_threshold_ini = num(data_th, 8);
-            blob_threshold_peak = num(data_th, 9);
-            start_frame = num(data_th, 4);
-            shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-            
-            %% ROI
-            roi_img_check = dir(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-            if ~isempty(roi_img_check)
-                %load(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.mat'),'BW')
-                BW = imread(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-                BW = im2double(BW);
-                roi_mask = BW;
-            end
-            
-            if bg_subtract_enable
-                bg_img_check = dir(strcat('./bg_output/',shuttleVideo.name,'/',shuttleVideo.name,'bg.png'));
-                if ~isempty(bg_img_check)
-                    bg_img = imread(strcat('./bg_output/',shuttleVideo.name,'/',shuttleVideo.name,'bg.png'));
-                    if size(size(bg_img),2) == 2 % one plane background
-                        bg_img(:,:,2) = bg_img(:,:,1);
-                        bg_img(:,:,3) = bg_img(:,:,1);
-                    end
-                    bg_img = rgb2gray(bg_img);
-                else
-                    bg_subtract_enable = 0;
-                end
-            end
-            thres_choice = blob_threshold_ini-0.2:0.02:blob_threshold_ini+0.2;
-            
-            % make output folder
-            filename = [sprintf('%05d',start_frame)];
-            mkdir(strcat('./threshold_output/',shuttleVideo.name,'_',filename));
-            
-            
-            
-            for thres_count = 1:size(thres_choice,2)
-                blob_threshold = thres_choice(thres_count);
-                
-                for i_count = start_frame : start_frame
-                    i = i_count - start_frame + 1;
-                    
-                    if bg_subtract_enable
-                        bg_img_gray = bg_img;
-                        bg_img_gray_double = double(bg_img_gray);
-                        img_real = read(shuttleVideo,i_count);
-                        img_gray = rgb2gray(img_real);
-                        img_gray = img_gray + (mean(mean(bg_img_gray))-mean(mean(img_gray)));
-                        img_gray_double = double(img_gray);
-                        img = bg_img_gray_double-img_gray_double;
-                        img = uint8(img);
-                        img = imcomplement(img);
-                        %                         img(img<230) = img(img<230)-100;
-                        %                         img(img<=100) = img(img<=100)-100;
-                        
-                    else
-                        img_real = read(shuttleVideo,i_count);
-                        %         img_real = (imread(file_list(i).name)); %just for plottin purposes
-                        img_gray = rgb2gray(img_real);
-                        img_gray = img_gray + (200-mean(img_gray(img_gray<250)));   % adjust intensity 2016/07/29
-                        
-                        img = double(img_gray);
-                        img = uint8(img);
-                    end
-                    
-                    %do the blob filter
-                    blob_img = PD_blobfilter(img,h,sigma);
-                    
-                    %                 blob_img = PD_blobfilter(img,9,sigma);	%%% working with 8drosophilas_8.avi_0001_0100
-                    
-                    % imshow(blob_img)
-                    
-                    %% ROI
-                    %                     roi_img_check = dir(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.mat'));
-                    
-                    if ~isempty(roi_img_check)
-                        blob_img = blob_img .* roi_mask;
-                    end
-                    
-                    %%
-                    blob_img_1st = blob_img;
-                    idx = find(blob_img < blob_threshold);
-                    blob_img(idx) = nan ;
-                    
-                    if blob_center_enable
-                        [ X_update2{i}, Y_update2{i}, blob_img_logical2 ] = PD_blob_center( blob_img_1st, idx, H, blob_threshold, blob_threshold_peak );
-                    end
-                    
-                    if extrema_enable
-                        
-                        [zmax,imax,zmin,imin] = extrema2(blob_img);
-                        
-                        [X{i},Y{i}] = ind2sub(size(blob_img),imax);
-                        
-                        % near point average
-                        [ X_update{i}, Y_update{i} ] = PD_npa(X{i}, Y{i}, npa_radius);
-                        
-                        % blob analysis
-                        if ba_enable
-                            % blob_img_logical is logical version of blob image after thresholding
-                            blob_img_logical = blob_img_1st;
-                            blob_img_logical(~idx) = 1;
-                            blob_img_logical(idx) = 0;
-                            blob_img_logical = logical(blob_img_logical);
-                            [ X_update2{i}, Y_update2{i} ] = PD_blob_analysis( H, blob_img_logical, X_update{i}, Y_update{i} );
-                            blob_img_logical2 = blob_img_logical;   % just copy blob_img_logical
-                        end
-                        
-                        
-                    end
-                    
-                    %     clf
-                    %     imshow(img_real);
-                    %     hold on;
-                    %     plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                    %     title('updated2 detection')
-                    %     quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                    %     % save figure
-                    %     f=getframe;
-                    %     imwrite(f.cdata,strcat('./output/direct_img',file_list(i).name));
-                    
-                    %     disp(strcat(num2str(100*i/length(file_list)),'%','   detection : ', num2str(size(imax,1))));
-                    
-                    if blob_center_enable
-                        disp(strcat(num2str(data_th), 'th     >', '   detect_blob_center : ', num2str(size(X_update2{i},1))));
-                    end
-                    
-                    % graph
-                    clf
-                    imshow(img_real);
-                    hold on;
-                    plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                    num_txt = [' Detected : ', num2str(size(X_update2{i},1))];
-                    num_txt2 = [' TH : ', sprintf('%05.2f',blob_threshold)];
-                    text(1,25,num_txt,'Color','red','FontSize',18)
-                    text(1,75,num_txt2,'Color','red','FontSize',18)
-                    
-                    %                 quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                    % save figure
-                    f=getframe;
-                    imwrite(f.cdata,strcat('./threshold_output/',shuttleVideo.name,'_',filename,'/th_',sprintf('%05.2f',blob_threshold) ,'.png'));
-                    
-                    %                     %% graph for detection analysis
-                    %                     keep_i = [keep_i i];
-                    %                     keep_count = [keep_count size(X_update2{i},1)];
-                    %                     plot(keep_i,keep_count)
-                    %                     axis([0,i,5,10])
-                    pause(0.01)
-                end
-                
-                
-            end
-            
-            
+    % wait for closing detectoptimizer
+    while true
+        if ~strcmp(getenv('TPRO_RUNOPTM'),'1')
+            break; % process next movie
         end
+        pause(0.5);
     end
 end
 
-time = toc;
-close 'check_threshold.m'
-set(handles.edit1, 'String',strcat('check_threshold.m done!     t =',num2str(time),'s'))
+set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
+
 
 % detection--- Executes on button press in pushbutton4.
 function pushbutton4_Callback(hObject, eventdata, handles)
@@ -502,8 +323,6 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % set(handles.edit1, 'String','detection.m done!')
 tic
 
-% run('./detection.m')
-
 addpath(genpath('function'));
 addpath(genpath('input'));
 addpath(genpath('parameter'));
@@ -533,11 +352,6 @@ end
 
 % load parameters
 %% parameters setting
-
-% blobfilter parameters
-h = 30;
-sigma = 6;
-blob_threshold = 0.8;
 
 % near point average
 npa_radius = 12; % set 0 to skip
@@ -585,9 +399,6 @@ blob_center_enable = 1;
 % extrema detection (0)
 extrema_enable = 0;
 
-% background subtraction
-bg_subtract_enable = 1;
-
 % the closest neighbour approach
 cna_enable = 1;
 
@@ -616,45 +427,45 @@ H.EccentricityOutputPort = 1;
 keep_i = [];
 keep_count = [];
 
-if detect_fig_enable
-    figure('name','detection.m','NumberTitle','off')
-end
-
 % added on 2016-07-28
 if ~isempty(file_list2) && ~isempty(file_list3)
     for data_th = 1:(size(raw,1)-1)
         if num(data_th,1)
             
-            %%% detection number before blobcenter
-            dnum = 0;
-            
             blob_threshold = num(data_th, 8);
             blob_threshold_peak = num(data_th, 9);
             start_frame = num(data_th, 4);
             end_frame = num(data_th, 5);
+            frame_steps = num(data_th, 16);
+            h = num(data_th, 13);
+            sigma = num(data_th, 14);
+            area_pixel = num(data_th, 15);
+
             shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-            
-            %% ROI
-            roi_img_check = dir(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-            if ~isempty(roi_img_check)
-                %load(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.mat'),'BW')
-                BW = imread(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-                BW = im2double(BW);
-                roi_mask = BW;
+
+            % ROI
+            videoName = shuttleVideo.name;
+            roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+            if exist(roiFileName, 'file')
+                img = imread(roiFileName);
+                roi_mask = im2double(img);
+            else
+                roi_mask = [];
             end
-            
-            if bg_subtract_enable
-                bg_img_check = dir(strcat('./bg_output/',shuttleVideo.name,'/',shuttleVideo.name,'bg.png'));
-                if ~isempty(bg_img_check)
-                    bg_img = imread(strcat('./bg_output/',shuttleVideo.name,'/',shuttleVideo.name,'bg.png'));
-                    if size(size(bg_img),2) == 2 % one plane background
-                        bg_img(:,:,2) = bg_img(:,:,1);
-                        bg_img(:,:,3) = bg_img(:,:,1);
-                    end
-                    bg_img = rgb2gray(bg_img);
-                else
-                    bg_subtract_enable = 0;
+
+            bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+            if exist(bgImageFile, 'file')
+                bgImage = imread(bgImageFile);
+                if size(size(bgImage),2) == 2 % one plane background
+                    bgImage(:,:,2) = bgImage(:,:,1);
+                    bgImage(:,:,3) = bgImage(:,:,1);
                 end
+                bgImage = rgb2gray(bgImage);
+                bg_img_double = double(bgImage);
+                bg_img_mean = mean(mean(bgImage));
+            else
+                bg_img_double = [];
+                bg_img_mean = [];
             end
             
             % make output folder
@@ -665,45 +476,30 @@ if ~isempty(file_list2) && ~isempty(file_list3)
             Y = cell(1,length(end_frame-start_frame+1));
             detection_num = nan(2,end_frame-start_frame+1);
             
-            for i_count = start_frame : end_frame
-                i = i_count - start_frame + 1;
-                
-                if bg_subtract_enable
-                    
-                    bg_img_gray = bg_img;
-                    bg_img_gray_double = double(bg_img_gray) + intensity_shift;
-                    img_real = read(shuttleVideo,i_count);
-                    img_gray = rgb2gray(img_real);
-                    img_gray2 = img_gray + (mean(mean(bg_img_gray))-mean(mean(img_gray)));
-                    %                     img_gray = img_gray + mean(mean(bg_img_gray))-mean(mean(img_gray));
-                    img_gray_double = double(img_gray) + intensity_shift;
-                    img = bg_img_gray_double-img_gray_double;
+            i = 1;
+            for i_count = start_frame : frame_steps : end_frame
+                img_real = read(shuttleVideo, i_count);
+                grayImg = rgb2gray(img_real);
+                if ~isempty(bg_img_mean)
+                    grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
+                    grayImageDouble = double(grayImg);
+                    img = bg_img_double - grayImageDouble;
                     img = uint8(img);
                     img = imcomplement(img);
-                    
                 else
-                    img_real = read(shuttleVideo,i_count);
-                    %         img_real = (imread(file_list(i).name)); %just for plottin purposes
-                    img_gray = rgb2gray(img_real);
-                    img_gray = img_gray + (200-mean(img_gray(img_gray<250)));   % adjust intensity 2016/07/29
-                    
-                    img = double(img_gray);
-                    img = uint8(img);   % to make unit8 for no bg case
+                    img = grayImg;
                 end
                 
                 %do the blob filter
-                blob_img = PD_blobfilter(img,h,sigma);
-                
-                %                 blob_img = PD_blobfilter(img,9,sigma);	%%% working with 8drosophilas_8.avi_0001_0100
-                
-                
-                %% ROI
-                if ~isempty(roi_img_check)
+                blob_img = PD_blobfilter(img, h, sigma);
+
+                % ROI
+                if ~isempty(roi_mask)
                     blob_img = blob_img .* roi_mask;
                 end
                 
                 % imshow(blob_img)
-                blob_img_1st = blob_img;
+%                blob_img_1st = blob_img;
                 
                 %                 if animal_type == 2     % rodent set blob_threshold_peak to be the maximum of blob_img_1st
                 %                     blob_th_test = blob_threshold;
@@ -720,8 +516,8 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 %                     end
                 %                     blob_threshold = blob_th_test;
                 %                 end
-                idx = find(blob_img < blob_threshold);
-                blob_img(idx) = nan ;
+%                idx = find(blob_img < blob_threshold);
+%                blob_img(idx) = nan ;
                 
                 %                 %%% find the number of detection
                 %                 blob_img_logical = blob_img_1st;
@@ -776,15 +572,13 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 %                                 f=getframe;
                 %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting','.png'));
                 %                                 keyboard
-                
-                if animal_type == 2     % rodent set blob_threshold_peak to be the maximum of blob_img_1st
-                    blob_threshold_peak = max(max(blob_img_1st));
-                end
-                
+
+                img = imbinarize(blob_img, blob_threshold);
+                blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
+
                 if blob_center_enable
-                    [ X_update2{i}, Y_update2{i}, blob_img_logical2 ] = PD_blob_center( blob_img_1st, idx, H, blob_threshold, blob_threshold_peak );
+                    [ X_update2{i}, Y_update2{i} ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
                 end
-                
                 
                 %%% for output cut_Video_14.aviblob_splitting_after
                 %                     imshow(blob_img_logical2(60:130,320:390))
@@ -838,10 +632,19 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 
                 %%
                 
-                [ keep_direction, XY_update_to_keep_direction, keep_ecc, keep_angle] = PD_direction( H, img_gray, blob_img_logical2, X_update2{i}, Y_update2{i} );
+                [ keep_direction, XY_update_to_keep_direction, keep_ecc, keep_angle] = PD_direction( H, grayImg, blob_img_logical2, X_update2{i}, Y_update2{i} );
                 % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
                 % sort based on X_update2 and Y_update2
-                
+% need to check later
+if size(keep_direction,2) ~= size(XY_update_to_keep_direction, 1)
+    keep_direction(:,size(XY_update_to_keep_direction, 1)) = 0;
+end
+if size(keep_ecc,2) ~= size(XY_update_to_keep_direction, 1)
+    keep_ecc(:,size(XY_update_to_keep_direction, 1)) = 0;
+end
+if size(keep_angle,2) ~= size(XY_update_to_keep_direction, 1)
+    keep_angle(:,size(XY_update_to_keep_direction, 1)) = 0;
+end
                 keep_direction_sorted{i} = keep_direction(:,XY_update_to_keep_direction);
                 keep_ecc_sorted{i} = keep_ecc(:,XY_update_to_keep_direction);
                 keep_angle_sorted{i} = keep_angle(:,XY_update_to_keep_direction);
@@ -860,22 +663,31 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 
                 if extrema_enable
                     if size(imax,1) == size(X_update{i},1)
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*i/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
+                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
                     elseif ba_enable
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*i/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
+                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
                     else
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*i/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
+                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
                     end
                     detection_num(:,i) = [size(imax,1); size(X_update{i},1)];
                 end
                 
                 if blob_center_enable
-                    disp(strcat(num2str(data_th), 'th     >', num2str(100*i/(end_frame-start_frame+1)), '%', '   detect_blob_center : ', num2str(size(X_update2{i},1))));
+                    disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', ' i:',num2str(i),' frame:',num2str(i_count), '   detect_blob_center : ', num2str(size(X_update2{i},1))));
                 end
                 
                 % graph
                 if detect_fig_enable
+                    % create new roi window if it does not exist
+                    if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+                        figureWindow = figure('name','selecting roi','NumberTitle','off');
+                    end
+
+                    % change title message
+                    set(figureWindow, 'name', ['detection for ', shuttleVideo.name]);
+                    figure(figureWindow);
                     clf
+        
                     if intensity_shift ~= 0
                         imshow(uint8(img_gray_double));
                     else
@@ -893,11 +705,12 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                     imwrite(f.cdata,strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',filename2));
                     pause(0.001)
                 end
-                %% graph for detection analysis
+                % graph for detection analysis
                 keep_i = [keep_i i];
                 keep_count = [keep_count size(X_update2{i},1)];
-                set(handles.text9, 'String',[num2str(100*i/(end_frame-start_frame+1)) ' %'])
+                set(handles.text9, 'String',[num2str(int64(100*(i_count-start_frame)/(end_frame-start_frame+1))) ' %']);
                 pause(0.001)
+                i = i + 1;
             end
             X = X_update2;
             Y = Y_update2;
@@ -905,6 +718,7 @@ if ~isempty(file_list2) && ~isempty(file_list3)
             filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
             save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted')
             save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count')
+            set(handles.text9, 'String','100 %'); % done!
         end
     end
 end
@@ -1064,6 +878,7 @@ if ~isempty(file_list2) && ~isempty(file_list3)
             reject_dist = num(data_th, 11);
             start_frame = num(data_th, 4);
             end_frame = num(data_th, 5);
+            frame_steps = num(data_th, 16);
             shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
             
             % load detection
@@ -1116,10 +931,9 @@ if ~isempty(file_list2) && ~isempty(file_list3)
             img_initial = read(shuttleVideo,1);
             img_h = size(img_initial,1);
             img_w = size(img_initial,2);
-            
-            for t_count = start_frame:end_frame
-                t = t_count - start_frame + 1;
-                
+
+            t = 1;
+            for t_count = start_frame:frame_steps:end_frame
                 % make the given detections matrix
                 Q_loc_meas = [X{t} Y{t}];
                 direction_meas = keep_direction_sorted{t};
@@ -1235,9 +1049,11 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                             for count2 = 1:count_target
                                 %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
                                 [m,n] = find(est_dist2==min(min(est_dist2)));
-                                asgn2(m(1)) = n(1);
-                                est_dist2(m(1),:) = NaN;
-                                est_dist2(:,n(1)) = NaN;
+if ~isempty(m) && ~isempty(n) % 2017-4-26 TODO: need to check later
+                                    asgn2(m(1)) = n(1);
+                                    est_dist2(m(1),:) = NaN;
+                                    est_dist2(:,n(1)) = NaN;
+end
                                 %                             end   % fixed bug 2016-12-30
                                 
                             end
@@ -1418,12 +1234,13 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 
                 
                 %}
-                disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*t/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
+                disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*(t_count-start_frame)/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
                 %     sum(strk_trks)
-                set(handles.text9, 'String',[num2str(100*t/(end_frame-start_frame+1)) ' %'])
+                set(handles.text9, 'String',[num2str(int64(100*(t_count-start_frame)/(end_frame-start_frame+1))) ' %']);
                 pause(0.001)
-                
+                t = t + 1;
             end
+            set(handles.text9, 'String', '100 %'); % done!
             
             % save data as text
             write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
@@ -1601,110 +1418,80 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function [ X_update_keep, Y_update_keep, blob_img_logical2 ] = PD_blob_center( blob_img_1st, idx, H, blob_threshold, blob_threshold_peak )
-%UNTITLED5 Summary of this function goes here
-%   Detailed explanation goes here
-% imshowpair(blob_img_logical,blob_img_logical2,'montage')
-blob_img_logical = blob_img_1st;
-blob_img_logical(~idx) = 1;
-blob_img_logical(idx) = 0;
-blob_img_logical = logical(blob_img_logical);
-blob_img_logical2 = bwareaopen(blob_img_logical, 50);   % delete blob that has area less than 50
-%                     blob_img_logical2 = bwareaopen(blob_img_logical, 10);   %%% working with 8drosophilas_8.avi_0001_0100
+function [ X_update_keep, Y_update_keep ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold )
 
-labeledImage1 = bwlabel(blob_img_logical2);   % label the image
+labeledImage = bwlabel(blob_img_logical);   % label the image
 
-%% delete based on max of the blob
-blob_num_before = max(max(labeledImage1));
-for i = 1:blob_num_before
-    if max(blob_img_1st(labeledImage1==i)) < blob_threshold_peak
-        blob_img_logical2(labeledImage1==i) = 0;
-    end
-end
+[blobAreas, blobCenterPoints, blobBoxes] = step(H, blob_img_logical);
 
-labeledImage = bwlabel(blob_img_logical2);   % label the image
-
-%%
-
-%                     [AREA,CENTROID,BBOX,ORIENTATION,ECCENTRICITY,EXTENT] = step(H,blob_img_logical2);
-[AREA,CENTROID,BBOX] = step(H,blob_img_logical2);
-
-BBOX_diagonal = sqrt(sum(abs(BBOX(:,[3,4])).^2,2));
-area_mean = mean(AREA);
-blob_num = size(AREA,1);
+area_mean = mean(blobAreas);
+blob_num = size(blobAreas,1);
 X_update_keep = [];
 Y_update_keep = [];
 
+% loop for checking all blobs
 for blob_count = 1 : blob_num
-    
-    area_ratio = double(AREA(blob_count))/area_mean;
-    BBOX_diagonal_value = BBOX_diagonal(blob_count);
-    if (mod(area_ratio,1)>0.4)
-        area_ratio = area_ratio + (1-mod(area_ratio,1));
+    % check blobAreas dimension of current blob and how bigger than avarage.
+    area_ratio = double(blobAreas(blob_count))/area_mean;
+    if (mod(area_ratio,1) > 0.4)
+        expect_num = area_ratio + (1-mod(area_ratio,1));
+    else
+        expect_num = round(area_ratio); % round to the nearest integer
     end
-    expect_num = round(area_ratio); % round to the nearest integer
-    
-    
-    %                         if (expect_num == 1) && (BBOX_diagonal_value > 12)
-    %                             expect_num = expect_num + 1;
-    % %                         elseif
-    %                         end
-    
-    if expect_num == 1  % expect one
+
+    % check expected number of targets (animals)
+    if expect_num <= 1  % expect one
         % choose one
-        x_choose = CENTROID(blob_count,2);
-        y_choose = CENTROID(blob_count,1);
-    elseif expect_num == 0
-        % choose one
-        x_choose = CENTROID(blob_count,2);
-        y_choose = CENTROID(blob_count,1);
+        x_choose = blobCenterPoints(blob_count,2);
+        y_choose = blobCenterPoints(blob_count,1);
+    elseif expect_num > 4 % too big! isn't it?
+        x_choose = [];
+        y_choose = [];
     elseif expect_num > 1
-        blob_threshold2 = blob_threshold;
-        %                             label_num = labeledImage(sub2ind(size(labeledImage), round(CENTROID(blob_count,2)), round(CENTROID(blob_count,1))));
-        label_num = blob_count;
-        %                             if label_num == 0
-        %                                 labelImage_search = labeledImage(round(CENTROID(blob_count,2))-2:round(CENTROID(blob_count,2))+2,round(CENTROID(blob_count,1))-2:round(CENTROID(blob_count,1))+2);
-        %                                 label_num = mode(labelImage_search(labelImage_search~=0));
-        %                             end
-        
-        label_mask = labeledImage==label_num;
-        blob_img_masked = blob_img_1st.*label_mask;
-        
+        % find separated area
+        blob_threshold2 = blob_threshold - 0.2;
+        if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
+
+        label_mask = labeledImage==blob_count;
+        blob_img_masked = blob_img .* label_mask;
+
+        x_choose = blobCenterPoints(blob_count,2);
+        y_choose = blobCenterPoints(blob_count,1);  % choose the center if cannot divide the blob
+
+        % trimmed from original gray scale image
+        rect = blobBoxes(blob_count,:);
+        blob_img_trimmed = imcrop(blob_img_masked, rect);
+
+        % stronger gaussian again
+        blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
+
         for th_i = 1 : 40
             blob_threshold2 = blob_threshold2 + 0.05;
-            %  idx2 = find(blob_img_masked < blob_threshold2) find(blob_img_masked>0);
-            idx2 = intersect(find(blob_img_masked < blob_threshold2), find(blob_img_masked>0));
-            blob_img_masked_logical = blob_img_masked;
-            blob_img_masked_logical(idx2) = 0;
-            blob_img_masked_logical = logical(blob_img_masked_logical);
-            [AREA2,CENTROID2,BBOX2] = step(H,blob_img_masked_logical);
-            
-            %*** fixing 20161015
-            if expect_num == size(AREA2,1) % change from <= to == 20161015
-                [B, I] = sort(AREA2);
-                CENTROID2_sorted = CENTROID2(I,:);
-                x_choose = CENTROID2_sorted(1:expect_num,2);
-                y_choose = CENTROID2_sorted(1:expect_num,1);    % choose expect_num according to area (large)
-                
-                blob_img_logical2(idx2) = false;
+
+            blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
+            [trimmedAreas, trimmedCenterPoints, trimmedBoxes] = step(H, blob_img_trimmed2);
+
+            if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
+                [B, I] = sort(trimmedAreas);
+                trimmedCenterPoints_sorted = trimmedCenterPoints(I,:);
+                x_choose = trimmedCenterPoints_sorted(1:expect_num,2);
+                y_choose = trimmedCenterPoints_sorted(1:expect_num,1);    % choose expect_num according to area (large)
+                x_choose = x_choose + double(rect(2));
+                y_choose = y_choose + double(rect(1));
                 break
             end
-            x_choose = CENTROID(blob_count,2);
-            y_choose = CENTROID(blob_count,1);  % choose the center if cannot divide the blob
         end
-        
     end
-    
-    X_update_keep = [X_update_keep ; x_choose];
-    Y_update_keep = [Y_update_keep ; y_choose];
+
+    if ~isempty(x_choose)
+        X_update_keep = [X_update_keep ; x_choose];
+        Y_update_keep = [Y_update_keep ; y_choose];
+    end
 end
-
-% imshowpair(blob_img_logical,blob_img_logical2,'montage')
-
 
 
 function [ output_image ] = PD_blobfilter( image, h, sigma )
-%UNTITLED ?±?Ì?Ö?”?Ì?T—v?ð?±?±?É?L?q
+%UNTITLED ?±?Ì?Ö??Ì?T—v??±?±?É?L?q
 %   h & sigma : the bigger, the larger the blob can be found
 %   example : >>subplot(121); imagesc(h) >>subplot(122); mesh(h)
 %   >>colormap(jet)
@@ -2285,9 +2072,6 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton6 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-tic
-
-figure('name','select roi','NumberTitle','off')
 
 addpath(genpath('function'));
 addpath(genpath('input'));
@@ -2295,7 +2079,6 @@ addpath(genpath('parameter'));
 addpath(genpath('multi'));
 addpath(genpath('detect_output'));
 addpath(genpath('../input_share'));
-
 
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
@@ -2316,41 +2099,64 @@ else
     return
 end
 
-if ~isempty(file_list2) && ~isempty(file_list3)
-    for data_th = 1:(size(raw,1)-1)
-        if num(data_th,1) && num(data_th,10)
-            shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-            roi_img_check = dir(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-            if ~isempty(roi_img_check)
-                BW = imread(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-                
-                BW = im2double(BW);
-                %                 load(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.mat'),'BW')
-                img = read(shuttleVideo,1);
-                img_gray = rgb2gray(img);
-                img = double(img_gray).*imcomplement(BW);
-                img = uint8(img);
-                BW_add = roipoly(img);
-                BW = or(BW,BW_add);
-                
-                img_gray = img;
-                img = double(img_gray).*imcomplement(BW);
-                img = uint8(img);
-                imshow(img)
-            else
-                mkdir(strcat('./roi/',shuttleVideo.name));
-                img = read(shuttleVideo,1);
-                img_gray = rgb2gray(img);
-                BW = roipoly(img);
-                img = double(img_gray).*imcomplement(BW);
-                img = uint8(img);
-                imshow(img)
+% show start text
+set(handles.edit1, 'String','selecting "Region of Interest" ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+
+% select roi for every movie
+for data_th = 1:(size(raw,1)-1)
+    if num(data_th,1) && num(data_th,10)
+        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+        frameImage = read(shuttleVideo,1);
+        grayImage = rgb2gray(frameImage);
+
+        pathName = strcat('./roi/',shuttleVideo.name);
+        roiFileName = strcat(pathName,'/',shuttleVideo.name,'_roi.png');
+
+        % create new roi window if it does not exist
+        if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+            figureWindow = figure('name','selecting roi','NumberTitle','off');
+        end
+        
+        % change title message
+        set(figureWindow, 'name', ['select roi for ', shuttleVideo.name]);
+
+        if exist(roiFileName, 'file')
+            roiImage = imread(roiFileName);
+            roiImage = im2double(roiImage);
+            img = double(grayImage).*imcomplement(roiImage);
+            img = uint8(img);
+        else
+            if ~exist(pathName, 'dir')
+                mkdir(pathName);
             end
-            imwrite(BW,strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.png'));
-            %             save(strcat('./roi/',shuttleVideo.name,'/',shuttleVideo.name,'_roi.mat'),'BW')
+            img = frameImage;
+        end
+        
+        % show polygon selection window
+        newRoiImage = roipoly(img);
+
+        % if canceled, do not show and save roi file
+        if ~isempty(newRoiImage)
+            img = double(grayImage).*imcomplement(newRoiImage);
+            img = uint8(img);
+            imshow(img)
+
+            % write roi file
+            imwrite(newRoiImage, roiFileName);
         end
     end
 end
+
+% close background image window
+if exist('figureWindow','var') && ~isempty(figureWindow) && ishandle(figureWindow)
+    pause(2);
+    close(figureWindow);
+end
+
+% show end text
+set(handles.edit1, 'String','selecting "Region of Interest" ... done!')
+set(handles.text9, 'String','Ready','BackgroundColor','green');
 
 
 % --- Executes on button press in radiobutton1.
