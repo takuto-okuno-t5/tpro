@@ -630,11 +630,11 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 
                 
                 %%
-                [ keep_direction, keep_ecc, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc);
+                [ keep_direction, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
                 % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
                 % sort based on X_update2 and Y_update2
                 keep_direction_sorted{i} = keep_direction;
-                keep_ecc_sorted{i} = keep_ecc;
+                keep_ecc_sorted{i} = blobEcc';
                 keep_angle_sorted{i} = keep_angle;
                 
                 %     clf
@@ -1509,7 +1509,7 @@ log_kernel = fspecial('log', h, sigma);
 output_image = conv2(image, log_kernel, 'same');
 
 %%
-function [ keep_direction, keep_ecc, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc)
+function [ keep_direction, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
 % hidden parameters
 search_radius = 4;
 disk_size = 6;
@@ -1518,8 +1518,7 @@ disk_size = 6;
 blobBoxes = double(blobBoxes);
 areaNumber = size(blobAreas, 1);
 keep_direction = zeros(2, areaNumber); % allocate memory
-keep_ecc = [];
-keep_angle = [];
+keep_angle = zeros(1, areaNumber); % allocate memory;
 
 for i = 1:areaNumber
     % calculate angle
@@ -1592,8 +1591,7 @@ for i = 1:areaNumber
     end
 
     keep_direction(:,i) = direction_vector;
-    keep_ecc = [keep_ecc blobEcc(i)];
-    keep_angle = [keep_angle angle];
+    keep_angle(:,i) = angle;
 end
 
 
