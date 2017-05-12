@@ -416,12 +416,10 @@ animal_type = get(handles.popupmenu1,'Value');
 
 %%
 H = vision.BlobAnalysis;
-H.OrientationOutputPort = 1;
-H.EccentricityOutputPort = 1;
-H.ExtentOutputPort = 1;
 H.MaximumCount = 100;
 H.MajorAxisLengthOutputPort = 1;
 H.MinorAxisLengthOutputPort = 1;
+H.OrientationOutputPort = 1;
 H.EccentricityOutputPort = 1;
 
 keep_i = [];
@@ -576,8 +574,9 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 img = imbinarize(blob_img, blob_threshold);
                 blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
 
+                % get blobs from step function
                 if blob_center_enable
-                    [ X_update2{i}, Y_update2{i} ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
+                    [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
                 end
                 
                 %%% for output cut_Video_14.aviblob_splitting_after
@@ -631,23 +630,12 @@ if ~isempty(file_list2) && ~isempty(file_list3)
                 
                 
                 %%
-                
-                [ keep_direction, XY_update_to_keep_direction, keep_ecc, keep_angle] = PD_direction( H, grayImg, blob_img_logical2, X_update2{i}, Y_update2{i} );
+                [ keep_direction, keep_ecc, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc);
                 % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
                 % sort based on X_update2 and Y_update2
-% need to check later
-if size(keep_direction,2) ~= size(XY_update_to_keep_direction, 1)
-    keep_direction(:,size(XY_update_to_keep_direction, 1)) = 0;
-end
-if size(keep_ecc,2) ~= size(XY_update_to_keep_direction, 1)
-    keep_ecc(:,size(XY_update_to_keep_direction, 1)) = 0;
-end
-if size(keep_angle,2) ~= size(XY_update_to_keep_direction, 1)
-    keep_angle(:,size(XY_update_to_keep_direction, 1)) = 0;
-end
-                keep_direction_sorted{i} = keep_direction(:,XY_update_to_keep_direction);
-                keep_ecc_sorted{i} = keep_ecc(:,XY_update_to_keep_direction);
-                keep_angle_sorted{i} = keep_angle(:,XY_update_to_keep_direction);
+                keep_direction_sorted{i} = keep_direction;
+                keep_ecc_sorted{i} = keep_ecc;
+                keep_angle_sorted{i} = keep_angle;
                 
                 %     clf
                 %     imshow(img_real);
@@ -697,7 +685,7 @@ end
                     
                     if size(X_update2{i},1) ~= 0
                         plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                        quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
+                        quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
                     end
                     % save figure
                     f=getframe;
@@ -1418,21 +1406,28 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function [ X_update_keep, Y_update_keep ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold )
+function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold )
+
+[origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
 
 labeledImage = bwlabel(blob_img_logical);   % label the image
 
-[blobAreas, blobCenterPoints, blobBoxes] = step(H, blob_img_logical);
-
-area_mean = mean(blobAreas);
-blob_num = size(blobAreas,1);
+area_mean = mean(origAreas);
+blob_num = size(origAreas,1);
 X_update_keep = [];
 Y_update_keep = [];
+blobAreas = [];
+blobCenterPoints = [];
+blobBoxes = [];
+blobMajorAxis = [];
+blobMinorAxis = [];
+blobOrient = [];
+blobEcc = [];
 
 % loop for checking all blobs
 for blob_count = 1 : blob_num
     % check blobAreas dimension of current blob and how bigger than avarage.
-    area_ratio = double(blobAreas(blob_count))/area_mean;
+    area_ratio = double(origAreas(blob_count))/area_mean;
     if (mod(area_ratio,1) > 0.4)
         expect_num = area_ratio + (1-mod(area_ratio,1));
     else
@@ -1440,13 +1435,11 @@ for blob_count = 1 : blob_num
     end
 
     % check expected number of targets (animals)
+    chooseOne = true;
     if expect_num <= 1  % expect one
-        % choose one
-        x_choose = blobCenterPoints(blob_count,2);
-        y_choose = blobCenterPoints(blob_count,1);
+        % set output later
     elseif expect_num > 4 % too big! isn't it?
-        x_choose = [];
-        y_choose = [];
+        chooseOne = false;
     elseif expect_num > 1
         % find separated area
         blob_threshold2 = blob_threshold - 0.2;
@@ -1455,11 +1448,8 @@ for blob_count = 1 : blob_num
         label_mask = labeledImage==blob_count;
         blob_img_masked = blob_img .* label_mask;
 
-        x_choose = blobCenterPoints(blob_count,2);
-        y_choose = blobCenterPoints(blob_count,1);  % choose the center if cannot divide the blob
-
         % trimmed from original gray scale image
-        rect = blobBoxes(blob_count,:);
+        rect = origBoxes(blob_count,:);
         blob_img_trimmed = imcrop(blob_img_masked, rect);
 
         % stronger gaussian again
@@ -1469,23 +1459,40 @@ for blob_count = 1 : blob_num
             blob_threshold2 = blob_threshold2 + 0.05;
 
             blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
-            [trimmedAreas, trimmedCenterPoints, trimmedBoxes] = step(H, blob_img_trimmed2);
+            [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
 
             if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
-                [B, I] = sort(trimmedAreas);
-                trimmedCenterPoints_sorted = trimmedCenterPoints(I,:);
-                x_choose = trimmedCenterPoints_sorted(1:expect_num,2);
-                y_choose = trimmedCenterPoints_sorted(1:expect_num,1);    % choose expect_num according to area (large)
-                x_choose = x_choose + double(rect(2));
-                y_choose = y_choose + double(rect(1));
+                x_choose = trimmedCenterPoints(1:expect_num,2);
+                y_choose = trimmedCenterPoints(1:expect_num,1);    % choose expect_num according to area (large)
+                X_update_keep = [X_update_keep ; x_choose + double(rect(2))];
+                Y_update_keep = [Y_update_keep ; y_choose + double(rect(1))];
+                blobAreas = [blobAreas ; trimmedAreas];
+                blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
+                blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
+                blobOrient = [blobOrient ; trimmedOrient];
+                blobEcc = [blobEcc ; trimmedEcc];
+                for j=1 : expect_num
+                    pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
+                    box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                    blobCenterPoints = [blobCenterPoints ; pt];
+                    blobBoxes = [blobBoxes ; box];
+                end
+                chooseOne = false;
                 break
             end
         end
     end
-
-    if ~isempty(x_choose)
-        X_update_keep = [X_update_keep ; x_choose];
-        Y_update_keep = [Y_update_keep ; y_choose];
+    if chooseOne
+        % choose one
+        X_update_keep = [X_update_keep ; origCenterPoints(blob_count,2)];
+        Y_update_keep = [Y_update_keep ; origCenterPoints(blob_count,1)];
+        blobAreas = [blobAreas ; origAreas(blob_count)];
+        blobCenterPoints = [blobCenterPoints ; origCenterPoints(blob_count,:)];
+        blobBoxes = [blobBoxes ; origBoxes(blob_count,:)];
+        blobMajorAxis = [blobMajorAxis ; origMajorAxis(blob_count)];
+        blobMinorAxis = [blobMinorAxis ; origMinorAxis(blob_count)];
+        blobOrient = [blobOrient ; origOrient(blob_count)];
+        blobEcc = [blobEcc ; origEcc(blob_count)];
     end
 end
 
@@ -1501,182 +1508,58 @@ log_kernel = fspecial('log', h, sigma);
 %   2d convolution
 output_image = conv2(image, log_kernel, 'same');
 
-
-
-function [ keep_direction, XY_update_to_keep_direction, keep_ecc, keep_angle ] = PD_direction( H, img_gray, blob_img_logical, X_update2, Y_update2 )
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
-
+%%
+function [ keep_direction, keep_ecc, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc)
+% hidden parameters
 search_radius = 4;
-
 disk_size = 6;
-%     SE = strel('disk',disk_size,0);
 
-linearInd = sub2ind(size(blob_img_logical), round(X_update2), round(Y_update2));
-
-[AREA,CENTROID,BBOX,MAJORAXIS,MINORAXIS,ORIENTATION,ECCENTRICITY] = step(H,blob_img_logical);
-
-BBOX = double(BBOX);
-labeledImage = bwlabel(blob_img_logical);   % label the image
-
-XY_update_to_keep_direction = labeledImage(linearInd);
-keep_direction = [];
+% init
+blobBoxes = double(blobBoxes);
+areaNumber = size(blobAreas, 1);
+keep_direction = zeros(2, areaNumber); % allocate memory
 keep_ecc = [];
 keep_angle = [];
 
-for i_index = 1:size(AREA,1)
-    
-    % wing detection
-    index = i_index;
-    
-    angle = -ORIENTATION(index)*180/pi;
-    lineLength = MAJORAXIS(index)/2;
-    x(1) = CENTROID(index,1)-BBOX(index,1)+1 + disk_size;
-    y(1) = CENTROID(index,2)-BBOX(index,2)+1 + disk_size;
+for i = 1:areaNumber
+    % calculate angle
+    angle = -blobOrient(i)*180 / pi;
+    lineLength = blobMajorAxis(i) / 2;
+    x(1) = blobCenterPoints(i,1) - blobBoxes(i,1)+1 + disk_size;
+    y(1) = blobCenterPoints(i,2) - blobBoxes(i,2)+1 + disk_size;
     x(2) = x(1) + lineLength * cosd(angle);
     y(2) = y(1) + lineLength * sind(angle);
-    
-    %%% add new
-    %         blob_img_logical2 = blob_img_logical.*(labeledImage==index);
-    %         blob_img_logical2 = imdilate(blob_img_logical2,SE); % time consumtion
-    
-    %%%
-    
-    %         blob = blob_img_logical2(BBOX(index,2)-disk_size:BBOX(index,2)+BBOX(index,4)-1+disk_size ,BBOX(index,1)-disk_size:BBOX(index,1)+BBOX(index,3)-1+disk_size);
-    
-    keep = img_gray(BBOX(index,2)-disk_size:BBOX(index,2)+BBOX(index,4)-1+disk_size ,BBOX(index,1)-disk_size:BBOX(index,1)+BBOX(index,3)-1+disk_size);
-    
-    %         range = 0.3:(0.55-0.3)/(6-1):0.55;  % for Video_14.avi
-    range = 0.3:0.05:0.6;  % for Video_14.avi
-    %         range = 0.05:0.05:0.3;  % for 1-1.avi
-    
-    direction_flag = 2;
+
+    % search at the end of major axis
+    v1 = [x(2)-x(1);y(2)-y(1)];
+
+    % wing ditection TODO: change this later?
+    a_point = [x(1);y(1)]+v1;   % in v1 direction
+    b_point = [x(1);y(1)]-v1;
+
+    % trim image
+    rect = [blobBoxes(i,1)-disk_size blobBoxes(i,2)-disk_size blobBoxes(i,3)+disk_size*2 blobBoxes(i,4)+disk_size*2];
+    trimmedImage = imcrop(grayImage, rect);
+
     count = [0 0];
-    %         sure_score = 200;
-    
-    for i = 1:size(range,2)
-        
-        keep2 = im2double(keep);
-        
-        range_begin = range(i);
+    range = 0.3:0.05:0.6;  % for Video_14.avi TODO: change this later?
+
+    for j = 1:size(range,2)
+        keep2 = im2double(trimmedImage);
+        range_begin = range(j);
         ind = find(keep2>(range_begin+0.05));  % find brighter pixel
         ind2 = find(keep2<range_begin); % find darker pixel
         keep2(ind) = NaN;
         keep2(ind2) = NaN;
         keep2(find(~isnan(keep2))) = 1;
         keep2(find(isnan(keep2))) = 0;
-        [row,col] = find(keep2==1);
-        % search at the end of major axis
-        v1 = [x(2)-x(1);y(2)-y(1)];
-        a_point = [x(1);y(1)]+v1;   % in v1 direction
-        b_point = [x(1);y(1)]-v1;
-        %             a_score = 0;
-        %             b_score = 0;
-        
+
         [row_hasvalue, col_hasvalue] = find(keep2==1);
         a_score = sum(((a_point(2)-row_hasvalue).^2+(a_point(1)-col_hasvalue).^2)<(search_radius^2));
         b_score = sum(((b_point(2)-row_hasvalue).^2+(b_point(1)-col_hasvalue).^2)<(search_radius^2));
         envi_score = (sum(((a_point(2)-row_hasvalue).^2+(a_point(1)-col_hasvalue).^2)>(search_radius^2)) + sum(((b_point(2)-row_hasvalue).^2+(b_point(1)-col_hasvalue).^2)<(search_radius^2)) - a_score - b_score ) / 2;
-        
-        %%% pic for paper
-        
-        %             if index == 13
-        %                 minor_point = [x(1);y(1)]-[0 -1;1 0]*v1./norm(v1).*MINORAXIS(index)/2;
-        % %                 figure(1)
-        % %                 imshow(labeledImage(BBOX(index,2)-disk_size:BBOX(index,2)+BBOX(index,4)-1+disk_size ,BBOX(index,1)-disk_size:BBOX(index,1)+BBOX(index,3)-1+disk_size))
-        % %                 set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
-        % %                 hold on
-        % % %                 scatter(a_point(1),a_point(2),'r')
-        % % %                 scatter(b_point(1),b_point(2),'b')
-        % % %                 scatter(x(1),y(1),'r')
-        % %                 phi = linspace(0,2*pi,50);
-        % %                 cosphi = cos(phi);
-        % %                 sinphi = sin(phi);
-        % %                 a = MAJORAXIS(index)/2;
-        % %                 b = MINORAXIS(index)/2;
-        % %                 theta = ORIENTATION(index);
-        % %                 R = [ cos(theta)   sin(theta)
-        % %                     -sin(theta)   cos(theta)];
-        % %                 xy = [a*cosphi; b*sinphi];
-        % %                 xy = R*xy;
-        % %                 x2 = xy(1,:) + x(1);
-        % %                 y2 = xy(2,:) + y(1);
-        % %                 plot(x2,y2,'r','LineWidth',2);
-        % %                 plot([x(1) a_point(1)],[y(1) a_point(2)],'r','LineWidth',2);
-        % %                 plot([x(1) minor_point(1)],[y(1) minor_point(2)],'b','LineWidth',2);
-        % %                 hold off
-        % %
-        % %                 figure(2)
-        % %                 imshow(keep)
-        % %                 set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
-        % %                 hold on
-        % % %                 scatter(a_point(1),a_point(2),'r')
-        % % %                 scatter(b_point(1),b_point(2),'b')
-        % % %                 scatter(x(1),y(1),'r')
-        % %                 phi = linspace(0,2*pi,50);
-        % %                 cosphi = cos(phi);
-        % %                 sinphi = sin(phi);
-        % %                 a = MAJORAXIS(index)/2;
-        % %                 b = MINORAXIS(index)/2;
-        % %                 theta = ORIENTATION(index);
-        % %                 R = [ cos(theta)   sin(theta)
-        % %                     -sin(theta)   cos(theta)];
-        % %                 xy = [a*cosphi; b*sinphi];
-        % %                 xy = R*xy;
-        % %                 x2 = xy(1,:) + x(1);
-        % %                 y2 = xy(2,:) + y(1);
-        % %                 plot(x2,y2,'r','LineWidth',2);
-        % %                 plot([x(1) a_point(1)],[y(1) a_point(2)],'r','LineWidth',2);
-        % %                 plot([x(1) minor_point(1)],[y(1) minor_point(2)],'b','LineWidth',2);
-        % %                 hold off
-        %
-        %                 figure(3)
-        %                 imshow(keep2)
-        %                 set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
-        %                 hold on
-        %                 scatter(a_point(1),a_point(2),'r')
-        %                 scatter(b_point(1),b_point(2),'g')
-        % %                 scatter(x(1),y(1),'r')
-        %                 plot([x(1) a_point(1)],[y(1) a_point(2)],'r','LineWidth',2);
-        %                 ang=0:0.01:2*pi;
-        %                 xp=search_radius*cos(ang);
-        %                 yp=search_radius*sin(ang);
-        %                 plot(a_point(1)+xp,a_point(2)+yp,'r');
-        %                 plot(b_point(1)+xp,b_point(2)+yp,'g');
-        % %                 plot([x(1) minor_point(1)],[y(1) minor_point(2)],'b','LineWidth',2);
-        %                 hold off
-        %                 keyboard
-        %             end
-        
-        %             % for checking
-        %             imshow(keep2)
-        %             hold on
-        %             scatter(a_point(1),a_point(2),'r')
-        %             scatter(b_point(1),b_point(2),'b')
-        %             scatter(x(1),y(1),'r')
-        %             hold off
-        %             keyboard
-        
-        
-        
-        
-        %             for row_count = 1:size(keep2,1)
-        %                 for col_count = 1:size(keep2,2)
-        %                     moving_point = [col_count; row_count];
-        %                     if sum((a_point-moving_point).^2)<(search_radius^2);
-        %                         a_score = a_score + keep2(row_count,col_count);
-        %                     end
-        %                     if sum((b_point-moving_point).^2)<(search_radius^2);
-        %                         b_score = b_score + keep2(row_count,col_count);
-        %                     end
-        %                 end
-        %             end
-        
-        %             [a_score , b_score]
-        
-        
-        %% calculate direction
-        
+
+        % calculate direction
         if (a_score > b_score ) && (envi_score < 40) % correct direction
             %                 count(1) = count(1) + 1;
             count(1) = count(1) + a_score - b_score;
@@ -1692,133 +1575,25 @@ for i_index = 1:size(AREA,1)
             %                     sure_score = b_score - a_score;
             %                 end
         end
-        
     end
-    
+
     if ((count(1)~=0)||(count(2)~=0)) && (count(1) > count(2))
-        direction_flag = 1;
+        direction_vector = -v1;
         %             if direction_flag == 2  % if noone is sure
         %                 direction_flag = 1;
         %             end
     elseif ((count(1)~=0)||(count(2)~=0)) && (count(2) > count(1))
-        direction_flag = 0;
+        direction_vector = v1;
         %             if direction_flag == 2  % if noone is sure
         %                 direction_flag = 0;
         %             end
-    end
-    
-    
-    if direction_flag == 1  % a wins so direction has to be toward b
-        direction_vector = -v1;
-    elseif direction_flag == 0
-        direction_vector = v1;
     else
-        direction_vector = 0*v1;    % zero vector
+        direction_vector = 0 * v1;    % zero vector
     end
-    
-    keep_direction = [keep_direction direction_vector];
-    keep_ecc = [keep_ecc ECCENTRICITY(index)];
+
+    keep_direction(:,i) = direction_vector;
+    keep_ecc = [keep_ecc blobEcc(i)];
     keep_angle = [keep_angle angle];
-    
-end
-
-
-
-
-%     for i_index = 1:size(AREA,1)
-%
-%         % wing detection
-%         index = i_index;
-%
-%         angle = -ORIENTATION(index)*180/pi;
-%         lineLength = 6;
-%         x(1) = CENTROID(index,1)-BBOX(index,1)+1;
-%         y(1) = CENTROID(index,2)-BBOX(index,2)+1;
-%         x(2) = x(1) + lineLength * cosd(angle);
-%         y(2) = y(1) + lineLength * sind(angle);
-%
-%         blob = blob_img_logical(BBOX(index,2):BBOX(index,2)+BBOX(index,4)-1 ,BBOX(index,1):BBOX(index,1)+BBOX(index,3)-1);
-%
-%         keep = img_real(BBOX(index,2):BBOX(index,2)+BBOX(index,4)-1,BBOX(index,1):BBOX(index,1)+BBOX(index,3)-1);
-%
-%
-%         range = [0.3:(0.55-0.3)/(6-1):0.55];
-%
-%         direction_flag = 2;
-%         norm_thres = 2;
-%         count = [0 0];
-%
-%         for i = 1:size(range,2)
-%
-%             keep2 = im2double(keep);
-%
-%             range_begin = range(i);
-%             ind = find(keep2>(range_begin+0.1));  % find brighter pixel
-%             ind2 = find(keep2<range_begin); % find darder pixel
-%             keep2(ind) = NaN;
-%             keep2(ind2) = NaN;
-%             keep2(find(~isnan(keep2))) = 1;
-%             keep2(find(isnan(keep2))) = 0;
-%             [row,col] = find(keep2==1);
-%             intersec_blob = blob.*keep2;
-%             if isempty(find(intersec_blob==1))  %if nothing in intersect
-%                 [row2,col2] = find(intersec_blob==0);
-%             else
-%                 [row2,col2] = find(intersec_blob==1);
-%             end
-%
-%
-%             x2(1) = CENTROID(index,1)-BBOX(index,1)+1;
-%             y2(1) = CENTROID(index,2)-BBOX(index,2)+1;
-%             x2(2) = mean(col2);
-%             y2(2) = mean(row2);
-%
-%             %% calculate direction
-%             v1 = [x(2)-x(1);y(2)-y(1)];
-%             v2 = [x2(2)-x2(1);y2(2)-y2(1)];
-%             angle_v1_v2 = acosd(dot(v1,v2)/norm(v1)/norm(v2));
-%             norm_v2 = norm(v2);
-%
-%             if ((angle_v1_v2 > 120) && (norm_v2 > norm_thres))  % correct direction
-%                 count(1) = count(1) + 1;
-%                 direction_flag = 1;
-%                 norm_thres = norm_v2;
-%             elseif ((angle_v1_v2 < 60) && (norm_v2 > norm_thres))   % inverse direction
-%                 count(2) = count(2) + 1;
-%                 direction_flag = 0;
-%                 norm_thres = norm_v2;
-%             end
-%
-%         end
-%
-%         if ((count(1)~=0)||(count(2)~=0)) && (count(1) > count(2))
-%             direction_flag = 1;
-%         elseif ((count(1)~=0)||(count(2)~=0)) && (count(2) > count(1))
-%             direction_flag = 0;
-%         end
-%
-%
-%         if direction_flag == 1
-%             direction_vector = v1;
-%         elseif direction_flag == 0
-%             direction_vector = -v1;
-%         else
-%             direction_vector = 0*v1;    % zero vector
-%         end
-%
-%         keep_direction = [keep_direction direction_vector];
-%
-%
-%     end
-
-zero_element = find(XY_update_to_keep_direction==0);
-a = [1:size(XY_update_to_keep_direction,1)];
-b = a(~ismember(a,XY_update_to_keep_direction));
-if ~isempty(zero_element)
-    for i_count = 1:size(zero_element,1)
-        XY_update_to_keep_direction(zero_element(i_count,1),1) = b(i_count);
-    end
-    
 end
 
 
@@ -2823,7 +2598,6 @@ for i_index = 1:size(AREA,1)    %26
     end
     
     keep_direction = [keep_direction direction_vector];
-    keep_ecc = [keep_ecc ECCENTRICITY(index)];
     
     
 end
