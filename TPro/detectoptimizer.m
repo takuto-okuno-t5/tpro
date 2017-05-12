@@ -903,7 +903,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 
     % calc and draw direction
     if sharedInst.showDirection
-        keep_direction = PD_direction(X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        keep_direction = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         quiver(X_update_keep(:), Y_update_keep(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     
@@ -998,7 +998,7 @@ function [ outVector, isFound ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, 
 end
 
 %%
-function [ keep_direction ] = PD_direction(X_update2, Y_update2, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
+function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
     sharedInst = sharedInstance(0); % get shared
 
     % init
