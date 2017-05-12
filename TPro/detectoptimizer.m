@@ -23,7 +23,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 09-May-2017 16:10:40
+    % Last Modified by GUIDE v2.5 13-May-2017 03:13:11
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -99,7 +99,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
 
-    set(handles.text7, 'String', sharedInst.frameNum);
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
@@ -108,6 +107,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.edit1, 'String', sharedInst.startFrame);
     set(handles.edit2, 'String', sharedInst.endFrame);
     set(handles.edit3, 'String', sharedInst.frameSteps);
+    set(handles.edit4, 'String', sharedInst.frameNum);
 
     set(hObject, 'name', ['Detection Optimizer for ', sharedInst.shuttleVideo.name]); % set window title
 
@@ -339,7 +339,7 @@ function slider1_Callback(hObject, eventdata, handles)
     sharedInst.detectedPointY = [];
     sharedInstance(sharedInst); % set shared instance
 
-    set(handles.text7, 'String', sharedInst.frameNum);
+    set(handles.edit4, 'String', sharedInst.frameNum);
     guidata(hObject, handles);    % Update handles structure
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
@@ -574,6 +574,53 @@ function edit3_CreateFcn(hObject, eventdata, handles)
     %       See ISPC and COMPUTER.
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
+    end
+end
+
+%%
+function edit4_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    frame = str2double(get(hObject,'String'));
+    set(handles.slider1, 'value', frame);
+    slider1_Callback(handles.slider1, eventdata, handles)
+end
+
+%% --- Executes during object creation, after setting all properties.
+function edit4_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+
+% --- Executes on key release with focus on figure1 and none of its controls.
+function figure1_KeyReleaseFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+    %	Key: name of the key that was released, in lower case
+    %	Character: character interpretation of the key(s) that was released
+    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = sharedInstance(0); % get shared
+    if strcmp(eventdata.Key, 'rightarrow')
+        if sharedInst.frameNum < sharedInst.maxFrame
+            set(handles.slider1, 'value', sharedInst.frameNum+1);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        end
+    elseif strcmp(eventdata.Key, 'leftarrow')
+        if sharedInst.frameNum > 1
+            set(handles.slider1, 'value', sharedInst.frameNum-1);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        end
     end
 end
 
