@@ -112,7 +112,7 @@ set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
 tic
     
 outputFileName = './input/input_video_control.xlsx';
-A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', 'TH_peak', 'ROI', 'rej_dist', 'frame_limit', 'G_Strength','G_Radius', 'AreaPixel', 'Step'};
+A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', 'TH_peak', 'ROI', 'rej_dist', '', 'G_Strength','G_Radius', 'AreaPixel', 'Step'};
 if ischar(fileNames)
     fileCount = 1;
 else
@@ -131,7 +131,7 @@ for i = 1:fileCount
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0.6', '1', '200', '2000', '12', '4', '50', '1'};
+    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0.6', '1', '200', '0', '12', '4', '50', '1'};
     A = vertcat(A,B);
 end
 
@@ -839,6 +839,7 @@ end
 
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
+MAX_FLIES = 400; % maxmum number of flies
 
 u = 0; % no acceleration
 noise_process = 1; % process noise
@@ -881,38 +882,36 @@ for data_th = 1:(size(raw,1)-1)
 
     % initialize estimation variables for two dimensions
     Q = [X{frame_start} Y{frame_start} zeros(length(X{frame_start}),1) zeros(length(X{frame_start}),1)]';
-    Q_estimate = nan(4,2000);
+    Q_estimate = nan(4, MAX_FLIES);
     Q_estimate(:,1:size(Q,2)) = Q;  % initial location
-    direction_track = nan(2,2000); % initialize the direction
+    direction_track = nan(2, MAX_FLIES); % initialize the direction
     direction_track(:,1:size(keep_direction_sorted{frame_start},2)) = keep_direction_sorted{frame_start};
     ecc_enable = exist('keep_ecc_sorted');
     angle_enable = exist('keep_angle_sorted');
     if ecc_enable
-        ecc_track = nan(1,2000);
+        ecc_track = nan(1, MAX_FLIES);
         ecc_track(:,1:size(keep_ecc_sorted{frame_start},2)) = keep_ecc_sorted{frame_start};
     end
     if angle_enable
-        angle_track = nan(1,2000);
+        angle_track = nan(1, MAX_FLIES);
         angle_track(:,1:size(keep_angle_sorted{frame_start},2)) = keep_angle_sorted{frame_start};
     end
-    Q_loc_estimateY = nan(2000); % position estimate
-    Q_loc_estimateX = nan(2000); % position estimate
+    Q_loc_estimateY = nan(MAX_FLIES); % position estimate
+    Q_loc_estimateX = nan(MAX_FLIES); % position estimate
     P_estimate = P;  % covariance estimator
-    strk_trks = zeros(1,2000);  % counter of how many strikes a track has gotten
-    outbound_trks = zeros(1,2000);  % counter of out boundary track
+    strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
+    outbound_trks = zeros(1, MAX_FLIES);  % counter of out boundary track
     nD = size(X{frame_start},1); % initize number of detections
-    nF =  find(isnan(Q_estimate(1,:))==1,1)-1 ; % initize number of track estimates
-    v_keep = nan(3,2000); % mean value of velocity
-    v_agent_max_keep = nan(1,2000); % max velocity of an agent at each time step
+    flyNum =  find(isnan(Q_estimate(1,:))==1,1)-1 ; % initize number of track estimates
+    v_keep = nan(3, MAX_FLIES); % mean value of velocity
+    v_agent_max_keep = nan(1, MAX_FLIES); % max velocity of an agent at each time step
 
     keep_data = cell(1,4);  % x y vx vy
-    frame_limit = num(data_th, 12);
-    keep_data{1} = nan(frame_limit,200);
-    keep_data{2} = nan(frame_limit,200);
-    keep_data{3} = nan(frame_limit,200);
-    keep_data{4} = nan(frame_limit,200);
-
-
+    outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 8;
+    keep_data{1} = nan(outFrameNum, MAX_FLIES);
+    keep_data{2} = nan(outFrameNum, MAX_FLIES);
+    keep_data{3} = nan(outFrameNum, MAX_FLIES);
+    keep_data{4} = nan(outFrameNum, MAX_FLIES);
 
     % size
     img_initial = read(shuttleVideo,1);
@@ -936,7 +935,7 @@ for data_th = 1:(size(raw,1)-1)
         end
 
 
-        %% do the kalman filter
+        % do the kalman filter
         % Predict next state
         nD = size(X{t},1); %set new number of detections
 
@@ -952,7 +951,7 @@ for data_th = 1:(size(raw,1)-1)
         %
         %                 end
 
-        for F = 1:nF
+        for F = 1:flyNum
             Q_estimate(:,F) = A * Q_estimate(:,F) + B * u;
             %         if (Q_estimate(1,F) > img_h) || (Q_estimate(2,F) > img_w) || (Q_estimate(1,F) < 0) || (Q_estimate(2,F) < 0)
             %             % if the predict is out of bound
@@ -968,14 +967,14 @@ for data_th = 1:(size(raw,1)-1)
         K = P*C'*inv(C*P*C'+Ez);
 
 
-        %% assign the detections to estimated track positions
+        % assign the detections to estimated track positions
         %make the distance (cost) matrice between all pairs rows = tracks, coln =
         %detections
         if ~isempty(Q_loc_meas)
 
-            est_dist = pdist([Q_estimate(1:2,1:nF)'; Q_loc_meas]);
+            est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
             est_dist = squareform(est_dist); %make square
-            est_dist = est_dist(1:nF,nF+1:end) ; %limit to just the tracks to detection distances
+            est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
 
             %                 for est_count = 1:nF    % added on 2016-07-28
             %                     if min(est_dist(est_count,:)) < 50
@@ -992,7 +991,7 @@ for data_th = 1:(size(raw,1)-1)
 
             %check 1: is the detection far from the observation? if so, reject it.
             rej = [];
-            for F = 1:nF
+            for F = 1:flyNum
                 if asgn(F) > 0  % if track F has pair asgn(F)
                     rej(F) = est_dist(F,asgn(F)) < reject_dist ;
                     if check_direction_enable
@@ -1009,7 +1008,7 @@ for data_th = 1:(size(raw,1)-1)
             end
 
 
-            %%
+            %
 
             asgn = asgn.*rej;
 
@@ -1018,9 +1017,9 @@ for data_th = 1:(size(raw,1)-1)
                 Q_loc_meas2 = Q_loc_meas;
                 Q_loc_meas2(ismember(1:size(Q_loc_meas,1),asgn),:) = NaN;
 
-                est_dist2 = pdist([Q_estimate_before_update(1:2,1:nF)'; Q_loc_meas2]);
+                est_dist2 = pdist([Q_estimate_before_update(1:2,1:flyNum)'; Q_loc_meas2]);
                 est_dist2 = squareform(est_dist2); %make square
-                est_dist2 = est_dist2(1:nF,nF+1:end);  %limit to just the tracks to detection distances
+                est_dist2 = est_dist2(1:flyNum,flyNum+1:end);  %limit to just the tracks to detection distances
 
                 if cna_enable   % Closest Neighbour Approach
                     asgn2 = asgn.*0;
@@ -1100,7 +1099,7 @@ end
 
                 end
 
-                %% velocity thresholding
+                % velocity thresholding
                 if ~isnan(Q_estimate(1,k))  % if the value is not NaN
                     if velocity_thres_enable
                         % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
@@ -1122,12 +1121,12 @@ end
         % update covariance estimation.
         P =  (eye(4)-K*C)*P;
 
-        %% Store data
-        Q_loc_estimateX(t,1:nF) = Q_estimate(1,1:nF);
-        Q_loc_estimateY(t,1:nF) = Q_estimate(2,1:nF);
+        % Store data
+        Q_loc_estimateX(t,1:flyNum) = Q_estimate(1,1:flyNum);
+        Q_loc_estimateY(t,1:flyNum) = Q_estimate(2,1:flyNum);
 
         % keep data from Q_estimate
-        for F = 1:nF
+        for F = 1:flyNum
             keep_data{1}(t,F) = Q_estimate(1,F);
             keep_data{2}(t,F) = Q_estimate(2,F);
             keep_data{3}(t,F) = Q_estimate(3,F);
@@ -1146,11 +1145,10 @@ end
         if ~isempty(Q_loc_meas)
 
             %find the new detections. basically, anything that doesn't get assigned is a new tracking
-            new_trk = [];
             new_trk = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:)';
             if ~isempty(new_trk)
-                Q_estimate(:,nF+1:nF+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
-                nF = nF + size(new_trk,2);  % number of track estimates with new ones included
+                Q_estimate(:,flyNum+1:flyNum+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
+                flyNum = flyNum + size(new_trk,2);  % number of track estimates with new ones included
             end
 
         end  % end of if ~isempty(Q_loc_meas)
@@ -1172,7 +1170,7 @@ end
         bad_trks = find(strk_trks > strike_track_threshold);
         Q_estimate(:,bad_trks) = NaN;
 
-        %% output figure
+        % output figure
         %%{
         if figure_enable
             clf
@@ -1184,7 +1182,7 @@ end
             T = size(Q_loc_estimateX,2);
             Ms = [3 5]; %marker sizes
             c_list = ['r' 'b' 'g' 'c' 'm' 'y'];
-            for Dc = 1:nF     %normal
+            for Dc = 1:flyNum     %normal
                 %                     for Dc = 1:1        %rodent
                 if ~isnan(Q_loc_estimateX(t,Dc))
                     Sz = mod(Dc,2)+1; %pick marker size
@@ -1240,11 +1238,11 @@ end
     write_file_dd2 = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
     if ecc_enable
         write_file_ecc = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
-        keep_data{7} = keep_data{7}(:,1:nF);
+        keep_data{7} = keep_data{7}(:,1:flyNum);
     end
     if angle_enable
         write_file_angle = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
-        keep_data{8} = keep_data{8}(:,1:nF);
+        keep_data{8} = keep_data{8}(:,1:flyNum);
         % inverse the angle upside-down
         keep_data{8} = -keep_data{8};
     end
@@ -1252,28 +1250,27 @@ end
     write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
 
 
-    keep_data{1} = keep_data{1}(:,1:nF);
-    keep_data{2} = keep_data{2}(:,1:nF);
-    keep_data{3} = keep_data{3}(:,1:nF);
-    keep_data{4} = keep_data{4}(:,1:nF);
-    keep_data{5} = keep_data{5}(:,1:nF);
-    keep_data{6} = keep_data{6}(:,1:nF);
+    keep_data{1} = keep_data{1}(:,1:flyNum);
+    keep_data{2} = keep_data{2}(:,1:flyNum);
+    keep_data{3} = keep_data{3}(:,1:flyNum);
+    keep_data{4} = keep_data{4}(:,1:flyNum);
+    keep_data{5} = keep_data{5}(:,1:flyNum);
+    keep_data{6} = keep_data{6}(:,1:flyNum);
 
 
     % find end of row
     a = isnan(keep_data{1});
     b = sum(a,2);
-    end_row = find(b==nF,1) - 1;
+    end_row = find(b==flyNum,1) - 1;
     % make save string
     save_string = [];
-    for s_count = 1:nF
+    for s_count = 1:flyNum
         save_string = [save_string '%.4f '];
     end
     save_string = [save_string '\n'];
 
 
     % cook raw data before saving
-    distance_travel = [];
     for row_count = 1:end_row
         fprintf(write_file_y,save_string , img_h - keep_data{1}(row_count, :));
         fprintf(write_file_x,save_string , keep_data{2}(row_count, :));
