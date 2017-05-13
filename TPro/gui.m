@@ -112,7 +112,7 @@ set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
 tic
     
 outputFileName = './input/input_video_control.xlsx';
-A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', 'TH_peak', 'ROI', 'rej_dist', '', 'G_Strength','G_Radius', 'AreaPixel', 'Step'};
+A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', '', 'ROI', 'rej_dist', '', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 if ischar(fileNames)
     fileCount = 1;
 else
@@ -131,7 +131,7 @@ for i = 1:fileCount
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0.6', '1', '200', '0', '12', '4', '50', '1'};
+    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0', '1', '200', '0', '12', '4', '50', '1', '0.5'};
     A = vertcat(A,B);
 end
 
@@ -193,53 +193,70 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 
 % background detection for active movie
 for data_th = 1:(size(raw,1)-1)
-    if num(data_th,1)
-        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-
-        % show detecting message
-        set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name])
-
-        % make output folder
-        pathName = strcat('./bg_output/',shuttleVideo.name);
-        backgroundFileName = strcat(pathName,'/',shuttleVideo.name,'bg.png');
-        if ~exist(pathName, 'dir')
-            mkdir(pathName);
-        end
-        
-        range = num(data_th, 6);
-        r = randperm(range);
-        r = r(1:calcFramesNumber);
-
-        % initialize output matrix 
-        frameImage = read(shuttleVideo,1);
-        [m,n,l] = size(frameImage);
-        grayImages = uint8(zeros(m,n,calcFramesNumber));
-
-        % find appropriate background pixels
-        for i = 1 : calcFramesNumber
-            set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
-            frameImage = read(shuttleVideo,r(i));
-            grayImage = rgb2gray(frameImage);
-            grayImages(:,:,i) = grayImage;
-        end
-        bgImage = mode(grayImages,3);
-
-        % create new background window if it does not exist
-        if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-            figureWindow = figure('name','detecting ','NumberTitle','off');
-        end
-        
-        % show background image
-        figure(figureWindow);
-        clf
-        imshow(bgImage);
-        set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
-
-        % output png file
-        imwrite(bgImage, backgroundFileName);
-        disp(num2str(data_th));
-        clear img
+    % check active flag
+    if ~num(data_th,1)
+        continue;
     end
+    
+    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+
+    % show detecting message
+    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name])
+
+    % make output folder
+    pathName = strcat('./bg_output/',shuttleVideo.name);
+    backgroundFileName = strcat(pathName,'/',shuttleVideo.name,'bg.png');
+    if ~exist(pathName, 'dir')
+        mkdir(pathName);
+    end
+
+    range = num(data_th, 6);
+    r = randperm(range);
+    r = r(1:calcFramesNumber);
+
+    % initialize output matrix 
+    frameImage = read(shuttleVideo,1);
+    [m,n,l] = size(frameImage);
+    grayImages = uint8(zeros(m,n,calcFramesNumber));
+
+    % find appropriate background pixels
+    for i = 1 : calcFramesNumber
+        set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
+        frameImage = read(shuttleVideo,r(i));
+        grayImage = rgb2gray(frameImage);
+        grayImages(:,:,i) = grayImage;
+    end
+    bgImage = mode(grayImages,3);
+    
+    % sometimes fly stays same position. and mode does not work well.
+    % check its mean color and difference each pixels.
+    bgMeanImage = mean(grayImages,3);
+    maxImage = max(grayImages,3); % get most blight image
+    diffImage = abs(double(bgImage) - bgMeanImage);
+    diffImage2 = maxImage - bgImage;
+    for x = 1 : n
+        for y = 1 : m
+            if diffImage(y,x) > 80 || diffImage2(y,x) > 150
+                bgImage(y,x) = maxImage(y,x);
+            end
+        end
+    end
+
+    % create new background window if it does not exist
+    if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+        figureWindow = figure('name','detecting ','NumberTitle','off');
+    end
+
+    % show background image
+    figure(figureWindow);
+    clf
+    imshow(bgImage);
+    set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
+
+    % output png file
+    imwrite(bgImage, backgroundFileName);
+    disp(num2str(data_th));
+    clear img
 end
 
 % close background image window
@@ -429,13 +446,13 @@ for data_th = 1:(size(raw,1)-1)
     end
     
     blob_threshold = num(data_th, 8);
-    blob_threshold_peak = num(data_th, 9);
     start_frame = num(data_th, 4);
     end_frame = num(data_th, 5);
     frame_steps = num(data_th, 16);
     h = num(data_th, 13);
     sigma = num(data_th, 14);
     area_pixel = num(data_th, 15);
+    blobSeparateRate = num(data_th, 17);
 
     shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
 
@@ -574,7 +591,7 @@ for data_th = 1:(size(raw,1)-1)
 
         % get blobs from step function
         if blob_center_enable
-            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
+            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold, blobSeparateRate);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -1400,7 +1417,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold )
+function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold, blobSeparateRate )
 
 [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
 
@@ -1422,7 +1439,7 @@ blobEcc = [];
 for i = 1 : blob_num
     % check blobAreas dimension of current blob and how bigger than avarage.
     area_ratio = double(origAreas(i))/area_mean;
-    if (mod(area_ratio,1) > 0.4)
+    if (mod(area_ratio,1) > blobSeparateRate)
         expect_num = area_ratio + (1-mod(area_ratio,1));
     else
         expect_num = round(area_ratio); % round to the nearest integer

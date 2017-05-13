@@ -90,6 +90,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.gaussSigma = num(rowNum,14);
     sharedInst.binaryTh = num(rowNum,8) * 100;
     sharedInst.binaryAreaPixel = num(rowNum,15);
+    sharedInst.blobSeparateRate = num(rowNum,17);
     sharedInst.isModified = false;
 
     sharedInst.originalImage = [];
@@ -874,7 +875,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     for i = 1 : blob_num
         % check blobAreas dimension of current blob and how bigger than avarage.
         area_ratio = double(origAreas(i))/area_mean;
-        if (mod(area_ratio,1) > 0.4)
+        if (mod(area_ratio,1) > sharedInst.blobSeparateRate)
             expect_num = area_ratio + (1-mod(area_ratio,1));
         else
             expect_num = round(area_ratio); % round to the nearest integer
@@ -975,9 +976,9 @@ function saveExcelConfigurationFile(handles)
     frameRate = sharedInst.shuttleVideo.FrameRate;
 
     B = {'1', name, '', num2str(sharedInst.startFrame), num2str(sharedInst.endFrame), frameNum, frameRate, ...
-        num2str(sharedInst.binaryTh / 100), '0.6', '1', '200', '0', ...
+        num2str(sharedInst.binaryTh / 100), '0', '1', '200', '0', ...
         num2str(sharedInst.gaussH), num2str(sharedInst.gaussSigma), num2str(sharedInst.binaryAreaPixel), ...
-        num2str(sharedInst.frameSteps)};
+        num2str(sharedInst.frameSteps), '0.5'};
 
     outputFileName = './input/input_video_control.xlsx';
     status = xlswrite(outputFileName,B,1,['A',num2str(sharedInst.rowNum+1)]);
