@@ -162,11 +162,6 @@ addpath(genpath('multi'));
 addpath(genpath('detect_output'));
 addpath(genpath('../input_share'));
 
-file_list =  dir('./input/*png');
-if isempty(file_list)
-    file_list = dir('./input/*jpg');
-end
-
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
     file_list2 = dir('../input_share/*mov');
@@ -178,12 +173,12 @@ if ~isempty(file_list2)
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
     else
-        disp('please put input xlsx files into the folder')
-        return
+        disp('please put input xlsx files into the folder');
+        return;
     end
 else
-    disp('please put input video files into the folder')
-    return
+    disp('please put input video files into the folder');
+    return;
 end
 
 tic % start timer
@@ -283,12 +278,12 @@ if ~isempty(file_list2)
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
     else
-        disp('please put input xlsx files into the folder')
-        return
+        disp('please put input xlsx files into the folder');
+        return;
     end
 else
-    disp('please put input video files into the folder')
-    return
+    disp('please put input video files into the folder');
+    return;
 end
 
 % show start text
@@ -320,8 +315,6 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% set(handles.edit1, 'String','detection.m done!')
-tic
 
 addpath(genpath('function'));
 addpath(genpath('input'));
@@ -329,7 +322,6 @@ addpath(genpath('parameter'));
 addpath(genpath('multi'));
 addpath(genpath('detect_output'));
 addpath(genpath('../input_share'));
-
 
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
@@ -342,16 +334,20 @@ if ~isempty(file_list2)
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
     else
-        disp('please put input xlsx files into the folder')
-        return
+        disp('please put input xlsx files into the folder');
+        return;
     end
 else
-    disp('please put input video files into the folder')
-    return
+    disp('please put input video files into the folder');
+    return;
 end
 
-% load parameters
+% show start text
+set(handles.edit1, 'String','detection ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+
 %% parameters setting
+tic % start timer
 
 % near point average
 npa_radius = 12; % set 0 to skip
@@ -426,305 +422,301 @@ keep_i = [];
 keep_count = [];
 
 % added on 2016-07-28
-if ~isempty(file_list2) && ~isempty(file_list3)
-    for data_th = 1:(size(raw,1)-1)
-        if num(data_th,1)
-            
-            blob_threshold = num(data_th, 8);
-            blob_threshold_peak = num(data_th, 9);
-            start_frame = num(data_th, 4);
-            end_frame = num(data_th, 5);
-            frame_steps = num(data_th, 16);
-            h = num(data_th, 13);
-            sigma = num(data_th, 14);
-            area_pixel = num(data_th, 15);
+for data_th = 1:(size(raw,1)-1)
+    if num(data_th,1)
 
-            shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+        blob_threshold = num(data_th, 8);
+        blob_threshold_peak = num(data_th, 9);
+        start_frame = num(data_th, 4);
+        end_frame = num(data_th, 5);
+        frame_steps = num(data_th, 16);
+        h = num(data_th, 13);
+        sigma = num(data_th, 14);
+        area_pixel = num(data_th, 15);
+
+        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+
+        % ROI
+        videoName = shuttleVideo.name;
+        roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            roi_mask = im2double(img);
+        else
+            roi_mask = [];
+        end
+
+        bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+        if exist(bgImageFile, 'file')
+            bgImage = imread(bgImageFile);
+            if size(size(bgImage),2) == 2 % one plane background
+                bgImage(:,:,2) = bgImage(:,:,1);
+                bgImage(:,:,3) = bgImage(:,:,1);
+            end
+            bgImage = rgb2gray(bgImage);
+            bg_img_double = double(bgImage);
+            bg_img_mean = mean(mean(bgImage));
+        else
+            bg_img_double = [];
+            bg_img_mean = [];
+        end
+
+        % make output folder
+        filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+        mkdir(strcat('./detect_output/',shuttleVideo.name,'_',filename));
+
+        X = cell(1,length(end_frame-start_frame+1));
+        Y = cell(1,length(end_frame-start_frame+1));
+        detection_num = nan(2,end_frame-start_frame+1);
+
+        i = 1;
+        for i_count = start_frame : frame_steps : end_frame
+            img_real = read(shuttleVideo, i_count);
+            grayImg = rgb2gray(img_real);
+            if ~isempty(bg_img_mean)
+                grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
+                grayImageDouble = double(grayImg);
+                img = bg_img_double - grayImageDouble;
+                img = uint8(img);
+                img = imcomplement(img);
+            else
+                img = grayImg;
+            end
+
+            %do the blob filter
+            blob_img = PD_blobfilter(img, h, sigma);
 
             % ROI
-            videoName = shuttleVideo.name;
-            roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
-            if exist(roiFileName, 'file')
-                img = imread(roiFileName);
-                roi_mask = im2double(img);
-            else
-                roi_mask = [];
+            if ~isempty(roi_mask)
+                blob_img = blob_img .* roi_mask;
             end
 
-            bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
-            if exist(bgImageFile, 'file')
-                bgImage = imread(bgImageFile);
-                if size(size(bgImage),2) == 2 % one plane background
-                    bgImage(:,:,2) = bgImage(:,:,1);
-                    bgImage(:,:,3) = bgImage(:,:,1);
-                end
-                bgImage = rgb2gray(bgImage);
-                bg_img_double = double(bgImage);
-                bg_img_mean = mean(mean(bgImage));
-            else
-                bg_img_double = [];
-                bg_img_mean = [];
-            end
-            
-            % make output folder
-            filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-            mkdir(strcat('./detect_output/',shuttleVideo.name,'_',filename));
-            
-            X = cell(1,length(end_frame-start_frame+1));
-            Y = cell(1,length(end_frame-start_frame+1));
-            detection_num = nan(2,end_frame-start_frame+1);
-            
-            i = 1;
-            for i_count = start_frame : frame_steps : end_frame
-                img_real = read(shuttleVideo, i_count);
-                grayImg = rgb2gray(img_real);
-                if ~isempty(bg_img_mean)
-                    grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
-                    grayImageDouble = double(grayImg);
-                    img = bg_img_double - grayImageDouble;
-                    img = uint8(img);
-                    img = imcomplement(img);
-                else
-                    img = grayImg;
-                end
-                
-                %do the blob filter
-                blob_img = PD_blobfilter(img, h, sigma);
-
-                % ROI
-                if ~isempty(roi_mask)
-                    blob_img = blob_img .* roi_mask;
-                end
-                
-                % imshow(blob_img)
+            % imshow(blob_img)
 %                blob_img_1st = blob_img;
-                
-                %                 if animal_type == 2     % rodent set blob_threshold_peak to be the maximum of blob_img_1st
-                %                     blob_th_test = blob_threshold;
-                %                     blob_img_test = blob_img;
-                %                     for th_i = 1:10
-                %                         blob_img_test2 = blob_img_test;
-                %                         idx_test = find(blob_img_test < blob_th_test);
-                %                         blob_img_test2(idx_test) = nan;
-                %                         if sum(sum(~isnan(blob_img_test2))) > 100
-                %                             break;
-                %                         else
-                %                             blob_th_test = blob_th_test - 0.05;
-                %                         end
-                %                     end
-                %                     blob_threshold = blob_th_test;
-                %                 end
+
+            %                 if animal_type == 2     % rodent set blob_threshold_peak to be the maximum of blob_img_1st
+            %                     blob_th_test = blob_threshold;
+            %                     blob_img_test = blob_img;
+            %                     for th_i = 1:10
+            %                         blob_img_test2 = blob_img_test;
+            %                         idx_test = find(blob_img_test < blob_th_test);
+            %                         blob_img_test2(idx_test) = nan;
+            %                         if sum(sum(~isnan(blob_img_test2))) > 100
+            %                             break;
+            %                         else
+            %                             blob_th_test = blob_th_test - 0.05;
+            %                         end
+            %                     end
+            %                     blob_threshold = blob_th_test;
+            %                 end
 %                idx = find(blob_img < blob_threshold);
 %                blob_img(idx) = nan ;
-                
-                %                 %%% find the number of detection
-                %                 blob_img_logical = blob_img_1st;
-                %                 blob_img_logical(~idx) = 1;
-                %                 blob_img_logical(idx) = 0;
-                %                 blob_img_logical = logical(blob_img_logical);
-                %                 abc = bwareaopen(blob_img_logical, 50);
-                %                 [AREA,CENTROID,BBOX] = step(H,abc);
-                %                 dnum = dnum + size(AREA,1)
-                
-                %                     %% for output cut_Video_14.avi blob specific and normal thresholding
-                %                     figure(1)
-                %                     imshow(blob_img(228:255,329:369))
-                %                     set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
-                %
-                %                     figure(2)
-                %                     img2 = uint8(img);
-                %                     idx_img2 = find(img2 > 160);
-                %                     idx2_img2 = find(img2 <= 160);
-                %                     img2(idx_img2) = nan ;
-                %                     img2(idx2_img2) = 255 ;
-                %                     imshow(img2(228:255,329:369))
-                %                     set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
-                % %                     f=getframe;
-                % %                     imwrite(f.cdata,strcat('./for_resource/','blob_after_thresholding','.png'));
-                %                     keyboard
-                
-                %%% for output cut_Video_14.aviblob_after_thresholding
-                %                     imshow(blob_img)
-                %                     f=getframe;
-                %                     imwrite(f.cdata,strcat('./for_resource/','blob_after_thresholding','.png'));
-                %                     keyboard
-                
-                %%% for output cut_Video_14.aviblob_splitting
-                %                     imshow(blob_img(60:130,320:390))
-                %                     f=getframe;
-                %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting','.png'));
-                %                     keyboard
-                
-                %                 %% for output 3d splitting
-                %
-                %                                 blob_temp = blob_img(60:130,320:390);
-                %                                 blob_temp(1:end,:) = blob_img(130:-1:60,320:390);
-                %                                 surf(blob_temp);
-                %                                 colormap(parula);
-                %                                 axis([20 60 20 50 0.8 2.4])
-                %                                 view(-15,29)
-                %                                 xlabel('x','FontSize',18)
-                %                                 ylabel('y','FontSize',18)
-                %                                 zlabel('z','FontSize',18)
-                %                                 set(gca,'fontsize',18)
-                %                                 f=getframe;
-                %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting','.png'));
-                %                                 keyboard
 
-                img = imbinarize(blob_img, blob_threshold);
-                blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
+            %                 %%% find the number of detection
+            %                 blob_img_logical = blob_img_1st;
+            %                 blob_img_logical(~idx) = 1;
+            %                 blob_img_logical(idx) = 0;
+            %                 blob_img_logical = logical(blob_img_logical);
+            %                 abc = bwareaopen(blob_img_logical, 50);
+            %                 [AREA,CENTROID,BBOX] = step(H,abc);
+            %                 dnum = dnum + size(AREA,1)
 
-                % get blobs from step function
-                if blob_center_enable
-                    [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
-                end
-                
-                %%% for output cut_Video_14.aviblob_splitting_after
-                %                     imshow(blob_img_logical2(60:130,320:390))
-                %                     f=getframe;
-                %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting_after','.png'));
-                %                     keyboard
-                
-                %                 %% for output 3d splitting
-                %                                 blob_img_temp = blob_img.*blob_img_logical2;
-                %                                 blob_temp = blob_img_temp(60:130,320:390);
-                %                                 blob_temp(1:end,:) = blob_img_temp(130:-1:60,320:390);
-                %                                 surf(blob_temp);
-                %                                 colormap(parula);
-                %                                 axis([20 60 20 50 0.8 2.4])
-                %                                 view(-15,29)
-                %                                 xlabel('x','FontSize',18)
-                %                                 ylabel('y','FontSize',18)
-                %                                 zlabel('z','FontSize',18)
-                %                                 set(gca,'fontsize',18)
-                %                                 f=getframe;
-                %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting_after','.png'));
-                %                                 keyboard
-                
-                if extrema_enable
-                    
-                    [zmax,imax,zmin,imin] = extrema2(blob_img);
-                    
-                    [X{i},Y{i}] = ind2sub(size(blob_img),imax);
-                    
-                    % near point average
-                    [ X_update{i}, Y_update{i} ] = PD_npa(X{i}, Y{i}, npa_radius);
-                    
-                    % blob analysis
-                    if ba_enable
-                        % blob_img_logical is logical version of blob image after thresholding
-                        blob_img_logical = blob_img_1st;
-                        blob_img_logical(~idx) = 1;
-                        blob_img_logical(idx) = 0;
-                        blob_img_logical = logical(blob_img_logical);
-                        [ X_update2{i}, Y_update2{i} ] = PD_blob_analysis( H, blob_img_logical, X_update{i}, Y_update{i} );
-                        blob_img_logical2 = blob_img_logical;   % just copy blob_img_logical
-                    end
-                    
-                    
-                end
-                
-                %% working 20170315
-                %                 [ keep_direction, XY_update_to_keep_direction, keep_ecc] = PD_wing( H, img, img_gray, blob_img_logical2, X_update2{i}, Y_update2{i} );
-                
-                
-                
-                %%
-                [ keep_direction, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-                %[ keep_direction, keep_angle ] = PD_direction2( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-                % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
-                % sort based on X_update2 and Y_update2
-                keep_direction_sorted{i} = keep_direction;
-                keep_ecc_sorted{i} = blobEcc';
-                keep_angle_sorted{i} = keep_angle;
-                
-                %     clf
-                %     imshow(img_real);
-                %     hold on;
-                %     plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                %     title('updated2 detection')
-                %     quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                %     % save figure
-                %     f=getframe;
-                %     imwrite(f.cdata,strcat('./output/direct_img',file_list(i).name));
-                
-                %     disp(strcat(num2str(100*i/length(file_list)),'%','   detection : ', num2str(size(imax,1))));
-                
-                if extrema_enable
-                    if size(imax,1) == size(X_update{i},1)
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
-                    elseif ba_enable
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
-                    else
-                        disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
-                    end
-                    detection_num(:,i) = [size(imax,1); size(X_update{i},1)];
-                end
-                
-                if blob_center_enable
-                    disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', ' i:',num2str(i),' frame:',num2str(i_count), '   detect_blob_center : ', num2str(size(X_update2{i},1))));
-                end
-                
-                % graph
-                if detect_fig_enable
-                    % create new roi window if it does not exist
-                    if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-                        figureWindow = figure('name','selecting roi','NumberTitle','off');
-                    end
+            %                     %% for output cut_Video_14.avi blob specific and normal thresholding
+            %                     figure(1)
+            %                     imshow(blob_img(228:255,329:369))
+            %                     set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
+            %
+            %                     figure(2)
+            %                     img2 = uint8(img);
+            %                     idx_img2 = find(img2 > 160);
+            %                     idx2_img2 = find(img2 <= 160);
+            %                     img2(idx_img2) = nan ;
+            %                     img2(idx2_img2) = 255 ;
+            %                     imshow(img2(228:255,329:369))
+            %                     set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
+            % %                     f=getframe;
+            % %                     imwrite(f.cdata,strcat('./for_resource/','blob_after_thresholding','.png'));
+            %                     keyboard
 
-                    % change title message
-                    set(figureWindow, 'name', ['detection for ', shuttleVideo.name]);
-                    figure(figureWindow);
-                    clf
-        
-                    if intensity_shift ~= 0
-                        imshow(uint8(img_gray_double));
-                    else
-                        imshow(img_real);
-                    end
-                    hold on;
-                    
-                    if size(X_update2{i},1) ~= 0
-                        plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                        quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
-                    end
-                    % save figure
-                    f=getframe;
-                    filename2 = [sprintf('%05d',i_count) '.png'];
-                    imwrite(f.cdata,strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',filename2));
-                    pause(0.001)
-                end
-                % graph for detection analysis
-                keep_i = [keep_i i];
-                keep_count = [keep_count size(X_update2{i},1)];
-                set(handles.text9, 'String',[num2str(int64(100*(i_count-start_frame)/(end_frame-start_frame+1))) ' %']);
-                pause(0.001)
-                i = i + 1;
+            %%% for output cut_Video_14.aviblob_after_thresholding
+            %                     imshow(blob_img)
+            %                     f=getframe;
+            %                     imwrite(f.cdata,strcat('./for_resource/','blob_after_thresholding','.png'));
+            %                     keyboard
+
+            %%% for output cut_Video_14.aviblob_splitting
+            %                     imshow(blob_img(60:130,320:390))
+            %                     f=getframe;
+            %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting','.png'));
+            %                     keyboard
+
+            %                 %% for output 3d splitting
+            %
+            %                                 blob_temp = blob_img(60:130,320:390);
+            %                                 blob_temp(1:end,:) = blob_img(130:-1:60,320:390);
+            %                                 surf(blob_temp);
+            %                                 colormap(parula);
+            %                                 axis([20 60 20 50 0.8 2.4])
+            %                                 view(-15,29)
+            %                                 xlabel('x','FontSize',18)
+            %                                 ylabel('y','FontSize',18)
+            %                                 zlabel('z','FontSize',18)
+            %                                 set(gca,'fontsize',18)
+            %                                 f=getframe;
+            %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting','.png'));
+            %                                 keyboard
+
+            img = imbinarize(blob_img, blob_threshold);
+            blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
+
+            % get blobs from step function
+            if blob_center_enable
+                [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold );
             end
-            X = X_update2;
-            Y = Y_update2;
-            %save it!
-            filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-            save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted')
-            save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count')
-            set(handles.text9, 'String','100 %'); % done!
+
+            %%% for output cut_Video_14.aviblob_splitting_after
+            %                     imshow(blob_img_logical2(60:130,320:390))
+            %                     f=getframe;
+            %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting_after','.png'));
+            %                     keyboard
+
+            %                 %% for output 3d splitting
+            %                                 blob_img_temp = blob_img.*blob_img_logical2;
+            %                                 blob_temp = blob_img_temp(60:130,320:390);
+            %                                 blob_temp(1:end,:) = blob_img_temp(130:-1:60,320:390);
+            %                                 surf(blob_temp);
+            %                                 colormap(parula);
+            %                                 axis([20 60 20 50 0.8 2.4])
+            %                                 view(-15,29)
+            %                                 xlabel('x','FontSize',18)
+            %                                 ylabel('y','FontSize',18)
+            %                                 zlabel('z','FontSize',18)
+            %                                 set(gca,'fontsize',18)
+            %                                 f=getframe;
+            %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting_after','.png'));
+            %                                 keyboard
+
+            if extrema_enable
+
+                [zmax,imax,zmin,imin] = extrema2(blob_img);
+
+                [X{i},Y{i}] = ind2sub(size(blob_img),imax);
+
+                % near point average
+                [ X_update{i}, Y_update{i} ] = PD_npa(X{i}, Y{i}, npa_radius);
+
+                % blob analysis
+                if ba_enable
+                    % blob_img_logical is logical version of blob image after thresholding
+                    blob_img_logical = blob_img_1st;
+                    blob_img_logical(~idx) = 1;
+                    blob_img_logical(idx) = 0;
+                    blob_img_logical = logical(blob_img_logical);
+                    [ X_update2{i}, Y_update2{i} ] = PD_blob_analysis( H, blob_img_logical, X_update{i}, Y_update{i} );
+                    blob_img_logical2 = blob_img_logical;   % just copy blob_img_logical
+                end
+
+
+            end
+
+            %% working 20170315
+            %                 [ keep_direction, XY_update_to_keep_direction, keep_ecc] = PD_wing( H, img, img_gray, blob_img_logical2, X_update2{i}, Y_update2{i} );
+
+
+
+            %%
+            [ keep_direction, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            %[ keep_direction, keep_angle ] = PD_direction2( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
+            % sort based on X_update2 and Y_update2
+            keep_direction_sorted{i} = keep_direction;
+            keep_ecc_sorted{i} = blobEcc';
+            keep_angle_sorted{i} = keep_angle;
+
+            %     clf
+            %     imshow(img_real);
+            %     hold on;
+            %     plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
+            %     title('updated2 detection')
+            %     quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
+            %     % save figure
+            %     f=getframe;
+            %     imwrite(f.cdata,strcat('./output/direct_img',file_list(i).name));
+
+            %     disp(strcat(num2str(100*i/length(file_list)),'%','   detection : ', num2str(size(imax,1))));
+
+            if extrema_enable
+                if size(imax,1) == size(X_update{i},1)
+                    disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
+                elseif ba_enable
+                    disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
+                else
+                    disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
+                end
+                detection_num(:,i) = [size(imax,1); size(X_update{i},1)];
+            end
+
+            if blob_center_enable
+                disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', ' i:',num2str(i),' frame:',num2str(i_count), '   detect_blob_center : ', num2str(size(X_update2{i},1))));
+            end
+
+            % graph
+            if detect_fig_enable
+                % create new roi window if it does not exist
+                if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+                    figureWindow = figure('name','selecting roi','NumberTitle','off');
+                end
+
+                % change title message
+                set(figureWindow, 'name', ['detection for ', shuttleVideo.name]);
+                figure(figureWindow);
+                clf
+
+                if intensity_shift ~= 0
+                    imshow(uint8(img_gray_double));
+                else
+                    imshow(img_real);
+                end
+                hold on;
+
+                if size(X_update2{i},1) ~= 0
+                    plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
+                    quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
+                end
+                % save figure
+                f=getframe;
+                filename2 = [sprintf('%05d',i_count) '.png'];
+                imwrite(f.cdata,strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',filename2));
+                pause(0.001)
+            end
+            % graph for detection analysis
+            keep_i = [keep_i i];
+            keep_count = [keep_count size(X_update2{i},1)];
+            set(handles.text9, 'String',[num2str(int64(100*(i_count-start_frame)/(end_frame-start_frame+1))) ' %']);
+            pause(0.001)
+            i = i + 1;
         end
+        X = X_update2;
+        Y = Y_update2;
+        %save it!
+        filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+        save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted')
+        save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count')
+        set(handles.text9, 'String','100 %'); % done!
     end
 end
 
+% show end text
 time = toc;
-% close 'detection.m'
-set(handles.edit1, 'String',strcat('detection.m done!     t =',num2str(time),'s'))
+set(handles.edit1, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
+
 
 % tracker--- Executes on button press in pushbutton5.
 function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % hObject    handle to pushbutton5 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% set(handles.edit1, 'String','tracker_savefig_op.m done!')
-tic
-
-% run('./tracker_savefig_op.m')
 
 addpath(genpath('function'));
 addpath(genpath('input'));
@@ -733,8 +725,32 @@ addpath(genpath('output'));
 addpath(genpath('multi'));
 addpath(genpath('../input_share'));
 
-% load parameters
+file_list2 =  dir('../input_share/*avi');
+if isempty(file_list2)
+    file_list2 = dir('../input_share/*mov');
+end
+
+if ~isempty(file_list2)
+    %     file_list = [];
+    file_list3 = dir('./input/input_video_control.xlsx');
+    if ~isempty(file_list3)
+        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+        raw_a = raw(1,:);
+    else
+        disp('please put input xlsx files into the folder');
+        return;
+    end
+else
+    disp('please put input video files into the folder');
+    return;
+end
+
+% show start text
+set(handles.edit1, 'String','tracking ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+
 %% parameters setting
+tic % start timer
 
 % blobfilter parameters
 h = 30;
@@ -808,12 +824,6 @@ animal_type = get(handles.popupmenu1,'Value');
 
 % kalman filter multiple object tracking
 
-% %get frame list
-% file_list =  dir('./input/*png');
-% if isempty(file_list)
-%     file_list = dir('./input/*jpg');
-% end
-
 if figure_enable
     if visible_enable
         figure('name','tracker_savefig_op.m','NumberTitle','off')
@@ -822,21 +832,6 @@ if figure_enable
     end
 
 end
-
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
-end
-
-if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-        raw_a = raw(1,:);
-    end
-end
-
 
 %% Kalman
 
@@ -860,530 +855,528 @@ A = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1];
 B = [(dt^2/2); (dt^2/2); dt; dt];
 C = [1 0 0 0; 0 1 0 0];
 
+for data_th = 1:(size(raw,1)-1)
+    if num(data_th,1)
+        reject_dist = num(data_th, 11);
+        start_frame = num(data_th, 4);
+        end_frame = num(data_th, 5);
+        frame_steps = num(data_th, 16);
+        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
 
-if ~isempty(file_list2) && ~isempty(file_list3)
-    for data_th = 1:(size(raw,1)-1)
-        if num(data_th,1)
-            reject_dist = num(data_th, 11);
-            start_frame = num(data_th, 4);
-            end_frame = num(data_th, 5);
-            frame_steps = num(data_th, 16);
-            shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-            
-            % load detection
-            filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-            load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'))
-            
-            % make output folder
-            mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_pic'));
-            mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_data'));
-            
-            %% initialize result variables
-            Q_loc_meas = []; % location measure
-            
-            %% initialize estimation variables for two dimensions
-            Q = [X{frame_start} Y{frame_start} zeros(length(X{frame_start}),1) zeros(length(X{frame_start}),1)]';
-            Q_estimate = nan(4,2000);
-            Q_estimate(:,1:size(Q,2)) = Q;  % initial location
-            direction_track = nan(2,2000); % initialize the direction
-            direction_track(:,1:size(keep_direction_sorted{frame_start},2)) = keep_direction_sorted{frame_start};
-            ecc_enable = exist('keep_ecc_sorted');
-            angle_enable = exist('keep_angle_sorted');
+        % load detection
+        filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+        load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'))
+
+        % make output folder
+        mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_pic'));
+        mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_data'));
+
+        % initialize result variables
+        Q_loc_meas = []; % location measure
+
+        % initialize estimation variables for two dimensions
+        Q = [X{frame_start} Y{frame_start} zeros(length(X{frame_start}),1) zeros(length(X{frame_start}),1)]';
+        Q_estimate = nan(4,2000);
+        Q_estimate(:,1:size(Q,2)) = Q;  % initial location
+        direction_track = nan(2,2000); % initialize the direction
+        direction_track(:,1:size(keep_direction_sorted{frame_start},2)) = keep_direction_sorted{frame_start};
+        ecc_enable = exist('keep_ecc_sorted');
+        angle_enable = exist('keep_angle_sorted');
+        if ecc_enable
+            ecc_track = nan(1,2000);
+            ecc_track(:,1:size(keep_ecc_sorted{frame_start},2)) = keep_ecc_sorted{frame_start};
+        end
+        if angle_enable
+            angle_track = nan(1,2000);
+            angle_track(:,1:size(keep_angle_sorted{frame_start},2)) = keep_angle_sorted{frame_start};
+        end
+        Q_loc_estimateY = nan(2000); % position estimate
+        Q_loc_estimateX = nan(2000); % position estimate
+        P_estimate = P;  % covariance estimator
+        strk_trks = zeros(1,2000);  % counter of how many strikes a track has gotten
+        outbound_trks = zeros(1,2000);  % counter of out boundary track
+        nD = size(X{frame_start},1); % initize number of detections
+        nF =  find(isnan(Q_estimate(1,:))==1,1)-1 ; % initize number of track estimates
+        v_keep = nan(3,2000); % mean value of velocity
+        v_agent_max_keep = nan(1,2000); % max velocity of an agent at each time step
+
+        keep_data = cell(1,4);  % x y vx vy
+        frame_limit = num(data_th, 12);
+        keep_data{1} = nan(frame_limit,200);
+        keep_data{2} = nan(frame_limit,200);
+        keep_data{3} = nan(frame_limit,200);
+        keep_data{4} = nan(frame_limit,200);
+
+
+
+        % size
+        img_initial = read(shuttleVideo,1);
+        img_h = size(img_initial,1);
+        img_w = size(img_initial,2);
+
+        t = 1;
+        for t_count = start_frame:frame_steps:end_frame
+            % make the given detections matrix
+            Q_loc_meas = [X{t} Y{t}];
+            direction_meas = keep_direction_sorted{t};
+
+            % major & minor
             if ecc_enable
-                ecc_track = nan(1,2000);
-                ecc_track(:,1:size(keep_ecc_sorted{frame_start},2)) = keep_ecc_sorted{frame_start};
+                ecc_meas = keep_ecc_sorted{t};
             end
-            if angle_enable
-                angle_track = nan(1,2000);
-                angle_track(:,1:size(keep_angle_sorted{frame_start},2)) = keep_angle_sorted{frame_start};
-            end
-            Q_loc_estimateY = nan(2000); % position estimate
-            Q_loc_estimateX = nan(2000); % position estimate
-            P_estimate = P;  % covariance estimator
-            strk_trks = zeros(1,2000);  % counter of how many strikes a track has gotten
-            outbound_trks = zeros(1,2000);  % counter of out boundary track
-            nD = size(X{frame_start},1); % initize number of detections
-            nF =  find(isnan(Q_estimate(1,:))==1,1)-1 ; % initize number of track estimates
-            v_keep = nan(3,2000); % mean value of velocity
-            v_agent_max_keep = nan(1,2000); % max velocity of an agent at each time step
-            
-            keep_data = cell(1,4);  % x y vx vy
-            frame_limit = num(data_th, 12);
-            keep_data{1} = nan(frame_limit,200);
-            keep_data{2} = nan(frame_limit,200);
-            keep_data{3} = nan(frame_limit,200);
-            keep_data{4} = nan(frame_limit,200);
-            
-            
-            
-            % size
-            img_initial = read(shuttleVideo,1);
-            img_h = size(img_initial,1);
-            img_w = size(img_initial,2);
 
-            t = 1;
-            for t_count = start_frame:frame_steps:end_frame
-                % make the given detections matrix
-                Q_loc_meas = [X{t} Y{t}];
-                direction_meas = keep_direction_sorted{t};
-                
-                % major & minor
-                if ecc_enable
-                    ecc_meas = keep_ecc_sorted{t};
-                end
-                
-                % bodyline angle
-                if angle_enable
-                    angle_meas = keep_angle_sorted{t};
-                end
-                
-                
-                %% do the kalman filter
-                % Predict next state
-                nD = size(X{t},1); %set new number of detections
-                
-                Q_estimate_before_update = Q_estimate;  % keep Q_estimate before the update
-                
-                %                 % keep data from Q_estimate_before_update
-                %                 for F = 1:nF
-                %
-                %                     keep_data{1}(t,F) = Q_estimate_before_update(1,F);
-                %                     keep_data{2}(t,F) = Q_estimate_before_update(2,F);
-                %                     keep_data{3}(t,F) = Q_estimate_before_update(3,F);
-                %                     keep_data{4}(t,F) = Q_estimate_before_update(4,F);
-                %
+            % bodyline angle
+            if angle_enable
+                angle_meas = keep_angle_sorted{t};
+            end
+
+
+            %% do the kalman filter
+            % Predict next state
+            nD = size(X{t},1); %set new number of detections
+
+            Q_estimate_before_update = Q_estimate;  % keep Q_estimate before the update
+
+            %                 % keep data from Q_estimate_before_update
+            %                 for F = 1:nF
+            %
+            %                     keep_data{1}(t,F) = Q_estimate_before_update(1,F);
+            %                     keep_data{2}(t,F) = Q_estimate_before_update(2,F);
+            %                     keep_data{3}(t,F) = Q_estimate_before_update(3,F);
+            %                     keep_data{4}(t,F) = Q_estimate_before_update(4,F);
+            %
+            %                 end
+
+            for F = 1:nF
+                Q_estimate(:,F) = A * Q_estimate(:,F) + B * u;
+                %         if (Q_estimate(1,F) > img_h) || (Q_estimate(2,F) > img_w) || (Q_estimate(1,F) < 0) || (Q_estimate(2,F) < 0)
+                %             % if the predict is out of bound
+                %             Q_estimate(:,F) = NaN;
+                %         end
+            end
+
+
+
+            %predict next covariance
+            P = A * P* A' + Ex;
+            % Kalman Gain
+            K = P*C'*inv(C*P*C'+Ez);
+
+
+            %% assign the detections to estimated track positions
+            %make the distance (cost) matrice between all pairs rows = tracks, coln =
+            %detections
+            if ~isempty(Q_loc_meas)
+
+                est_dist = pdist([Q_estimate(1:2,1:nF)'; Q_loc_meas]);
+                est_dist = squareform(est_dist); %make square
+                est_dist = est_dist(1:nF,nF+1:end) ; %limit to just the tracks to detection distances
+
+                %                 for est_count = 1:nF    % added on 2016-07-28
+                %                     if min(est_dist(est_count,:)) < 50
+                %                         est_dist(find(est_dist(est_count,:) ~= min(est_dist(est_count,:)))) = est_dist(find(est_dist(est_count,:) ~= min(est_dist(est_count,:)))) * 2;
+                %                     end
                 %                 end
-                
+
+
+                [asgn, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
+                asgn = asgn';
+
+                %check for tough situations and if it's tough, just go with estimate and ignore the data
+                %make asgn = 0 for that tracking element
+
+                %check 1: is the detection far from the observation? if so, reject it.
+                rej = [];
                 for F = 1:nF
-                    Q_estimate(:,F) = A * Q_estimate(:,F) + B * u;
-                    %         if (Q_estimate(1,F) > img_h) || (Q_estimate(2,F) > img_w) || (Q_estimate(1,F) < 0) || (Q_estimate(2,F) < 0)
-                    %             % if the predict is out of bound
-                    %             Q_estimate(:,F) = NaN;
-                    %         end
+                    if asgn(F) > 0  % if track F has pair asgn(F)
+                        rej(F) = est_dist(F,asgn(F)) < reject_dist ;
+                        if check_direction_enable
+                            v1 = direction_track(:,F);
+                            v2 = direction_meas(:,asgn(F));
+                            if (norm(v1) ~= 0) && (norm(v2) ~= 0)
+                                angle_v1_v2 = acosd(dot(v1,v2)/norm(v1)/norm(v2));  % calculate the angle between two vectors
+                                rej(F) = (-90 < angle_v1_v2) && (angle_v1_v2 < 90); % reject if direction is too different
+                            end
+                        end
+                    else
+                        rej(F) = 0;
+                    end
                 end
-                
-                
-                
-                %predict next covariance
-                P = A * P* A' + Ex;
-                % Kalman Gain
-                K = P*C'*inv(C*P*C'+Ez);
-                
-                
-                %% assign the detections to estimated track positions
-                %make the distance (cost) matrice between all pairs rows = tracks, coln =
-                %detections
-                if ~isempty(Q_loc_meas)
-                    
-                    est_dist = pdist([Q_estimate(1:2,1:nF)'; Q_loc_meas]);
-                    est_dist = squareform(est_dist); %make square
-                    est_dist = est_dist(1:nF,nF+1:end) ; %limit to just the tracks to detection distances
-                    
-                    %                 for est_count = 1:nF    % added on 2016-07-28
-                    %                     if min(est_dist(est_count,:)) < 50
-                    %                         est_dist(find(est_dist(est_count,:) ~= min(est_dist(est_count,:)))) = est_dist(find(est_dist(est_count,:) ~= min(est_dist(est_count,:)))) * 2;
-                    %                     end
-                    %                 end
-                    
-                    
-                    [asgn, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
-                    asgn = asgn';
-                    
-                    %check for tough situations and if it's tough, just go with estimate and ignore the data
-                    %make asgn = 0 for that tracking element
-                    
-                    %check 1: is the detection far from the observation? if so, reject it.
-                    rej = [];
-                    for F = 1:nF
-                        if asgn(F) > 0  % if track F has pair asgn(F)
-                            rej(F) = est_dist(F,asgn(F)) < reject_dist ;
-                            if check_direction_enable
-                                v1 = direction_track(:,F);
-                                v2 = direction_meas(:,asgn(F));
-                                if (norm(v1) ~= 0) && (norm(v2) ~= 0)
-                                    angle_v1_v2 = acosd(dot(v1,v2)/norm(v1)/norm(v2));  % calculate the angle between two vectors
-                                    rej(F) = (-90 < angle_v1_v2) && (angle_v1_v2 < 90); % reject if direction is too different
-                                end
+
+
+                %%
+
+                asgn = asgn.*rej;
+
+                if ~kalman_only_enable
+                    Q_estimate_before_update(1:2, (asgn ~= 0)) = NaN;
+                    Q_loc_meas2 = Q_loc_meas;
+                    Q_loc_meas2(ismember(1:size(Q_loc_meas,1),asgn),:) = NaN;
+
+                    est_dist2 = pdist([Q_estimate_before_update(1:2,1:nF)'; Q_loc_meas2]);
+                    est_dist2 = squareform(est_dist2); %make square
+                    est_dist2 = est_dist2(1:nF,nF+1:end);  %limit to just the tracks to detection distances
+
+                    if cna_enable   % Closest Neighbour Approach
+                        asgn2 = asgn.*0;
+                        row_est_dist2 = max(sum(~isnan(est_dist2)));
+                        col_est_dist2 = max(sum(~isnan(est_dist2),2));
+
+                        if ((row_est_dist2 - col_est_dist2) >= 0)
+                            count_target = col_est_dist2;
+                        else
+                            count_target = row_est_dist2;
+                        end
+
+                        for count2 = 1:count_target
+                            %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
+                            [m,n] = find(est_dist2==min(min(est_dist2)));
+if ~isempty(m) && ~isempty(n) % 2017-4-26 TODO: need to check later
+                                asgn2(m(1)) = n(1);
+                                est_dist2(m(1),:) = NaN;
+                                est_dist2(:,n(1)) = NaN;
+end
+                            %                             end   % fixed bug 2016-12-30
+
+                        end
+
+                    else    % hungarian assignment algorithm
+                        [asgn2, cost2] = assignmentoptimal(est_dist2); %do the assignment with hungarian algo
+                        asgn2 = asgn2';
+                    end
+
+
+                    asgn = asgn + asgn2;
+
+                else
+                    asgn2 = asgn.*0;
+                end
+
+
+
+                %apply the assingment to the update
+                k = 1;
+                velocity_temp2 = [];
+                for F = 1:length(asgn)
+                    Q_estimate_previous = Q_estimate(:,k);
+                    if asgn(F) > 0  % found its match
+                        if asgn2(F) ~= 0    % second matching assignment
+                            Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn2
+                            direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
+                            if ecc_enable
+                                ecc_track(:,k) = ecc_meas(:,asgn(F));
+                            end
+                            if angle_enable
+                                angle_track(:,k) = angle_meas(:,asgn(F));
                             end
                         else
-                            rej(F) = 0;
+                            Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn
+                            direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
+                            if ecc_enable
+                                ecc_track(:,k) = ecc_meas(:,asgn(F));
+                            end
+                            if angle_enable
+                                angle_track(:,k) = angle_meas(:,asgn(F));
+                            end
                         end
-                    end
-                    
-                    
-                    %%
-                    
-                    asgn = asgn.*rej;
-                    
-                    if ~kalman_only_enable
-                        Q_estimate_before_update(1:2, (asgn ~= 0)) = NaN;
-                        Q_loc_meas2 = Q_loc_meas;
-                        Q_loc_meas2(ismember(1:size(Q_loc_meas,1),asgn),:) = NaN;
-                        
-                        est_dist2 = pdist([Q_estimate_before_update(1:2,1:nF)'; Q_loc_meas2]);
-                        est_dist2 = squareform(est_dist2); %make square
-                        est_dist2 = est_dist2(1:nF,nF+1:end);  %limit to just the tracks to detection distances
-                        
-                        if cna_enable   % Closest Neighbour Approach
-                            asgn2 = asgn.*0;
-                            row_est_dist2 = max(sum(~isnan(est_dist2)));
-                            col_est_dist2 = max(sum(~isnan(est_dist2),2));
-                            
-                            if ((row_est_dist2 - col_est_dist2) >= 0)
-                                count_target = col_est_dist2;
-                            else
-                                count_target = row_est_dist2;
-                            end
-                            
-                            for count2 = 1:count_target
-                                %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
-                                [m,n] = find(est_dist2==min(min(est_dist2)));
-if ~isempty(m) && ~isempty(n) % 2017-4-26 TODO: need to check later
-                                    asgn2(m(1)) = n(1);
-                                    est_dist2(m(1),:) = NaN;
-                                    est_dist2(:,n(1)) = NaN;
-end
-                                %                             end   % fixed bug 2016-12-30
-                                
-                            end
-                            
-                        else    % hungarian assignment algorithm
-                            [asgn2, cost2] = assignmentoptimal(est_dist2); %do the assignment with hungarian algo
-                            asgn2 = asgn2';
-                        end
-                        
-                        
-                        asgn = asgn + asgn2;
-                        
-                    else
-                        asgn2 = asgn.*0;
-                    end
-                    
-                    
-                    
-                    %apply the assingment to the update
-                    k = 1;
-                    velocity_temp2 = [];
-                    for F = 1:length(asgn)
-                        Q_estimate_previous = Q_estimate(:,k);
-                        if asgn(F) > 0  % found its match
-                            if asgn2(F) ~= 0    % second matching assignment
-                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn2
-                                direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
-                                if ecc_enable
-                                    ecc_track(:,k) = ecc_meas(:,asgn(F));
-                                end
-                                if angle_enable
-                                    angle_track(:,k) = angle_meas(:,asgn(F));
-                                end
-                            else
-                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn
-                                direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
-                                if ecc_enable
-                                    ecc_track(:,k) = ecc_meas(:,asgn(F));
-                                end
-                                if angle_enable
-                                    angle_track(:,k) = angle_meas(:,asgn(F));
-                                end
-                            end
-                        elseif asgn(F) == 0 % assignment for no assignment
-                            if assign_for_noassign
-                                if (Q_estimate(1,k) > img_h) || (Q_estimate(2,k) > img_w) || (Q_estimate(1,k) < 0) || (Q_estimate(2,k) < 0)
-                                    % if the predict is out of bound then do nothing
-                                    
-                                else
-                                    if min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
-                                        [m,i] = min(est_dist(k,:));
-                                        Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
-                                    end
-                                end
-                                
-                            end
-                            
-                        end
-                        
-                        %% velocity thresholding
-                        if ~isnan(Q_estimate(1,k))  % if the value is not NaN
-                            if velocity_thres_enable
-                                % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
-                                if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > velocity_thres
-                                    Q_estimate(:,k) = NaN;    % delete
-                                    %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
-                                end
-                            end
-                            
-                        end
-                        
-                        
-                        
-                        k = k + 1;
-                    end
-                    
-                end     % end of if ~isempty(Q_loc_meas)
-                
-                % update covariance estimation.
-                P =  (eye(4)-K*C)*P;
-                
-                %% Store data
-                Q_loc_estimateX(t,1:nF) = Q_estimate(1,1:nF);
-                Q_loc_estimateY(t,1:nF) = Q_estimate(2,1:nF);
-                
-                % keep data from Q_estimate
-                for F = 1:nF
-                    keep_data{1}(t,F) = Q_estimate(1,F);
-                    keep_data{2}(t,F) = Q_estimate(2,F);
-                    keep_data{3}(t,F) = Q_estimate(3,F);
-                    keep_data{4}(t,F) = Q_estimate(4,F);
-                    keep_data{5}(t,F) = direction_track(1,F);   % keep_data{5} and keep_data{6} are for direction
-                    keep_data{6}(t,F) = direction_track(2,F);
-                    if ecc_enable
-                        keep_data{7}(t,F) = ecc_track(1,F);
-                    end
-                    if angle_enable
-                        keep_data{8}(t,F) = angle_track(1,F);
-                    end
-                end
-                
-                
-                if ~isempty(Q_loc_meas)
-                    
-                    %find the new detections. basically, anything that doesn't get assigned is a new tracking
-                    new_trk = [];
-                    new_trk = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:)';
-                    if ~isempty(new_trk)
-                        Q_estimate(:,nF+1:nF+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
-                        nF = nF + size(new_trk,2);  % number of track estimates with new ones included
-                    end
-                    
-                end  % end of if ~isempty(Q_loc_meas)
-                
-                %give a strike to any tracking that didn't get matched up to a
-                %detection
-                no_trk_list = find(asgn==0);
-                prev_strk_trks = strk_trks;
-                if ~isempty(no_trk_list)
-                    strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
-                end
-                %% consecutive strike
-                % if the strike is not consecutive then reset
-                strk_trks(strk_trks == prev_strk_trks) = 0;
-                
-                
-                %if a track has a strike greater than 6, delete the tracking. i.e.
-                %make it nan first vid = 3
-                bad_trks = find(strk_trks > strike_track_threshold);
-                Q_estimate(:,bad_trks) = NaN;
-                
-                %% output figure
-                %%{
-                if figure_enable
-                    clf
-                    img = read(shuttleVideo,t_count);
-                    %             img = imread(strcat('./input/',file_list(t).name));
-                    imshow(img);
-                    hold on;
-                    plot(Y{t}(:),X{t}(:),'or'); % the actual tracking
-                    T = size(Q_loc_estimateX,2);
-                    Ms = [3 5]; %marker sizes
-                    c_list = ['r' 'b' 'g' 'c' 'm' 'y'];
-                    for Dc = 1:nF     %normal
-                        %                     for Dc = 1:1        %rodent
-                        if ~isnan(Q_loc_estimateX(t,Dc))
-                            Sz = mod(Dc,2)+1; %pick marker size
-                            Cz = mod(Dc,6)+1; %pick color
-                            if animal_type == 2
-                                Cz = 1;
-                            end
-                            if t < line_length+2
-                                st = t-1;
-                            else
-                                st = line_length;
-                            end
-                            tmX = Q_loc_estimateX(t-st:t,Dc);
-                            tmY = Q_loc_estimateY(t-st:t,Dc);
-                            plot(tmY,tmX,'.-','markersize',Ms(Sz),'color',c_list(Cz),'linewidth',3)  % rodent 1 instead of Cz
-                            if num_text_enable
-                                num_txt = strcat(' = ', num2str(Dc));
-                                text(tmY(end),tmX(end),num_txt)
-                            end
-                            hold on
-                            %                 quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                            axis off
-                        end
-                    end
-                    
-                    % save figure
-                    f=getframe;
-                    filename2 = [sprintf('%05d',t_count) '.png'];
-                    imwrite(f.cdata,strcat('./output/',shuttleVideo.name,'_',filename,'_pic/',filename2));
-                    
-                    pause(0.001)
-                    
-                end
-                
-                
-                %}
-                disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*(t_count-start_frame)/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
-                %     sum(strk_trks)
-                set(handles.text9, 'String',[num2str(int64(100*(t_count-start_frame)/(end_frame-start_frame+1))) ' %']);
-                pause(0.001)
-                t = t + 1;
-            end
-            set(handles.text9, 'String', '100 %'); % done!
-            
-            % save data as text
-            write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-            write_file_y = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
-            write_file_vx = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
-            write_file_vy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
-            write_file_vxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
-            write_file_dir = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
-            write_file_dd = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
-            write_file_dd2 = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
-            if ecc_enable
-                write_file_ecc = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
-                keep_data{7} = keep_data{7}(:,1:nF);
-            end
-            if angle_enable
-                write_file_angle = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
-                keep_data{8} = keep_data{8}(:,1:nF);
-                % inverse the angle upside-down
-                keep_data{8} = -keep_data{8};
-            end
-            write_file_dis = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
-            write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
+                    elseif asgn(F) == 0 % assignment for no assignment
+                        if assign_for_noassign
+                            if (Q_estimate(1,k) > img_h) || (Q_estimate(2,k) > img_w) || (Q_estimate(1,k) < 0) || (Q_estimate(2,k) < 0)
+                                % if the predict is out of bound then do nothing
 
-            
-            keep_data{1} = keep_data{1}(:,1:nF);
-            keep_data{2} = keep_data{2}(:,1:nF);
-            keep_data{3} = keep_data{3}(:,1:nF);
-            keep_data{4} = keep_data{4}(:,1:nF);
-            keep_data{5} = keep_data{5}(:,1:nF);
-            keep_data{6} = keep_data{6}(:,1:nF);
-            
-            
-            % find end of row
-            end_row = find(sum(isnan(keep_data{1}),2)==nF,1) - 1;
-            % make save string
-            save_string = [];
-            for s_count = 1:nF
-                save_string = [save_string '%.4f '];
-            end
-            save_string = [save_string '\n'];
-            
-            
-            % cook raw data before saving
-            distance_travel = [];
-            for row_count = 1:end_row
-                fprintf(write_file_y,save_string , img_h - keep_data{1}(row_count, :));
-                fprintf(write_file_x,save_string , keep_data{2}(row_count, :));
-                if row_count > 1
-                    distance_travel = sqrt((keep_data{2}(row_count, :) - keep_data{2}(row_count-1, :)).^2 + (keep_data{1}(row_count, :) - keep_data{1}(row_count-1, :)).^2);
-                    fprintf(write_file_dis,save_string , distance_travel);
-                end
-                fprintf(write_file_vy,save_string , (-1).*keep_data{3}(row_count, :));
-                fprintf(write_file_vx,save_string , keep_data{4}(row_count, :));
-                vxy = sqrt( keep_data{3}(row_count, :).^2 +  keep_data{4}(row_count, :).^2  );
-                fprintf(write_file_vxy,save_string , vxy);
-                if row_count == 1
-                    v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
-                    check_v1 = sum(v1.*v1);
-                    v1(:,check_v1==0) = NaN;
-                    angle_v1 = atan2d(v1(2,:),v1(1,:));
-                    fprintf(write_file_dd,save_string , (0).*keep_data{5}(row_count, :) );
-                    fprintf(write_file_dd2,save_string , (0).*keep_data{5}(row_count, :) );
-                else
-                    v0 = v1;    % v2 contains the previous v1
-                    v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
-                    check_v1 = sum(v1.*v1);
-                    v1(:,check_v1==0) = NaN;
-                    angle_v1 = atan2d(v1(2,:),v1(1,:));
-                    angle_v0 = atan2d(v0(2,:),v0(1,:));
-                    angle_v1_v0 = angle_v1 - angle_v0;  % in degree
-                    for i_angle_mo = 1:size(angle_v1_v0,2)
-                        if angle_v1_v0(i_angle_mo) > 180
-                            angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)-360;
-                        elseif angle_v1_v0(i_angle_mo) < -180
-                            angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)+360;
+                            else
+                                if min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                                    [m,i] = min(est_dist(k,:));
+                                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
+                                end
+                            end
+
                         end
+
                     end
-                    angle_v1_v0_2 = angle_v1_v0;
-                    for i_angle_mo = 1:size(angle_v1_v0_2,2)
-                        if angle_v1_v0_2(i_angle_mo) > 90
-                            angle_v1_v0_2(i_angle_mo) = 180 - angle_v1_v0_2(i_angle_mo);
-                        elseif angle_v1_v0_2(i_angle_mo) < -90
-                            angle_v1_v0_2(i_angle_mo) = 180 + angle_v1_v0_2(i_angle_mo);
+
+                    %% velocity thresholding
+                    if ~isnan(Q_estimate(1,k))  % if the value is not NaN
+                        if velocity_thres_enable
+                            % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
+                            if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > velocity_thres
+                                Q_estimate(:,k) = NaN;    % delete
+                                %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
+                            end
                         end
-                        angle_v1_v0_2(i_angle_mo) = abs(angle_v1_v0_2(i_angle_mo));
+
                     end
-                    fprintf(write_file_dd,save_string , angle_v1_v0 );
-                    fprintf(write_file_dd2,save_string , angle_v1_v0_2 );
+
+
+
+                    k = k + 1;
                 end
-                fprintf(write_file_dir,save_string , angle_v1 );
+
+            end     % end of if ~isempty(Q_loc_meas)
+
+            % update covariance estimation.
+            P =  (eye(4)-K*C)*P;
+
+            %% Store data
+            Q_loc_estimateX(t,1:nF) = Q_estimate(1,1:nF);
+            Q_loc_estimateY(t,1:nF) = Q_estimate(2,1:nF);
+
+            % keep data from Q_estimate
+            for F = 1:nF
+                keep_data{1}(t,F) = Q_estimate(1,F);
+                keep_data{2}(t,F) = Q_estimate(2,F);
+                keep_data{3}(t,F) = Q_estimate(3,F);
+                keep_data{4}(t,F) = Q_estimate(4,F);
+                keep_data{5}(t,F) = direction_track(1,F);   % keep_data{5} and keep_data{6} are for direction
+                keep_data{6}(t,F) = direction_track(2,F);
                 if ecc_enable
-                    fprintf(write_file_ecc,save_string , keep_data{7}(row_count, :));
+                    keep_data{7}(t,F) = ecc_track(1,F);
                 end
                 if angle_enable
-                    fprintf(write_file_angle,save_string , keep_data{8}(row_count, :));
+                    keep_data{8}(t,F) = angle_track(1,F);
                 end
-                
-                % calculate sideway velocity
-                bodyline_y = v1(2,:);
-                bodyline_x = v1(1,:);
-                % fill nan with data from angle
-                nan_index = isnan(bodyline_y);
-                bodyline_y(nan_index) = sind(keep_data{8}(row_count, nan_index));
-                bodyline_x(nan_index) = cosd(keep_data{8}(row_count, nan_index));
-                vy = (-1).*keep_data{3}(row_count, :);
-                vx = keep_data{4}(row_count, :);
-                setA = [bodyline_x' bodyline_y' zeros(size(bodyline_x,2),1)];
-                setB = [vx' vy' zeros(size(vx,2),1)];
-                corss_pro = cross(setA,setB);
-                norm_setA = sqrt(sum(abs(setA).^2,2));
-                svxy = corss_pro(:,3)./norm_setA;
-                fprintf(write_file_svxy,save_string , svxy');   % sideway velocity
+            end
+
+
+            if ~isempty(Q_loc_meas)
+
+                %find the new detections. basically, anything that doesn't get assigned is a new tracking
+                new_trk = [];
+                new_trk = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:)';
+                if ~isempty(new_trk)
+                    Q_estimate(:,nF+1:nF+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
+                    nF = nF + size(new_trk,2);  % number of track estimates with new ones included
+                end
+
+            end  % end of if ~isempty(Q_loc_meas)
+
+            %give a strike to any tracking that didn't get matched up to a
+            %detection
+            no_trk_list = find(asgn==0);
+            prev_strk_trks = strk_trks;
+            if ~isempty(no_trk_list)
+                strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+            end
+            %% consecutive strike
+            % if the strike is not consecutive then reset
+            strk_trks(strk_trks == prev_strk_trks) = 0;
+
+
+            %if a track has a strike greater than 6, delete the tracking. i.e.
+            %make it nan first vid = 3
+            bad_trks = find(strk_trks > strike_track_threshold);
+            Q_estimate(:,bad_trks) = NaN;
+
+            %% output figure
+            %%{
+            if figure_enable
+                clf
+                img = read(shuttleVideo,t_count);
+                %             img = imread(strcat('./input/',file_list(t).name));
+                imshow(img);
+                hold on;
+                plot(Y{t}(:),X{t}(:),'or'); % the actual tracking
+                T = size(Q_loc_estimateX,2);
+                Ms = [3 5]; %marker sizes
+                c_list = ['r' 'b' 'g' 'c' 'm' 'y'];
+                for Dc = 1:nF     %normal
+                    %                     for Dc = 1:1        %rodent
+                    if ~isnan(Q_loc_estimateX(t,Dc))
+                        Sz = mod(Dc,2)+1; %pick marker size
+                        Cz = mod(Dc,6)+1; %pick color
+                        if animal_type == 2
+                            Cz = 1;
+                        end
+                        if t < line_length+2
+                            st = t-1;
+                        else
+                            st = line_length;
+                        end
+                        tmX = Q_loc_estimateX(t-st:t,Dc);
+                        tmY = Q_loc_estimateY(t-st:t,Dc);
+                        plot(tmY,tmX,'.-','markersize',Ms(Sz),'color',c_list(Cz),'linewidth',3)  % rodent 1 instead of Cz
+                        if num_text_enable
+                            num_txt = strcat(' = ', num2str(Dc));
+                            text(tmY(end),tmX(end),num_txt)
+                        end
+                        hold on
+                        %                 quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
+                        axis off
+                    end
+                end
+
+                % save figure
+                f=getframe;
+                filename2 = [sprintf('%05d',t_count) '.png'];
+                imwrite(f.cdata,strcat('./output/',shuttleVideo.name,'_',filename,'_pic/',filename2));
+
+                pause(0.001)
+
+            end
+
+
+            %}
+            disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*(t_count-start_frame)/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
+            %     sum(strk_trks)
+            set(handles.text9, 'String',[num2str(int64(100*(t_count-start_frame)/(end_frame-start_frame+1))) ' %']);
+            pause(0.001)
+            t = t + 1;
+        end
+        set(handles.text9, 'String', '100 %'); % done!
+
+        % save data as text
+        write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+        write_file_y = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+        write_file_vx = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
+        write_file_vy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
+        write_file_vxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
+        write_file_dir = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
+        write_file_dd = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
+        write_file_dd2 = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
+        if ecc_enable
+            write_file_ecc = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
+            keep_data{7} = keep_data{7}(:,1:nF);
+        end
+        if angle_enable
+            write_file_angle = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
+            keep_data{8} = keep_data{8}(:,1:nF);
+            % inverse the angle upside-down
+            keep_data{8} = -keep_data{8};
+        end
+        write_file_dis = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
+        write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
+
+
+        keep_data{1} = keep_data{1}(:,1:nF);
+        keep_data{2} = keep_data{2}(:,1:nF);
+        keep_data{3} = keep_data{3}(:,1:nF);
+        keep_data{4} = keep_data{4}(:,1:nF);
+        keep_data{5} = keep_data{5}(:,1:nF);
+        keep_data{6} = keep_data{6}(:,1:nF);
+
+
+        % find end of row
+        a = isnan(keep_data{1});
+        b = sum(a,2);
+        end_row = find(b==nF,1) - 1;
+        % make save string
+        save_string = [];
+        for s_count = 1:nF
+            save_string = [save_string '%.4f '];
+        end
+        save_string = [save_string '\n'];
+
+
+        % cook raw data before saving
+        distance_travel = [];
+        for row_count = 1:end_row
+            fprintf(write_file_y,save_string , img_h - keep_data{1}(row_count, :));
+            fprintf(write_file_x,save_string , keep_data{2}(row_count, :));
+            if row_count > 1
+                distance_travel = sqrt((keep_data{2}(row_count, :) - keep_data{2}(row_count-1, :)).^2 + (keep_data{1}(row_count, :) - keep_data{1}(row_count-1, :)).^2);
+                fprintf(write_file_dis,save_string , distance_travel);
+            end
+            fprintf(write_file_vy,save_string , (-1).*keep_data{3}(row_count, :));
+            fprintf(write_file_vx,save_string , keep_data{4}(row_count, :));
+            vxy = sqrt( keep_data{3}(row_count, :).^2 +  keep_data{4}(row_count, :).^2  );
+            fprintf(write_file_vxy,save_string , vxy);
+            if row_count == 1
+                v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
+                check_v1 = sum(v1.*v1);
+                v1(:,check_v1==0) = NaN;
+                angle_v1 = atan2d(v1(2,:),v1(1,:));
+                fprintf(write_file_dd,save_string , (0).*keep_data{5}(row_count, :) );
+                fprintf(write_file_dd2,save_string , (0).*keep_data{5}(row_count, :) );
+            else
+                v0 = v1;    % v2 contains the previous v1
+                v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
+                check_v1 = sum(v1.*v1);
+                v1(:,check_v1==0) = NaN;
+                angle_v1 = atan2d(v1(2,:),v1(1,:));
+                angle_v0 = atan2d(v0(2,:),v0(1,:));
+                angle_v1_v0 = angle_v1 - angle_v0;  % in degree
+                for i_angle_mo = 1:size(angle_v1_v0,2)
+                    if angle_v1_v0(i_angle_mo) > 180
+                        angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)-360;
+                    elseif angle_v1_v0(i_angle_mo) < -180
+                        angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)+360;
+                    end
+                end
+                angle_v1_v0_2 = angle_v1_v0;
+                for i_angle_mo = 1:size(angle_v1_v0_2,2)
+                    if angle_v1_v0_2(i_angle_mo) > 90
+                        angle_v1_v0_2(i_angle_mo) = 180 - angle_v1_v0_2(i_angle_mo);
+                    elseif angle_v1_v0_2(i_angle_mo) < -90
+                        angle_v1_v0_2(i_angle_mo) = 180 + angle_v1_v0_2(i_angle_mo);
+                    end
+                    angle_v1_v0_2(i_angle_mo) = abs(angle_v1_v0_2(i_angle_mo));
+                end
+                fprintf(write_file_dd,save_string , angle_v1_v0 );
+                fprintf(write_file_dd2,save_string , angle_v1_v0_2 );
+            end
+            fprintf(write_file_dir,save_string , angle_v1 );
+            if ecc_enable
+                fprintf(write_file_ecc,save_string , keep_data{7}(row_count, :));
+            end
+            if angle_enable
+                fprintf(write_file_angle,save_string , keep_data{8}(row_count, :));
+            end
+
+            % calculate sideway velocity
+            bodyline_y = v1(2,:);
+            bodyline_x = v1(1,:);
+            % fill nan with data from angle
+            nan_index = isnan(bodyline_y);
+            bodyline_y(nan_index) = sind(keep_data{8}(row_count, nan_index));
+            bodyline_x(nan_index) = cosd(keep_data{8}(row_count, nan_index));
+            vy = (-1).*keep_data{3}(row_count, :);
+            vx = keep_data{4}(row_count, :);
+            setA = [bodyline_x' bodyline_y' zeros(size(bodyline_x,2),1)];
+            setB = [vx' vy' zeros(size(vx,2),1)];
+            corss_pro = cross(setA,setB);
+            norm_setA = sqrt(sum(abs(setA).^2,2));
+            svxy = corss_pro(:,3)./norm_setA;
+            fprintf(write_file_svxy,save_string , svxy');   % sideway velocity
 %                 dir_vxy = atan2d(vy,vx);
 %                 angle_for_svxy = dir_vxy-angle_v1;
 %                 fprintf(write_file_svxy,save_string , vxy.*sind(angle_for_svxy));
 
-            end
-            
-            fclose(write_file_x);
-            fclose(write_file_y);
-            fclose(write_file_vx);
-            fclose(write_file_vy);
-            fclose(write_file_vxy);
-            fclose(write_file_dir);
-            fclose(write_file_dd);
-            fclose(write_file_dd2);
-            if ecc_enable
-                fclose(write_file_ecc);
-            end
-            if angle_enable
-                fclose(write_file_angle);
-            end
-            fclose(write_file_dis);
-            fclose(write_file_svxy);
-            
-            % save keep_data
-            save(strcat('./multi/track_',shuttleVideo.name,'_',filename,'.mat'), 'keep_data')
-            
-            % save input data used for generating this result
-            raw_b = raw(data_th+1,:);
-            raw_save = vertcat(raw_a,raw_b);
-            sheet = 1;
-            xlRange = 'A1';
-            xlswrite(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.xlsx'),raw_save,sheet,xlRange);
         end
-        
+
+        fclose(write_file_x);
+        fclose(write_file_y);
+        fclose(write_file_vx);
+        fclose(write_file_vy);
+        fclose(write_file_vxy);
+        fclose(write_file_dir);
+        fclose(write_file_dd);
+        fclose(write_file_dd2);
+        if ecc_enable
+            fclose(write_file_ecc);
+        end
+        if angle_enable
+            fclose(write_file_angle);
+        end
+        fclose(write_file_dis);
+        fclose(write_file_svxy);
+
+        % save keep_data
+        save(strcat('./multi/track_',shuttleVideo.name,'_',filename,'.mat'), 'keep_data')
+
+        % save input data used for generating this result
+        raw_b = raw(data_th+1,:);
+        raw_save = vertcat(raw_a,raw_b);
+        sheet = 1;
+        xlRange = 'A1';
+        xlswrite(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.xlsx'),raw_save,sheet,xlRange);
     end
-    
-    
+
 end
 
+% show end text
 time = toc;
-% close 'tracker_savefig_op.m'
-set(handles.edit1, 'String',strcat('tracker done!     t =',num2str(time),'s'))
+set(handles.edit1, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
 
 
 function edit1_Callback(hObject, eventdata, handles)
@@ -1426,9 +1419,9 @@ blobOrient = [];
 blobEcc = [];
 
 % loop for checking all blobs
-for blob_count = 1 : blob_num
+for i = 1 : blob_num
     % check blobAreas dimension of current blob and how bigger than avarage.
-    area_ratio = double(origAreas(blob_count))/area_mean;
+    area_ratio = double(origAreas(i))/area_mean;
     if (mod(area_ratio,1) > 0.4)
         expect_num = area_ratio + (1-mod(area_ratio,1));
     else
@@ -1446,11 +1439,11 @@ for blob_count = 1 : blob_num
         blob_threshold2 = blob_threshold - 0.2;
         if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
 
-        label_mask = labeledImage==blob_count;
+        label_mask = labeledImage==i;
         blob_img_masked = blob_img .* label_mask;
 
         % trimmed from original gray scale image
-        rect = origBoxes(blob_count,:);
+        rect = origBoxes(i,:);
         blob_img_trimmed = imcrop(blob_img_masked, rect);
 
         % stronger gaussian again
@@ -1485,15 +1478,15 @@ for blob_count = 1 : blob_num
     end
     if chooseOne
         % choose one
-        X_update_keep = [X_update_keep ; origCenterPoints(blob_count,2)];
-        Y_update_keep = [Y_update_keep ; origCenterPoints(blob_count,1)];
-        blobAreas = [blobAreas ; origAreas(blob_count)];
-        blobCenterPoints = [blobCenterPoints ; origCenterPoints(blob_count,:)];
-        blobBoxes = [blobBoxes ; origBoxes(blob_count,:)];
-        blobMajorAxis = [blobMajorAxis ; origMajorAxis(blob_count)];
-        blobMinorAxis = [blobMinorAxis ; origMinorAxis(blob_count)];
-        blobOrient = [blobOrient ; origOrient(blob_count)];
-        blobEcc = [blobEcc ; origEcc(blob_count)];
+        X_update_keep = [X_update_keep ; origCenterPoints(i,2)];
+        Y_update_keep = [Y_update_keep ; origCenterPoints(i,1)];
+        blobAreas = [blobAreas ; origAreas(i)];
+        blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
+        blobBoxes = [blobBoxes ; origBoxes(i,:)];
+        blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
+        blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
+        blobOrient = [blobOrient ; origOrient(i)];
+        blobEcc = [blobEcc ; origEcc(i)];
     end
 end
 
@@ -2008,12 +2001,12 @@ if ~isempty(file_list2)
     if ~isempty(file_list3)
         [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
     else
-        disp('please put input xlsx files into the folder')
-        return
+        disp('please put input xlsx files into the folder');
+        return;
     end
 else
-    disp('please put input video files into the folder')
-    return
+    disp('please put input video files into the folder');
+    return;
 end
 
 % show start text
