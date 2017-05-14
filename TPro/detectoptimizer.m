@@ -631,41 +631,56 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = sharedInstance(0); % get shared
+    boxSize = 32;
+    
+%outputFlyImageFiles(200,300,boxSize);
+%return;
 
-    figure
+    figure;
     blobNumber = size(sharedInst.detectedPointY,1);
     for i = 1:blobNumber
-        rect = [sharedInst.detectedPointX(i)-24 sharedInst.detectedPointY(i)-24 48 48];
         switch sharedInst.imageMode
             case 1
-                trimmedImage = imcrop(sharedInst.originalImage, rect);
+                image = sharedInst.originalImage;
             case 2
-                trimmedImage = imcrop(sharedInst.step2Image, rect);
+                image = sharedInst.step2Image;
             case 3
-                trimmedImage = imcrop(sharedInst.step3Image, rect);
+                image = sharedInst.step3Image;
             case 4
-                trimmedImage = imcrop(sharedInst.step4Image, rect);
+                image = sharedInst.step4Image;
         end
-        % rotate image
-        if isempty(sharedInst.detectedDirection) || sharedInst.detectedDirection(1,i) == 0
-            angle = 0;
-        else
-            rt = sharedInst.detectedDirection(2,i) / sharedInst.detectedDirection(1,i);
-            angle = atan(rt) * 180 / pi;
-            
-            if sharedInst.detectedDirection(1,i) >= 0
-                angle = angle + 90;
-            else
-                angle = angle + 270;
-            end
-        end
-        rotatedImage = imrotate(trimmedImage, angle, 'crop', 'bilinear');
+        trimmedImage = getOneFlyBoxImage(image, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.detectedDirection, boxSize, i);
 
-        % trim again
-        rect = [8 8 32 32];
-        trimmedImage = imcrop(rotatedImage, rect);
         subplot(8, 8, i);
         imshow(trimmedImage);
+    end
+end
+
+function outputFlyImageFiles(startFrame, endFrame, boxSize)
+    sharedInst = sharedInstance(0); % get shared
+
+    % create output directory
+    path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
+    mkdir(path);
+
+    for frameNum = startFrame:endFrame
+        img = read(sharedInst.shuttleVideo, frameNum);
+        step2Image = applyBackgroundSub(img);
+        step3Image = applyFilterAndRoi(step2Image);
+        step4Image = applyBinarizeAndAreaMin(step3Image);
+
+        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
+        flyDirection = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+
+        blobNumber = size(blobPointY,1);
+        for i = 1:blobNumber
+            trimmedImage = getOneFlyBoxImage(step2Image, blobPointX, blobPointY, flyDirection, boxSize, i);
+            filename = [sprintf('%05d_%02d', frameNum,i) '.png'];
+            imwrite(trimmedImage, strcat(path,'/',filename));
+            pause(0.001);
+        end
+        disp(strcat('output fly images >', num2str(100*(frameNum-startFrame)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
+        pause(0.001);
     end
 end
 
@@ -848,122 +863,32 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         sharedInstance(sharedInst); % update shared
     end
     
-    % vision tool box
-    H = vision.BlobAnalysis;
-    H.MaximumCount = 100;
-    H.MajorAxisLengthOutputPort = 1;
-    H.MinorAxisLengthOutputPort = 1;
-    H.OrientationOutputPort = 1;
+    [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
 
-    labeledImage = bwlabel(sharedInst.step4Image);   % label the image
-
-    [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient] = step(H, sharedInst.step4Image);
-
-    area_mean = mean(origAreas);
-    blob_num = size(origAreas,1);
-    X_update_keep = [];
-    Y_update_keep = [];
-    keep_direction = [];
-    blobAreas = [];
-    blobCenterPoints = [];
-    blobBoxes = [];
-    blobMajorAxis = [];
-    blobMinorAxis = [];
-    blobOrient = [];
-
-    % loop for checking all blobs
-    for i = 1 : blob_num
-        % check blobAreas dimension of current blob and how bigger than avarage.
-        area_ratio = double(origAreas(i))/area_mean;
-        if (mod(area_ratio,1) > sharedInst.blobSeparateRate)
-            expect_num = area_ratio + (1-mod(area_ratio,1));
-        else
-            expect_num = round(area_ratio); % round to the nearest integer
-        end
-
-        % check expected number of targets (animals)
-        chooseOne = true;
-        if expect_num <= 1  % expect one
-            % set output later
-        elseif expect_num > 4 % too big! isn't it?
-            chooseOne = false;
-        elseif expect_num > 1
-            % find separated area
-            blob_threshold2 = sharedInst.binaryTh / 100 - 0.2;
-            if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
-
-            label_mask = labeledImage==i;
-            blob_img_masked = sharedInst.step3Image .* label_mask;
-
-            % trimmed from original gray scale image
-            rect = origBoxes(i,:);
-            blob_img_trimmed = imcrop(blob_img_masked, rect);
-
-            % stronger gaussian again
-            blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
-
-            for th_i = 1 : 40
-                blob_threshold2 = blob_threshold2 + 0.05;
-
-                blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
-                [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient] = step(H, blob_img_trimmed2);
-
-                if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
-                    X_update_keep = [X_update_keep ; trimmedCenterPoints(1:expect_num,1) + double(rect(1))];
-                    Y_update_keep = [Y_update_keep ; trimmedCenterPoints(1:expect_num,2) + double(rect(2))];
-                    blobAreas = [blobAreas ; trimmedAreas];
-                    blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
-                    blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
-                    blobOrient = [blobOrient ; trimmedOrient];
-                    for j=1 : expect_num
-                        pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
-                        box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
-                        blobCenterPoints = [blobCenterPoints ; pt];
-                        blobBoxes = [blobBoxes ; box];
-                    end
-                    chooseOne = false;
-                    break
-                end
-            end
-        end
-        if chooseOne
-            % choose one
-            X_update_keep = [X_update_keep ; origCenterPoints(i,1)];
-            Y_update_keep = [Y_update_keep ; origCenterPoints(i,2)];
-            blobAreas = [blobAreas ; origAreas(i)];
-            blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
-            blobBoxes = [blobBoxes ; origBoxes(i,:)];
-            blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
-            blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
-            blobOrient = [blobOrient ; origOrient(i)];
-        end
-    end
-    
     % draw image
     if sharedInst.showIndexNumber
-        frameImage = getNumberDrawnImage(frameImage, X_update_keep, Y_update_keep);
+        frameImage = getNumberDrawnImage(frameImage, blobPointX, blobPointY);
     end
     imshow(frameImage);
 
     % show detection result    
     hold on;
-    plot(X_update_keep(:), Y_update_keep(:), 'or'); % the updated actual tracking
+    plot(blobPointX(:), blobPointY(:), 'or'); % the updated actual tracking
 
     % calc and draw direction
     if sharedInst.showDirection
         keep_direction = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-        quiver(X_update_keep(:), Y_update_keep(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
+        quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     
     % store in cache
-    sharedInst.detectedPointX = X_update_keep;
-    sharedInst.detectedPointY = Y_update_keep;
+    sharedInst.detectedPointX = blobPointX;
+    sharedInst.detectedPointY = blobPointY;
     sharedInst.detectedDirection = keep_direction;
     sharedInstance(sharedInst); % update shared
 
-
     % update gui
-    set(handles.text16, 'String', size(X_update_keep,1));
+    set(handles.text16, 'String', size(blobPointX,1));
     guidata(hObject, handles);  % Update handles structure
 end
 
@@ -989,6 +914,104 @@ function saveExcelConfigurationFile(handles)
     sharedInstance(sharedInst); % update shared
 end
 
+%
+function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate)
+    H = vision.BlobAnalysis;
+    H.MaximumCount = 100;
+    H.MajorAxisLengthOutputPort = 1;
+    H.MinorAxisLengthOutputPort = 1;
+    H.OrientationOutputPort = 1;
+    H.EccentricityOutputPort = 1;
+
+    [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
+
+    labeledImage = bwlabel(blob_img_logical);   % label the image
+
+    blobAvgSize = mean(origAreas);
+    blob_num = size(origAreas,1);
+    blobPointX = [];
+    blobPointY = [];
+    blobAreas = [];
+    blobCenterPoints = [];
+    blobBoxes = [];
+    blobMajorAxis = [];
+    blobMinorAxis = [];
+    blobOrient = [];
+    blobEcc = [];
+
+    % loop for checking all blobs
+    for i = 1 : blob_num
+        % check blobAreas dimension of current blob and how bigger than avarage.
+        area_ratio = double(origAreas(i))/blobAvgSize;
+        if (mod(area_ratio,1) > blobSeparateRate)
+            expect_num = area_ratio + (1-mod(area_ratio,1));
+        else
+            expect_num = round(area_ratio); % round to the nearest integer
+        end
+
+        % check expected number of targets (animals)
+        chooseOne = true;
+        if expect_num <= 1  % expect one
+            % set output later
+        elseif expect_num > 4 % too big! isn't it?
+            chooseOne = false;
+        elseif expect_num > 1
+            % find separated area
+            blob_threshold2 = blob_threshold - 0.2;
+            if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
+
+            label_mask = labeledImage==i;
+            blob_img_masked = blob_img .* label_mask;
+
+            % trimmed from original gray scale image
+            rect = origBoxes(i,:);
+            blob_img_trimmed = imcrop(blob_img_masked, rect);
+
+            % stronger gaussian again
+            blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
+
+            for th_i = 1 : 40
+                blob_threshold2 = blob_threshold2 + 0.05;
+
+                blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
+                [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
+
+                if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
+                    x_choose = trimmedCenterPoints(1:expect_num,1);
+                    y_choose = trimmedCenterPoints(1:expect_num,2);    % choose expect_num according to area (large)
+                    blobPointX = [blobPointX ; x_choose + double(rect(1))];
+                    blobPointY = [blobPointY ; y_choose + double(rect(2))];
+                    blobAreas = [blobAreas ; trimmedAreas];
+                    blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
+                    blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
+                    blobOrient = [blobOrient ; trimmedOrient];
+                    blobEcc = [blobEcc ; trimmedEcc];
+                    for j=1 : expect_num
+                        pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
+                        box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                        blobCenterPoints = [blobCenterPoints ; pt];
+                        blobBoxes = [blobBoxes ; box];
+                    end
+                    chooseOne = false;
+                    break
+                end
+            end
+        end
+        if chooseOne
+            % choose one
+            blobPointX = [blobPointX ; origCenterPoints(i,1)];
+            blobPointY = [blobPointY ; origCenterPoints(i,2)];
+            blobAreas = [blobAreas ; origAreas(i)];
+            blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
+            blobBoxes = [blobBoxes ; origBoxes(i,:)];
+            blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
+            blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
+            blobOrient = [blobOrient ; origOrient(i)];
+            blobEcc = [blobEcc ; origEcc(i)];
+        end
+    end
+end
+
 %%
 function [ outputImage ] = PD_blobfilter( image, h, sigma )
     %   h & sigma : the bigger, the larger the blob can be found
@@ -1002,11 +1025,51 @@ function [ outputImage ] = PD_blobfilter( image, h, sigma )
 end
 
 %%
+function trimmedImage = getOneFlyBoxImage(image, pointX, pointY, direction, boxSize, i)
+    trimSize = boxSize * 1.5;
+    rect = [pointX(i)-(trimSize/2) pointY(i)-(trimSize/2) trimSize trimSize];
+    trimmedImage = imcrop(image, rect);
+
+    % rotate image
+    if isempty(direction) || direction(1,i) == 0
+        angle = 0;
+    else
+        rt = direction(2,i) / direction(1,i);
+        angle = atan(rt) * 180 / pi;
+
+        if direction(1,i) >= 0
+            angle = angle + 90;
+        else
+            angle = angle + 270;
+        end
+    end
+    rotatedImage = imrotate(trimmedImage, angle, 'crop', 'bilinear');
+
+    % trim again
+    rect = [(trimSize-boxSize)/2 (trimSize-boxSize)/2 boxSize boxSize];
+    trimmedImage = imcrop(rotatedImage, rect);
+    [x,y,col] = size(trimmedImage);
+    if x > boxSize
+        if col == 3
+            trimmedImage(:,boxSize+1,:) = [];
+            trimmedImage(boxSize+1,:,:) = [];
+        else
+            trimmedImage(:,boxSize+1) = [];
+            trimmedImage(boxSize+1,:) = [];
+        end
+    end
+end
+
+%%
 function [ color1, color2 ] = getTopAndBottomColors(image, len, cosph, sinph, cx, cy, r)
     dx = len * cosph;
     dy = len * sinph;
     x1 = int64(cx+dx); y1 = int64(cy+dy);
     x2 = int64(cx-dx); y2 = int64(cy-dy);
+    if (y1-r)<1
+        y1 = r+1; end
+    if (y2-r)<1
+        y2 = r+1; end
     colBox1 = image(y1-r:y1+r, x1-r:x1+r);
     colBox2 = image(y2-r:y2+r, x2-r:x2+r);
     area = ((r*2+1) * (r*2+1));

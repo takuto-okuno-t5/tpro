@@ -430,12 +430,6 @@ intensity_shift = 0;
 animal_type = get(handles.popupmenu1,'Value');
 
 %%
-H = vision.BlobAnalysis;
-H.MaximumCount = 100;
-H.MajorAxisLengthOutputPort = 1;
-H.MinorAxisLengthOutputPort = 1;
-H.OrientationOutputPort = 1;
-H.EccentricityOutputPort = 1;
 
 keep_i = [];
 keep_count = [];
@@ -599,7 +593,7 @@ for data_th = 1:(size(raw,1)-1)
 
         % get blobs from step function
         if blob_center_enable
-            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold, blobSeparateRate, i, blobAvgSize);
+            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -732,7 +726,7 @@ for data_th = 1:(size(raw,1)-1)
     % before saving, check standard deviation of fly count
     sd = std(keep_count);
     mcount = mean(keep_count);
-    if 0 < sd && sd < 0.1
+    if 0 < sd && sd < 0.3
         % fly count should be same every frame.
         % let's fix false positive or false negative
         errorCases = find(abs(keep_count - mcount) > 0.9);
@@ -1318,14 +1312,9 @@ end
     write_file_dis = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
     write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
 
-
-    keep_data{1} = keep_data{1}(:,1:flyNum);
-    keep_data{2} = keep_data{2}(:,1:flyNum);
-    keep_data{3} = keep_data{3}(:,1:flyNum);
-    keep_data{4} = keep_data{4}(:,1:flyNum);
-    keep_data{5} = keep_data{5}(:,1:flyNum);
-    keep_data{6} = keep_data{6}(:,1:flyNum);
-
+    for i = 1:6
+        keep_data{i} = keep_data{i}(:,1:flyNum);
+    end
 
     % find end of row
     a = isnan(keep_data{1});
@@ -1469,7 +1458,14 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn)
+function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn)
+
+H = vision.BlobAnalysis;
+H.MaximumCount = 100;
+H.MajorAxisLengthOutputPort = 1;
+H.MinorAxisLengthOutputPort = 1;
+H.OrientationOutputPort = 1;
+H.EccentricityOutputPort = 1;
 
 [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
 
@@ -1478,8 +1474,8 @@ labeledImage = bwlabel(blob_img_logical);   % label the image
 area_mean = mean(origAreas);
 blobAvgSize = (area_mean + blobAvgSizeIn * (frameCount - 1)) / frameCount;
 blob_num = size(origAreas,1);
-X_update_keep = [];
-Y_update_keep = [];
+blobPointX = [];
+blobPointY = [];
 blobAreas = [];
 blobCenterPoints = [];
 blobBoxes = [];
@@ -1528,8 +1524,8 @@ for i = 1 : blob_num
             if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
                 x_choose = trimmedCenterPoints(1:expect_num,2);
                 y_choose = trimmedCenterPoints(1:expect_num,1);    % choose expect_num according to area (large)
-                X_update_keep = [X_update_keep ; x_choose + double(rect(2))];
-                Y_update_keep = [Y_update_keep ; y_choose + double(rect(1))];
+                blobPointX = [blobPointX ; x_choose + double(rect(2))];
+                blobPointY = [blobPointY ; y_choose + double(rect(1))];
                 blobAreas = [blobAreas ; trimmedAreas];
                 blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
                 blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
@@ -1548,8 +1544,8 @@ for i = 1 : blob_num
     end
     if chooseOne
         % choose one
-        X_update_keep = [X_update_keep ; origCenterPoints(i,2)];
-        Y_update_keep = [Y_update_keep ; origCenterPoints(i,1)];
+        blobPointX = [blobPointX ; origCenterPoints(i,2)];
+        blobPointY = [blobPointY ; origCenterPoints(i,1)];
         blobAreas = [blobAreas ; origAreas(i)];
         blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
         blobBoxes = [blobBoxes ; origBoxes(i,:)];
