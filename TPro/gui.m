@@ -222,26 +222,28 @@ for data_th = 1:(size(raw,1)-1)
     % find appropriate background pixels
     for i = 1 : calcFramesNumber
         set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
+        pause(0.001);
         frameImage = read(shuttleVideo,r(i));
         grayImage = rgb2gray(frameImage);
         grayImages(:,:,i) = grayImage;
     end
     bgImage = mode(grayImages,3);
-    
+     
     % sometimes fly stays same position. and mode does not work well.
     % check its mean color and difference each pixels.
     bgMeanImage = mean(grayImages,3);
-    maxImage = max(grayImages,3); % get most blight image
+    maxImage = max(grayImages,[],3); % get most blight image
+
     diffImage = abs(double(bgImage) - bgMeanImage);
     diffImage2 = maxImage - bgImage;
     for x = 1 : n
         for y = 1 : m
-            if diffImage(y,x) > 80 || diffImage2(y,x) > 150
+            if diffImage(y,x) > 50 || diffImage2(y,x) > 100
                 bgImage(y,x) = maxImage(y,x);
             end
         end
     end
-
+    
     % create new background window if it does not exist
     if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
         figureWindow = figure('name','detecting ','NumberTitle','off');
@@ -488,7 +490,13 @@ for data_th = 1:(size(raw,1)-1)
     X = cell(1,length(end_frame-start_frame+1));
     Y = cell(1,length(end_frame-start_frame+1));
     detection_num = nan(2,end_frame-start_frame+1);
+    blobAvgSize = 0;
 
+%load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'));
+%load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'));
+%X_update2 = X;
+%Y_update2 = Y;
+%if size(X,2) <= 1
     i = 1;
     for i_count = start_frame : frame_steps : end_frame
         img_real = read(shuttleVideo, i_count);
@@ -591,7 +599,7 @@ for data_th = 1:(size(raw,1)-1)
 
         % get blobs from step function
         if blob_center_enable
-            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold, blobSeparateRate);
+            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical2, H, blob_threshold, blobSeparateRate, i, blobAvgSize);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -652,6 +660,7 @@ for data_th = 1:(size(raw,1)-1)
         keep_direction_sorted{i} = keep_direction;
         keep_ecc_sorted{i} = blobEcc';
         keep_angle_sorted{i} = keep_angle;
+        keep_areas{i} = blobAreas';
 
         %     clf
         %     imshow(img_real);
@@ -713,15 +722,59 @@ for data_th = 1:(size(raw,1)-1)
         keep_i = [keep_i i];
         keep_count = [keep_count size(X_update2{i},1)];
         set(handles.text9, 'String',[num2str(int64(100*(i_count-start_frame)/(end_frame-start_frame+1))) ' %']);
-        pause(0.001)
+        pause(0.001);
         i = i + 1;
     end
+%end
     X = X_update2;
     Y = Y_update2;
-    %save it!
+
+    % before saving, check standard deviation of fly count
+    sd = std(keep_count);
+    mcount = mean(keep_count);
+    if 0 < sd && sd < 0.1
+        % fly count should be same every frame.
+        % let's fix false positive or false negative
+        errorCases = find(abs(keep_count - mcount) > 0.9);
+        for i = 1 : size(errorCases, 2)
+            idx = errorCases(i);
+            errorFrameX = X{idx};
+            errorFrameY = Y{idx};
+            errorFrameAreas = keep_areas{idx};
+            
+            % error case 1 : [false positive] sometimes wing is separated as a individual blob
+            if keep_count(idx) > mcount
+                % find nearest points
+                min1 = 1; min2 = 2;
+                minDist = 4096; % initial dummy
+                flyCount = size(errorFrameX, 1);
+                for j = 1 : flyCount - 1
+                    for k = j+1 : flyCount
+                        dist = abs(errorFrameX(j) - errorFrameX(k)) + abs(errorFrameY(j) - errorFrameY(k));
+                        if minDist > dist
+                            min1 = j; min2 = k;
+                            minDist = dist;
+                        end
+                    end
+                end
+                % remove smaller one!
+                if errorFrameAreas(min1) > errorFrameAreas(min2)
+                    X{idx}(min2) = [];
+                    Y{idx}(min2) = [];
+                else
+                    X{idx}(min1) = [];
+                    Y{idx}(min1) = [];
+                end
+                keep_count(idx) = flyCount - 1;
+            end
+        end
+    end
+    
+    % save it!
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted')
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count')
+    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count');
+
     set(handles.text9, 'String','100 %'); % done!
 end
 
@@ -924,11 +977,10 @@ for data_th = 1:(size(raw,1)-1)
     v_agent_max_keep = nan(1, MAX_FLIES); % max velocity of an agent at each time step
 
     keep_data = cell(1,4);  % x y vx vy
-    outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 8;
-    keep_data{1} = nan(outFrameNum, MAX_FLIES);
-    keep_data{2} = nan(outFrameNum, MAX_FLIES);
-    keep_data{3} = nan(outFrameNum, MAX_FLIES);
-    keep_data{4} = nan(outFrameNum, MAX_FLIES);
+    outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 2;
+    for i = 1:8
+        keep_data{i} = nan(outFrameNum, MAX_FLIES);
+    end
 
     % size
     img_initial = read(shuttleVideo,1);
@@ -1417,13 +1469,14 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold, blobSeparateRate )
+function [ X_update_keep, Y_update_keep, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical, H, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn)
 
 [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
 
 labeledImage = bwlabel(blob_img_logical);   % label the image
 
 area_mean = mean(origAreas);
+blobAvgSize = (area_mean + blobAvgSizeIn * (frameCount - 1)) / frameCount;
 blob_num = size(origAreas,1);
 X_update_keep = [];
 Y_update_keep = [];
@@ -1438,7 +1491,7 @@ blobEcc = [];
 % loop for checking all blobs
 for i = 1 : blob_num
     % check blobAreas dimension of current blob and how bigger than avarage.
-    area_ratio = double(origAreas(i))/area_mean;
+    area_ratio = double(origAreas(i))/blobAvgSize;
     if (mod(area_ratio,1) > blobSeparateRate)
         expect_num = area_ratio + (1-mod(area_ratio,1));
     else
