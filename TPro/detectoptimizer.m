@@ -631,7 +631,7 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = sharedInstance(0); % get shared
-    boxSize = 32;
+    boxSize = findFlyImageBoxSize(sharedInst.startFrame, sharedInst.endFrame);
     
 %outputFlyImageFiles(200,300,boxSize);
 %return;
@@ -653,34 +653,6 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 
         subplot(8, 8, i);
         imshow(trimmedImage);
-    end
-end
-
-function outputFlyImageFiles(startFrame, endFrame, boxSize)
-    sharedInst = sharedInstance(0); % get shared
-
-    % create output directory
-    path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
-    mkdir(path);
-
-    for frameNum = startFrame:endFrame
-        img = read(sharedInst.shuttleVideo, frameNum);
-        step2Image = applyBackgroundSub(img);
-        step3Image = applyFilterAndRoi(step2Image);
-        step4Image = applyBinarizeAndAreaMin(step3Image);
-
-        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
-        flyDirection = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-
-        blobNumber = size(blobPointY,1);
-        for i = 1:blobNumber
-            trimmedImage = getOneFlyBoxImage(step2Image, blobPointX, blobPointY, flyDirection, boxSize, i);
-            filename = [sprintf('%05d_%02d', frameNum,i) '.png'];
-            imwrite(trimmedImage, strcat(path,'/',filename));
-            pause(0.001);
-        end
-        disp(strcat('output fly images >', num2str(100*(frameNum-startFrame)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
-        pause(0.001);
     end
 end
 
@@ -1022,6 +994,57 @@ function [ outputImage ] = PD_blobfilter( image, h, sigma )
     logKernel = fspecial('log', h, sigma);
     %   2d convolution
     outputImage = conv2(image, logKernel, 'same');
+end
+
+%%
+
+function boxSize = findFlyImageBoxSize(startFrame, endFrame)
+    sharedInst = sharedInstance(0); % get shared
+
+    step = int64((endFrame - startFrame) / 12);
+    count = 0;
+    sumMajorAxis = 0;
+    for frameNum = startFrame+step:step:endFrame-step % just use middle flames of movie
+        img = read(sharedInst.shuttleVideo, frameNum);
+        step2Image = applyBackgroundSub(img);
+        step3Image = applyFilterAndRoi(step2Image);
+        step4Image = applyBinarizeAndAreaMin(step3Image);
+
+        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
+        sumMajorAxis = sumMajorAxis + mean(blobMajorAxis);
+        count = count + 1;
+    end
+    meanMajorAxis = sumMajorAxis / count;
+    boxSize = int64((meanMajorAxis * 1.5) / 8) * 8;
+end
+
+%%
+function outputFlyImageFiles(startFrame, endFrame, boxSize)
+    sharedInst = sharedInstance(0); % get shared
+
+    % create output directory
+    path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
+    mkdir(path);
+
+    for frameNum = startFrame:endFrame
+        img = read(sharedInst.shuttleVideo, frameNum);
+        step2Image = applyBackgroundSub(img);
+        step3Image = applyFilterAndRoi(step2Image);
+        step4Image = applyBinarizeAndAreaMin(step3Image);
+
+        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
+        flyDirection = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+
+        blobNumber = size(blobPointY,1);
+        for i = 1:blobNumber
+            trimmedImage = getOneFlyBoxImage(step2Image, blobPointX, blobPointY, flyDirection, boxSize, i);
+            filename = [sprintf('%05d_%02d', frameNum,i) '.png'];
+            imwrite(trimmedImage, strcat(path,'/',filename));
+            pause(0.001);
+        end
+        disp(strcat('output fly images >', num2str(100*(frameNum-startFrame)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
+        pause(0.001);
+    end
 end
 
 %%
