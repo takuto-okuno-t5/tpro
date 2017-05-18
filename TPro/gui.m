@@ -1,7 +1,5 @@
 % TPro1.4 2017-04-22
 % add total distance output
-% add create movie button
-% standard file name is now '%05d'
 
 function varargout = gui(varargin)
 % GUI MATLAB code for gui.fig
