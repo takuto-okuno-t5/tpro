@@ -92,6 +92,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.binaryAreaPixel = num(rowNum,15);
     sharedInst.blobSeparateRate = num(rowNum,17);
     sharedInst.isModified = false;
+    sharedInst.useDeepLearning = false;
 
     sharedInst.originalImage = [];
     sharedInst.step2Image = [];
@@ -100,11 +101,22 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
 
+    % deep learning data
+    if exist('./deeplearningFrontBack.mat', 'file')
+        netForFrontBack = [];
+        classifierFrontBack = [];
+        load('./deeplearningFrontBack.mat');
+
+        sharedInst.useDeepLearning = true;
+        sharedInst.netForFrontBack = netForFrontBack;
+        sharedInst.classifierFrontBack = classifierFrontBack;
+    end
+
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
     set(handles.checkbox1, 'Value', sharedInst.showDetectResult);
-    set(handles.pushbutton4, 'Enable', 'off')
+    set(handles.pushbutton4, 'Enable', 'off');
     set(handles.edit1, 'String', sharedInst.startFrame);
     set(handles.edit2, 'String', sharedInst.endFrame);
     set(handles.edit3, 'String', sharedInst.frameSteps);
@@ -633,8 +645,8 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     sharedInst = sharedInstance(0); % get shared
     boxSize = findFlyImageBoxSize(sharedInst.startFrame, sharedInst.endFrame);
     
-%outputFlyImageFiles(200,300,boxSize);
-%return;
+outputFlyImageFiles(sharedInst.startFrame, sharedInst.endFrame, boxSize);
+return;
 
     figure;
     blobNumber = size(sharedInst.detectedPointY,1);
@@ -849,7 +861,11 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 
     % calc and draw direction
     if sharedInst.showDirection
-        keep_direction = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        if sharedInst.useDeepLearning
+            keep_direction = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        else
+            keep_direction = PD_direction(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     
@@ -1015,7 +1031,7 @@ function boxSize = findFlyImageBoxSize(startFrame, endFrame)
         count = count + 1;
     end
     meanMajorAxis = sumMajorAxis / count;
-    boxSize = int64((meanMajorAxis * 1.5) / 8) * 8;
+    boxSize = int64((meanMajorAxis * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
 end
 
 %%
@@ -1026,6 +1042,7 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
     path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
     mkdir(path);
 
+    tic;
     for frameNum = startFrame:endFrame
         img = read(sharedInst.shuttleVideo, frameNum);
         step2Image = applyBackgroundSub(img);
@@ -1033,7 +1050,11 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
         step4Image = applyBinarizeAndAreaMin(step3Image);
 
         [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
-        flyDirection = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        if sharedInst.useDeepLearning
+            flyDirection = PD_direction_deepLearning(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        else
+            flyDirection = PD_direction(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        end
 
         blobNumber = size(blobPointY,1);
         for i = 1:blobNumber
@@ -1042,25 +1063,27 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
             imwrite(trimmedImage, strcat(path,'/',filename));
             pause(0.001);
         end
-        disp(strcat('output fly images >', num2str(100*(frameNum-startFrame)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
+        disp(strcat('output fly images (', num2str(frameNum) ,') >', num2str(100*(frameNum-startFrame+1)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
         pause(0.001);
     end
+    time = toc;
+    disp(strcat('output fly images ... done!     t =',num2str(time),'s'));
 end
 
 %%
-function trimmedImage = getOneFlyBoxImage(image, pointX, pointY, direction, boxSize, i)
+function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
     trimSize = boxSize * 1.5;
-    rect = [pointX(i)-(trimSize/2) pointY(i)-(trimSize/2) trimSize trimSize];
+    rect = [ptX-(trimSize/2) ptY-(trimSize/2) trimSize trimSize];
     trimmedImage = imcrop(image, rect);
-
+    
     % rotate image
-    if isempty(direction) || direction(1,i) == 0
+    if isempty(dir) || dir(1) == 0
         angle = 0;
     else
-        rt = direction(2,i) / direction(1,i);
+        rt = dir(2) / dir(1);
         angle = atan(rt) * 180 / pi;
 
-        if direction(1,i) >= 0
+        if dir(1) >= 0
             angle = angle + 90;
         else
             angle = angle + 270;
@@ -1081,6 +1104,10 @@ function trimmedImage = getOneFlyBoxImage(image, pointX, pointY, direction, boxS
             trimmedImage(boxSize+1,:) = [];
         end
     end
+end
+
+function trimmedImage = getOneFlyBoxImage(image, pointX, pointY, direction, boxSize, i)
+    trimmedImage = getOneFlyBoxImage_(image, pointX(i), pointY(i), direction(:,i), boxSize);
 end
 
 %%
@@ -1132,7 +1159,7 @@ function [ outVector, isFound ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, 
 end
 
 %%
-function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
+function [ keep_direction ] = PD_direction(glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
     sharedInst = sharedInstance(0); % get shared
 
     % init
@@ -1158,18 +1185,18 @@ function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxe
         vec = [len*cosph; len*sinph];
 
         % get head and tail colors
-        [ c1, c2 ] = getTopAndBottomColors(sharedInst.step2Image, len, cosph, sinph, cx, cy, 2);
+        [ c1, c2 ] = getTopAndBottomColors(glayImage, len, cosph, sinph, cx, cy, 2);
         
         % get over head and over tail (maybe wing) colors
-        [ c3, c4 ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.6, cosph, sinph, cx, cy, 2);
+        [ c3, c4 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.6, cosph, sinph, cx, cy, 2);
 
         % 1st step. find head and wing on long axis line (just check 4 points' color) 
         [ vec, found ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, TH_OVER_HEAD_COLOR, TH_WING_COLOR_MAX, TH_WING_COLOR_MIN);
 
         if ~found
             % 1st step - check one more points
-            [ c1a, c2a ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.4, cosph, sinph, cx, cy, 1);
-            [ c3a, c4a ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.5, cosph, sinph, cx, cy, 1);
+            [ c1a, c2a ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.4, cosph, sinph, cx, cy, 1);
+            [ c3a, c4a ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.5, cosph, sinph, cx, cy, 1);
             [ vec, found ] = check4PointsColorsOnBody(vec, c1a, c2a, c3a, c4a, TH_OVER_HEAD_COLOR, TH_WING_COLOR_MAX, TH_WING_COLOR_MIN);
         end
         
@@ -1181,12 +1208,12 @@ function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxe
                 ph2 = ph + pi/180 * (j-2)*30;
                 cosph2 =  cos(ph2);
                 sinph2 =  sin(ph2);
-                [ c5, c6 ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.45, cosph2, sinph2, cx, cy, 2);
+                [ c5, c6 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.45, cosph2, sinph2, cx, cy, 2);
                 if abs(c5 - c6) > TH_WING_BG_DIFF_COLOR
                     % wing should connected body and over-wing should white
                     % because some time miss-detects next side body.
-                    [ c7, c8 ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.4, cosph2, sinph2, cx, cy, 2);
-                    [ c9, c10 ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * 0.6, cosph2, sinph2, cx, cy, 2);
+                    [ c7, c8 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.4, cosph2, sinph2, cx, cy, 2);
+                    [ c9, c10 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.6, cosph2, sinph2, cx, cy, 2);
                     % if c6 is wing, check colors on line.
                     if (c6 - c8) > -5 && (c10 - c6) > 5
                         found = true;
@@ -1204,7 +1231,7 @@ function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxe
         % 3rd step. check long (body) axis colors
         if ~found
             for j=0.40:0.05:0.55
-                [ c5, c6 ] = getTopAndBottomColors(sharedInst.step2Image, blobMajorAxis(i) * j, cosph, sinph, cx, cy, 2);
+                [ c5, c6 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * j, cosph, sinph, cx, cy, 2);
                 if c6 > TH_OVER_HEAD_COLOR && TH_WING_COLOR_MIN < c5 && c5 < TH_WING_COLOR_MAX % c5 should be wing & c6 should be over head
                     vec = -vec;
                     found = true;
@@ -1231,3 +1258,59 @@ function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxe
         keep_direction(:,i) = vec;
     end
 end
+
+%%
+function [ keep_direction ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
+    sharedInst = sharedInstance(0); % get shared
+
+    % init
+    areaNumber = size(blobAreas, 1);
+    keep_direction = zeros(2, areaNumber); % allocate memory
+    
+    % find direction for every blobs
+    for i = 1:areaNumber
+        % pre calculation
+        cx = blobCenterPoints(i,1);
+        cy = blobCenterPoints(i,2);
+        ph = -blobOrient(i);
+        cosph =  cos(ph);
+        sinph =  sin(ph);
+        len = blobMajorAxis(i) * 0.35;
+        vec = [len*cosph; len*sinph];
+
+        boxSize = int64((blobMajorAxis(i) * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
+
+        trimmedImage = getOneFlyBoxImage_(glayImage, cx, cy, vec, boxSize);
+        img = readAndPreprocessImage(trimmedImage);
+
+        % Extract image features using the CNN
+        imageFeatures = activations(sharedInst.netForFrontBack, img, 'fc7');
+
+        % Make a prediction using the classifier
+        label = predict(sharedInst.classifierFrontBack, imageFeatures);
+        if label == 'fly_back'
+            vec = -vec;
+        end
+        
+        keep_direction(:,i) = vec;
+    end
+end
+
+function Iout = readAndPreprocessImage(I)
+    % Some images may be grayscale. Replicate the image 3 times to
+    % create an RGB image. 
+    if ismatrix(I)
+        I = cat(3,I,I,I);
+    end
+
+    % Resize the image as required for the CNN. 
+    Iout = imresize(I, [227 227]);  
+
+    % Note that the aspect ratio is not preserved. In Caltech 101, the
+    % object of interest is centered in the image and occupies a
+    % majority of the image scene. Therefore, preserving the aspect
+    % ratio is not critical. However, for other data sets, it may prove
+    % beneficial to preserve the aspect ratio of the original image
+    % when resizing.
+end
+
