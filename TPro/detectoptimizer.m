@@ -716,7 +716,7 @@ end
 %%
 function outimage = applyBinarizeAndAreaMin(img)
     sharedInst = sharedInstance(0); % get shared
-    img = imbinarize(img, sharedInst.binaryTh / 100);
+    img = im2bw(img, sharedInst.binaryTh / 100);
     outimage = bwareaopen(img, sharedInst.binaryAreaPixel);   % delete blob that has area less than 50
 end
 
@@ -961,7 +961,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
             for th_i = 1 : 40
                 blob_threshold2 = blob_threshold2 + 0.05;
 
-                blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
+                blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
                 [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
 
                 if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015

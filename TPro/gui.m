@@ -588,7 +588,7 @@ for data_th = 1:(size(raw,1)-1)
         %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting','.png'));
         %                                 keyboard
 
-        img = imbinarize(blob_img, blob_threshold);
+        img = im2bw(blob_img, blob_threshold);
         blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
 
         % get blobs from step function
@@ -1518,7 +1518,7 @@ for i = 1 : blob_num
         for th_i = 1 : 40
             blob_threshold2 = blob_threshold2 + 0.05;
 
-            blob_img_trimmed2 = imbinarize(blob_img_trimmed, blob_threshold2);
+            blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
             [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
 
             if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
