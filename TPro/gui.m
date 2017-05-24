@@ -303,15 +303,6 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% set(handles.edit1, 'String','check_threshold.m done!')
-
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('multi'));
-addpath(genpath('detect_output'));
-addpath(genpath('../input_share'));
-
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
     file_list2 = dir('../input_share/*mov');
@@ -336,18 +327,10 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 
 % loop for every movies
 for i = 1 : size(num)
-    % set env value and run script
-    setenv('TPRO_RUNOPTM', '1');
-    setenv('TPRO_ROWNUM', num2str(i));
-    run('detectoptimizer.m');
-
-    % wait for closing detectoptimizer
-    while true
-        if ~strcmp(getenv('TPRO_RUNOPTM'),'1')
-            break; % process next movie
-        end
-        pause(0.5);
-    end
+    % show detection optimizer
+    dlg = detectoptimizer({num2str(i)});
+    delete(dlg);
+    pause(0.1);
 end
 
 set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))

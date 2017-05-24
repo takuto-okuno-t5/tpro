@@ -70,7 +70,13 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load environment value
-    rowNum = int64(str2num(getenv('TPRO_ROWNUM')));
+    if size(varargin, 1) > 0
+        rowNum = int64(str2num(char(varargin{1}(1))));
+        handles.isArgin = true;
+    else
+        rowNum = 1;
+        handles.isArgin = false;
+    end
     if isempty(rowNum), rowNum = 1; end
 
     % initialize GUI
@@ -289,6 +295,9 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         pLock = [];
     end
+
+    % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
+    uiwait(handles.figure1); % wait for finishing dialog
 end
 
 %% --- Executes when user attempts to close figure1.
@@ -299,18 +308,19 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
     sharedInst = sharedInstance(0); % get shared
     if sharedInst.isModified
-        selection = questdlg('Do you close Detection Optimizer before saving?',...
+        selection = questdlg('Do you save configuration before closing Detection Optimizer before?',...
                              'Confirmation',...
-                             'Yes','No','No');
-        switch selection,
-        case 'Yes',
-             ;
+                             'Yes','No','Cancel','Yes');
+        switch selection
+        case 'Cancel'
+            return;
+        case 'Yes'
+            saveExcelConfigurationFile(handles);
         case 'No'
-             return;
+            % nothing todo
         end
     end
-    setenv('TPRO_RUNOPTM', '0'); % set close notification for gui.m
-    delete(hObject);
+    uiresume(handles.figure1);
 end
 
 %% --- Outputs from this function are returned to the command line.
@@ -322,6 +332,10 @@ function varargout = detectoptimizer_OutputFcn(hObject, eventdata, handles)
 
     % Get default command line output from handles structure
     varargout{1} = handles.output;
+
+    if ~handles.isArgin
+        delete(hObject); % only delete when it launched directly.
+    end
 end
 
 %% --- Executes on slider movement.
@@ -461,7 +475,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     % save excel setting data
-    saveExcelConfigurationFile(handles);    
+    saveExcelConfigurationFile(handles);
 end
 
 %% --- Executes on button press in pushbutton5.
