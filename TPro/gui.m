@@ -149,6 +149,7 @@ else
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
 
+
 % bg--- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton2 (see GCBO)
@@ -183,10 +184,6 @@ end
 
 tic % start timer
 
-% how many images to consider
-str = get(handles.edit3, 'String');
-calcFramesNumber = str2num(str);
-
 % show start text
 set(handles.edit1, 'String','detecting background ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
@@ -197,7 +194,7 @@ for data_th = 1:(size(raw,1)-1)
     if ~num(data_th,1)
         continue;
     end
-    
+
     shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
 
     % show detecting message
@@ -210,25 +207,46 @@ for data_th = 1:(size(raw,1)-1)
         mkdir(pathName);
     end
 
-    range = num(data_th, 6);
-    r = randperm(range);
-    r = r(1:calcFramesNumber);
+    % show startEndDialog
+    [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
+    delete(dlg);
+
+    if startFrame < 0
+        continue;
+    end
 
     % initialize output matrix 
     frameImage = read(shuttleVideo,1);
     [m,n,l] = size(frameImage);
-    grayImages = uint8(zeros(m,n,calcFramesNumber));
+    grayImages = uint8(zeros(m,n,checkNums));
+
+    % generate random
+    r = randperm(endFrame - startFrame);
+    r = r(1:checkNums);
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['detecting background for ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
 
     % find appropriate background pixels
-    for i = 1 : calcFramesNumber
-        set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
+    for i = 1 : checkNums
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+        % Report current estimate in the waitbar's message field
+        waitbar(i/checkNums, hWaitBar, [num2str(100*i/checkNums) ' %']);
         pause(0.001);
-        frameImage = read(shuttleVideo,r(i));
+
+        frameImage = read(shuttleVideo, r(i) + startFrame);
         grayImage = rgb2gray(frameImage);
         grayImages(:,:,i) = grayImage;
     end
     bgImage = mode(grayImages,3);
-     
+
     % sometimes fly stays same position. and mode does not work well.
     % check its mean color and difference each pixels.
     bgMeanImage = mean(grayImages,3);
@@ -242,6 +260,13 @@ for data_th = 1:(size(raw,1)-1)
                 bgImage(y,x) = maxImage(y,x);
             end
         end
+    end
+    
+    % delete dialog bar
+    delete(hWaitBar);
+    
+    if isCancel
+        continue;
     end
     
     % create new background window if it does not exist
@@ -258,7 +283,7 @@ for data_th = 1:(size(raw,1)-1)
     % output png file
     imwrite(bgImage, backgroundFileName);
     disp(num2str(data_th));
-    clear img
+    clear bgImage;
 end
 
 % close background image window
@@ -726,10 +751,10 @@ for data_th = 1:(size(raw,1)-1)
     % before saving, check standard deviation of fly count
     sd = std(keep_count);
     mcount = mean(keep_count);
-    if 0 < sd && sd < 0.3
+    if 0 < sd && sd < 1
         % fly count should be same every frame.
         % let's fix false positive or false negative
-        errorCases = find(abs(keep_count - mcount) > 0.9);
+        errorCases = find(abs(keep_count - mcount) > 0.5);
         for i = 1 : size(errorCases, 2)
             idx = errorCases(i);
             errorFrameX = X{idx};
@@ -2306,28 +2331,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-
-function edit3_Callback(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit3 as text
-%        str2double(get(hObject,'String')) returns contents of edit3 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit3_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
