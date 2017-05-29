@@ -93,6 +93,8 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 
 set(handles.text9,'String','Running','BackgroundColor','red');
 
+addpath(genpath('../input_share'));
+
 % show file select modal
 [fileNames, pathName, filterIndex] = uigetfile( {  ...
     '*.*',  'All Files (*.*)'}, ...
@@ -181,6 +183,8 @@ set(handles.edit1, 'String','detecting background ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
+
+addpath(genpath('../input_share'));
 
 tic % start timer
 
@@ -326,6 +330,8 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
+addpath(genpath('../input_share'));
+
 % loop for every movies
 for i = 1 : size(num)
     % show detection optimizer
@@ -369,6 +375,8 @@ set(handles.edit1, 'String','detection ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
+
+addpath(genpath('../input_share'));
 
 %% parameters setting
 tic % start timer
@@ -747,6 +755,8 @@ for data_th = 1:(size(raw,1)-1)
         continue;
     end
     
+    img_h = size(img_real, 1);
+
     X = X_update2;
     Y = Y_update2;
 
@@ -791,10 +801,40 @@ for data_th = 1:(size(raw,1)-1)
         end
     end
     
-    % save it!
+    % save data
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
     save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
     save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count');
+
+    % save data as text
+    countFileName = strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt')
+    write_file_cnt = fopen(countFileName, 'wt');
+    write_file_x = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+
+    % cook raw data before saving
+    end_row = size(X, 2);
+    for row_count = 1:end_row
+        % make save string
+        flyNum = size(X{row_count}, 1);
+        save_string = [];
+        for s_count = 1:flyNum
+            save_string = [save_string '%.4f\t'];
+        end
+        save_string = [save_string '\n'];
+    
+        fprintf(write_file_cnt, '%d\n', keep_count(row_count));
+        fprintf(write_file_x, save_string, X{row_count}(:));
+        fprintf(write_file_y, save_string, img_h - Y{row_count}(:));
+    end
+    
+    fclose(write_file_cnt);
+    fclose(write_file_x);
+    fclose(write_file_y);
+
+    % open text file with notepad (only windows)
+    winopen(countFileName);
+%    system(['start notepad ' countFileName]);
 
     set(handles.text9, 'String','100 %'); % done!
 end
@@ -1353,7 +1393,7 @@ end
     % make save string
     save_string = [];
     for s_count = 1:flyNum
-        save_string = [save_string '%.4f '];
+        save_string = [save_string '%.4f\t'];
     end
     save_string = [save_string '\n'];
 
@@ -2130,6 +2170,8 @@ set(handles.edit1, 'String','selecting "Region of Interest" ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
+
+addpath(genpath('../input_share'));
 
 % select roi for every movie
 for data_th = 1:(size(raw,1)-1)
