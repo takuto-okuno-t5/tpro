@@ -1018,6 +1018,9 @@ function boxSize = findFlyImageBoxSize(startFrame, endFrame)
     sharedInst = sharedInstance(0); % get shared
 
     step = int64((endFrame - startFrame) / 12);
+    if step == 0
+        step = 1;
+    end
     count = 0;
     sumMajorAxis = 0;
     for frameNum = startFrame+step:step:endFrame-step % just use middle flames of movie
