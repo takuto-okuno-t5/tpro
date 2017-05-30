@@ -214,6 +214,9 @@ for data_th = 1:(size(raw,1)-1)
     if startFrame < 0
         continue;
     end
+    if (endFrame - startFrame + 1) < checkNums
+        checkNums = (endFrame - startFrame + 1);
+    end
 
     % initialize output matrix 
     frameImage = read(shuttleVideo,1);
@@ -221,7 +224,7 @@ for data_th = 1:(size(raw,1)-1)
     grayImages = uint8(zeros(m,n,checkNums));
 
     % generate random
-    r = randperm(endFrame - startFrame);
+    r = randperm(endFrame - startFrame + 1);
     r = r(1:checkNums);
 
     % show wait dialog
@@ -241,7 +244,7 @@ for data_th = 1:(size(raw,1)-1)
         waitbar(i/checkNums, hWaitBar, [num2str(100*i/checkNums) ' %']);
         pause(0.001);
 
-        frameImage = read(shuttleVideo, r(i) + startFrame);
+        frameImage = read(shuttleVideo, r(i) + startFrame - 1);
         grayImage = rgb2gray(frameImage);
         grayImages(:,:,i) = grayImage;
     end

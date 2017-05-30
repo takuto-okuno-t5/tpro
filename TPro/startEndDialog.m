@@ -59,9 +59,13 @@ handles.endFrame = str2num(char(varargin{1}(2)));
 handles.name = char(varargin{1}(3));
 handles.maxFrame = handles.endFrame;
 handles.checkNum = 100;
+if (handles.endFrame - handles.startFrame + 1) < handles.checkNum
+    handles.checkNum = handles.endFrame - handles.startFrame + 1;
+end
 
 set(handles.edit1, 'String', handles.startFrame);
 set(handles.edit2, 'String', handles.endFrame);
+set(handles.edit3, 'String', handles.checkNum);
 
 % set window title
 set(hObject, 'name', handles.name); % set window title
