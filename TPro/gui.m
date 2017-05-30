@@ -93,10 +93,9 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 
 set(handles.text9,'String','Running','BackgroundColor','red');
 
-addpath(genpath('input'));
-addpath(genpath('multi'));
 addpath(genpath('../input_share'));
 
+% show file select modal
 [fileNames, pathName, filterIndex] = uigetfile( {  ...
     '*.*',  'All Files (*.*)'}, ...
     'Pick a file', ...
@@ -109,6 +108,9 @@ end
 
 % show starting message
 set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
+disableAllButtons(handles);
+pause(0.01);
+
 tic
     
 outputFileName = './input/input_video_control.xlsx';
@@ -148,19 +150,14 @@ else
     set(handles.edit1, 'String',strcat('can not output configuration file (xlsx)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
+enableAllButtons(handles);
+
 
 % bg--- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('multi'));
-addpath(genpath('detect_output'));
-addpath(genpath('../input_share'));
 
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
@@ -181,15 +178,15 @@ else
     return;
 end
 
-tic % start timer
-
-% how many images to consider
-str = get(handles.edit3, 'String');
-calcFramesNumber = str2num(str);
-
 % show start text
 set(handles.edit1, 'String','detecting background ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
+addpath(genpath('../input_share'));
+
+tic % start timer
 
 % background detection for active movie
 for data_th = 1:(size(raw,1)-1)
@@ -197,7 +194,7 @@ for data_th = 1:(size(raw,1)-1)
     if ~num(data_th,1)
         continue;
     end
-    
+
     shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
 
     % show detecting message
@@ -210,25 +207,49 @@ for data_th = 1:(size(raw,1)-1)
         mkdir(pathName);
     end
 
-    range = num(data_th, 6);
-    r = randperm(range);
-    r = r(1:calcFramesNumber);
+    % show startEndDialog
+    [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
+    delete(dlg);
+
+    if startFrame < 0
+        continue;
+    end
+    if (endFrame - startFrame + 1) < checkNums
+        checkNums = (endFrame - startFrame + 1);
+    end
 
     % initialize output matrix 
     frameImage = read(shuttleVideo,1);
     [m,n,l] = size(frameImage);
-    grayImages = uint8(zeros(m,n,calcFramesNumber));
+    grayImages = uint8(zeros(m,n,checkNums));
+
+    % generate random
+    r = randperm(endFrame - startFrame + 1);
+    r = r(1:checkNums);
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['detecting background for ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
 
     % find appropriate background pixels
-    for i = 1 : calcFramesNumber
-        set(handles.text9, 'String',[num2str(100*i/calcFramesNumber) ' %']);
+    for i = 1 : checkNums
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+        % Report current estimate in the waitbar's message field
+        waitbar(i/checkNums, hWaitBar, [num2str(100*i/checkNums) ' %']);
         pause(0.001);
-        frameImage = read(shuttleVideo,r(i));
+
+        frameImage = read(shuttleVideo, r(i) + startFrame - 1);
         grayImage = rgb2gray(frameImage);
         grayImages(:,:,i) = grayImage;
     end
     bgImage = mode(grayImages,3);
-     
+
     % sometimes fly stays same position. and mode does not work well.
     % check its mean color and difference each pixels.
     bgMeanImage = mean(grayImages,3);
@@ -242,6 +263,13 @@ for data_th = 1:(size(raw,1)-1)
                 bgImage(y,x) = maxImage(y,x);
             end
         end
+    end
+    
+    % delete dialog bar
+    delete(hWaitBar);
+    
+    if isCancel
+        continue;
     end
     
     % create new background window if it does not exist
@@ -258,19 +286,22 @@ for data_th = 1:(size(raw,1)-1)
     % output png file
     imwrite(bgImage, backgroundFileName);
     disp(num2str(data_th));
-    clear img
+    clear bgImage;
 end
 
 % close background image window
 if exist('figureWindow','var') && ~isempty(figureWindow) && ishandle(figureWindow)
     pause(2);
-    close(figureWindow);
+    if ishandle(figureWindow) % sometime closed by user
+        close(figureWindow);
+    end
 end
 
 % show end text
 time = toc;
 set(handles.edit1, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 % check_threshold--- Executes on button press in pushbutton3
@@ -278,15 +309,6 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-% set(handles.edit1, 'String','check_threshold.m done!')
-
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('multi'));
-addpath(genpath('detect_output'));
-addpath(genpath('../input_share'));
-
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
     file_list2 = dir('../input_share/*mov');
@@ -308,25 +330,22 @@ end
 % show start text
 set(handles.edit1, 'String','checking detection threashold ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
+addpath(genpath('../input_share'));
 
 % loop for every movies
 for i = 1 : size(num)
-    % set env value and run script
-    setenv('TPRO_RUNOPTM', '1');
-    setenv('TPRO_ROWNUM', num2str(i));
-    run('detectoptimizer.m');
-
-    % wait for closing detectoptimizer
-    while true
-        if ~strcmp(getenv('TPRO_RUNOPTM'),'1')
-            break; % process next movie
-        end
-        pause(0.5);
-    end
+    % show detection optimizer
+    dlg = detectoptimizer({num2str(i)});
+    delete(dlg);
+    pause(0.1);
 end
 
 set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 % detection--- Executes on button press in pushbutton4.
@@ -334,13 +353,6 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton4 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('multi'));
-addpath(genpath('detect_output'));
-addpath(genpath('../input_share'));
 
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
@@ -364,6 +376,10 @@ end
 % show start text
 set(handles.edit1, 'String','detection ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
+addpath(genpath('../input_share'));
 
 %% parameters setting
 tic % start timer
@@ -491,8 +507,21 @@ for data_th = 1:(size(raw,1)-1)
 %X_update2 = X;
 %Y_update2 = Y;
 %if size(X,2) <= 1
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['detecting for ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
     i = 1;
     for i_count = start_frame : frame_steps : end_frame
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+        
+        % process detection
         img_real = read(shuttleVideo, i_count);
         grayImg = rgb2gray(img_real);
         if ~isempty(bg_img_mean)
@@ -715,21 +744,32 @@ for data_th = 1:(size(raw,1)-1)
         % graph for detection analysis
         keep_i = [keep_i i];
         keep_count = [keep_count size(X_update2{i},1)];
-        set(handles.text9, 'String',[num2str(int64(100*(i_count-start_frame)/(end_frame-start_frame+1))) ' %']);
+        % Report current estimate in the waitbar's message field
+        rate = (i_count-start_frame+1)/(end_frame-start_frame+1);
+        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
         pause(0.001);
         i = i + 1;
     end
 %end
+    % delete dialog bar
+    delete(hWaitBar);
+    
+    if isCancel
+        continue;
+    end
+    
+    img_h = size(img_real, 1);
+
     X = X_update2;
     Y = Y_update2;
 
     % before saving, check standard deviation of fly count
     sd = std(keep_count);
     mcount = mean(keep_count);
-    if 0 < sd && sd < 0.3
+    if 0 < sd && sd < 1
         % fly count should be same every frame.
         % let's fix false positive or false negative
-        errorCases = find(abs(keep_count - mcount) > 0.9);
+        errorCases = find(abs(keep_count - mcount) > 0.5);
         for i = 1 : size(errorCases, 2)
             idx = errorCases(i);
             errorFrameX = X{idx};
@@ -764,10 +804,40 @@ for data_th = 1:(size(raw,1)-1)
         end
     end
     
-    % save it!
+    % save data
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
     save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
     save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count');
+
+    % save data as text
+    countFileName = strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt')
+    write_file_cnt = fopen(countFileName, 'wt');
+    write_file_x = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+
+    % cook raw data before saving
+    end_row = size(X, 2);
+    for row_count = 1:end_row
+        % make save string
+        flyNum = size(X{row_count}, 1);
+        save_string = [];
+        for s_count = 1:flyNum
+            save_string = [save_string '%.4f\t'];
+        end
+        save_string = [save_string '\n'];
+    
+        fprintf(write_file_cnt, '%d\n', keep_count(row_count));
+        fprintf(write_file_x, save_string, X{row_count}(:));
+        fprintf(write_file_y, save_string, img_h - Y{row_count}(:));
+    end
+    
+    fclose(write_file_cnt);
+    fclose(write_file_x);
+    fclose(write_file_y);
+
+    % open text file with notepad (only windows)
+    winopen(countFileName);
+%    system(['start notepad ' countFileName]);
 
     set(handles.text9, 'String','100 %'); % done!
 end
@@ -776,6 +846,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 % tracker--- Executes on button press in pushbutton5.
@@ -814,6 +885,8 @@ end
 % show start text
 set(handles.edit1, 'String','tracking ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
 
 %% parameters setting
 tic % start timer
@@ -1323,7 +1396,7 @@ end
     % make save string
     save_string = [];
     for s_count = 1:flyNum
-        save_string = [save_string '%.4f '];
+        save_string = [save_string '%.4f\t'];
     end
     save_string = [save_string '\n'];
 
@@ -1435,6 +1508,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 function edit1_Callback(hObject, eventdata, handles)
@@ -1798,6 +1872,32 @@ for i = 1:areaNumber
 end
 
 %%
+function enableAllButtons(handles)
+buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+enableButtons(buttons);
+
+%%
+function enableButtons(buttons)
+max = size(buttons, 2);
+for i = 1 : max
+    set(buttons(i), 'Enable', 'on');
+end
+
+%%
+function disableAllButtons(handles)
+buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+disableButtons(buttons);
+
+%%
+function disableButtons(buttons)
+max = size(buttons, 2);
+for i = 1 : max
+    set(buttons(i), 'Enable', 'off');
+end
+
+%%
 function [assignment, cost] = assignmentoptimal(distMatrix)
 %ASSIGNMENTOPTIMAL    Compute optimal assignment by Munkres algorithm
 %   ASSIGNMENTOPTIMAL(DISTMATRIX) computes the optimal assignment (minimum
@@ -2049,13 +2149,6 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('multi'));
-addpath(genpath('detect_output'));
-addpath(genpath('../input_share'));
-
 file_list2 =  dir('../input_share/*avi');
 if isempty(file_list2)
     file_list2 = dir('../input_share/*mov');
@@ -2078,6 +2171,10 @@ end
 % show start text
 set(handles.edit1, 'String','selecting "Region of Interest" ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
+addpath(genpath('../input_share'));
 
 % select roi for every movie
 for data_th = 1:(size(raw,1)-1)
@@ -2133,6 +2230,7 @@ end
 % show end text
 set(handles.edit1, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 % --- Executes on button press in radiobutton1.
@@ -2306,28 +2404,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-
-function edit3_Callback(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit3 as text
-%        str2double(get(hObject,'String')) returns contents of edit3 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit3_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
