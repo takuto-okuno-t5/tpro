@@ -61,12 +61,13 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     % uiwait(handles.figure1);
 
     % load config file
-    configFile = dir('./input/input_video_control.xlsx');
-    if ~isempty(configFile)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    configFile = './input_video_control.csv';
+    if exist(configFile, 'file')
+        confTable = readtable(configFile);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder')
-        return
+        disp('please put input csv file into the folder');
+        return;
     end
 
     % load environment value
@@ -81,22 +82,22 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % initialize GUI
     sharedInst = sharedInstance(0); % get shared instance
-    sharedInst.shuttleVideo = VideoReader(strcat('../input_share/', char(txt(rowNum+1,2))));
+    sharedInst.shuttleVideo = VideoReader(strcat('../input_share/', records{rowNum,2}));
     sharedInst.rowNum = rowNum;
     sharedInst.imageMode = 1;
     sharedInst.showDetectResult = 1;
     sharedInst.showDirection = 1;
     sharedInst.showIndexNumber = 0;
-    sharedInst.startFrame = num(rowNum, 4);
-    sharedInst.endFrame = num(rowNum, 5);
+    sharedInst.startFrame = records{rowNum, 4};
+    sharedInst.endFrame = records{rowNum, 5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
-    sharedInst.frameSteps = num(rowNum, 16);
+    sharedInst.frameSteps = records{rowNum, 16};
     sharedInst.frameNum = sharedInst.startFrame;
-    sharedInst.gaussH = num(rowNum,13);
-    sharedInst.gaussSigma = num(rowNum,14);
-    sharedInst.binaryTh = num(rowNum,8) * 100;
-    sharedInst.binaryAreaPixel = num(rowNum,15);
-    sharedInst.blobSeparateRate = num(rowNum,17);
+    sharedInst.gaussH = records{rowNum,13};
+    sharedInst.gaussSigma = records{rowNum,14};
+    sharedInst.binaryTh = records{rowNum,8} * 100;
+    sharedInst.binaryAreaPixel = records{rowNum,15};
+    sharedInst.blobSeparateRate = records{rowNum,17};
     sharedInst.isModified = false;
 
     sharedInst.originalImage = [];
@@ -315,7 +316,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
         case 'Cancel'
             return;
         case 'Yes'
-            saveExcelConfigurationFile(handles);
+            saveConfigurationFile(handles);
         case 'No'
             % nothing todo
         end
@@ -475,7 +476,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     % save excel setting data
-    saveExcelConfigurationFile(handles);
+    saveConfigurationFile(handles);
 end
 
 %% --- Executes on button press in pushbutton5.
@@ -879,20 +880,32 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 end
 
 %%
-function saveExcelConfigurationFile(handles)
-    %% save excel configuration file
+function saveConfigurationFile(handles)
+    % save configuration file
     sharedInst = sharedInstance(0); % get shared
     name = sharedInst.shuttleVideo.Name;
     frameNum = sharedInst.shuttleVideo.NumberOfFrames;
     frameRate = sharedInst.shuttleVideo.FrameRate;
 
-    B = {'1', name, '', num2str(sharedInst.startFrame), num2str(sharedInst.endFrame), frameNum, frameRate, ...
-        num2str(sharedInst.binaryTh / 100), '0', '1', '200', '0', ...
-        num2str(sharedInst.gaussH), num2str(sharedInst.gaussSigma), num2str(sharedInst.binaryAreaPixel), ...
-        num2str(sharedInst.frameSteps), '0.5'};
+    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
+        (sharedInst.binaryTh / 100), 0, 1, 200, 0, ...
+        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
+        sharedInst.frameSteps, 0.5};
 
-    outputFileName = './input/input_video_control.xlsx';
-    status = xlswrite(outputFileName,B,1,['A',num2str(sharedInst.rowNum+1)]);
+    outputFileName = './input_video_control.csv';
+    confTable = readtable(outputFileName);
+    records = table2cell(confTable);
+    for i=1:size(B,2)
+        records{sharedInst.rowNum, i} = B{i};
+    end
+    try
+        T = cell2table(records);
+        T.Properties.VariableNames = confTable.Properties.VariableNames;
+        writetable(T,outputFileName);
+        status = true;
+    catch e
+        status = false;
+    end
     if status 
         sharedInst.isModified = false;
         set(handles.pushbutton4, 'Enable', 'off');

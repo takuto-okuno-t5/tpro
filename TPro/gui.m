@@ -107,14 +107,14 @@ if ~filterIndex
 end
 
 % show starting message
-set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
+set(handles.edit1, 'String', 'creating configuration file (csv) ...');
 disableAllButtons(handles);
 pause(0.01);
 
 tic
     
-outputFileName = './input/input_video_control.xlsx';
-A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', '', 'ROI', 'rej_dist', '', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+outputFileName = './input_video_control.csv';
+header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 if ischar(fileNames)
     fileCount = 1;
 else
@@ -122,6 +122,7 @@ else
 end
 
 % process all selected files
+A = {};
 for i = 1:fileCount
     if fileCount > 1
         fileName = fileNames{i};
@@ -133,21 +134,29 @@ for i = 1:fileCount
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0', '1', '200', '0', '12', '4', '50', '1', '0.5'};
+    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.5};
     A = vertcat(A,B);
 end
 
-% remove file first and output excel file
+% remove file first and output csv file
 delete(outputFileName);
-status = xlswrite(outputFileName,A,1,'A1');
+try
+    T = cell2table(A);
+    T.Properties.VariableNames = header';
+    writetable(T,outputFileName);
+    status = true;
+catch e
+    status = false;
+end
+
 time = toc;
 
 % show result message
 if status 
-    set(handles.edit1, 'String',strcat('creating configuration file (xlsx) ... done!     t =',num2str(time),'s'));
+    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
     set(handles.text9,'String','Ready','BackgroundColor','green');
 else
-    set(handles.edit1, 'String',strcat('can not output configuration file (xlsx)'));
+    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
 enableAllButtons(handles);
@@ -165,12 +174,12 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    file_list3 = './input_video_control.csv';
+    if exist(file_list3, 'file')
+        confTable = readtable(file_list3);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder');
+        disp('please put input csv file into the folder');
         return;
     end
 else
@@ -189,16 +198,16 @@ addpath(genpath('../input_share'));
 tic % start timer
 
 % background detection for active movie
-for data_th = 1:(size(raw,1)-1)
+for data_th = 1:size(records,1)
     % check active flag
-    if ~num(data_th,1)
+    if ~records{data_th, 1}
         continue;
     end
 
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
 
     % show detecting message
-    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name])
+    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name]);
 
     % make output folder
     pathName = strcat('./bg_output/',shuttleVideo.name);
@@ -315,11 +324,12 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    file_list3 = './input_video_control.csv';
+    if exist(file_list3, 'file')
+        confTable = readtable(file_list3);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder');
+        disp('please put input csv file into the folder');
         return;
     end
 else
@@ -336,7 +346,7 @@ pause(0.01);
 addpath(genpath('../input_share'));
 
 % loop for every movies
-for i = 1 : size(num)
+for i = 1 : size(records,1)
     % show detection optimizer
     dlg = detectoptimizer({num2str(i)});
     delete(dlg);
@@ -360,12 +370,12 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    file_list3 = './input_video_control.csv';
+    if exist(file_list3, 'file')
+        confTable = readtable(file_list3);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder');
+        disp('please put input csv file into the folder');
         return;
     end
 else
@@ -455,22 +465,22 @@ keep_i = [];
 keep_count = [];
 
 % added on 2016-07-28
-for data_th = 1:(size(raw,1)-1)
+for data_th = 1:size(records,1)
     % check active flag
-    if ~num(data_th,1)
+    if ~records{data_th, 1}
         continue;
     end
     
-    blob_threshold = num(data_th, 8);
-    start_frame = num(data_th, 4);
-    end_frame = num(data_th, 5);
-    frame_steps = num(data_th, 16);
-    h = num(data_th, 13);
-    sigma = num(data_th, 14);
-    area_pixel = num(data_th, 15);
-    blobSeparateRate = num(data_th, 17);
+    blob_threshold = records{data_th, 8};
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    frame_steps = records{data_th, 16};
+    h = records{data_th, 13};
+    sigma = records{data_th, 14};
+    area_pixel = records{data_th, 15};
+    blobSeparateRate = records{data_th, 17};
 
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
 
     % ROI
     videoName = shuttleVideo.name;
@@ -872,13 +882,12 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-        raw_a = raw(1,:);
+    file_list3 = './input_video_control.csv';
+    if exist(file_list3, 'file')
+        confTable = readtable(file_list3);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder');
+        disp('please put input csv file into the folder');
         return;
     end
 else
@@ -999,16 +1008,16 @@ A = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1];
 B = [(dt^2/2); (dt^2/2); dt; dt];
 C = [1 0 0 0; 0 1 0 0];
 
-for data_th = 1:(size(raw,1)-1)
-    if ~num(data_th,1)
+for data_th = 1:size(records,1)
+    if ~records{data_th, 1}
         continue;
     end
     
-    reject_dist = num(data_th, 11);
-    start_frame = num(data_th, 4);
-    end_frame = num(data_th, 5);
-    frame_steps = num(data_th, 16);
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+    reject_dist = records{data_th, 11};
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    frame_steps = records{data_th, 16};
+    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
 
     % load detection
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
@@ -1501,11 +1510,13 @@ end
     save(strcat('./multi/track_',shuttleVideo.name,'_',filename,'.mat'), 'keep_data')
 
     % save input data used for generating this result
-    raw_b = raw(data_th+1,:);
-    raw_save = vertcat(raw_a,raw_b);
-    sheet = 1;
-    xlRange = 'A1';
-    xlswrite(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.xlsx'),raw_save,sheet,xlRange);
+    record = {};
+    for i=1:size(records,2)
+        record = [record, records{i}];
+    end
+    T = cell2table(record);
+    T.Properties.VariableNames = confTable.Properties.VariableNames;
+    writetable(T, strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.csv'));    
 end
 
 % show end text
@@ -2169,12 +2180,12 @@ if isempty(file_list2)
 end
 
 if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
+    file_list3 = './input_video_control.csv';
+    if exist(file_list3, 'file')
+        confTable = readtable(file_list3);
+        records = table2cell(confTable);
     else
-        disp('please put input xlsx files into the folder');
+        disp('please put input csv file into the folder');
         return;
     end
 else
@@ -2191,9 +2202,9 @@ pause(0.01);
 addpath(genpath('../input_share'));
 
 % select roi for every movie
-for data_th = 1:(size(raw,1)-1)
-    if num(data_th,1) && num(data_th,10)
-        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+for data_th = 1:size(records,1)
+    if records{data_th, 1} && records{data_th, 10}
+        shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
         frameImage = read(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
@@ -2315,78 +2326,84 @@ video_flag = 0;
 %     
 % keyboard
 
-%% make video from input file
-[num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-
-for data_th = 1:(size(raw,1)-1)
-    if num(data_th,1)
-        start_frame = num(data_th, 4);
-        end_frame = num(data_th, 5);
-        filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-        video_name = char(txt(data_th+1,2));
-        folder_name = strcat('./output/',video_name,'_',filename,'_pic');
-        
-        
-        fps = get(handles.edit2,'String');
-        fps_num = str2num(fps);
-        
-        if isempty(fps_num)
-            errordlg('Please fill fps.','Error Code I');
-        else
-            
-            addpath(genpath('output'))
-            
-            adjust_img_enable = 0;
-            adjust_img = -20;   % additional value for adjusting the img
-            
-            set_framerate = fps_num;  % set frame-rate manually here
-            
-            imageNames = dir(fullfile(folder_name,'*.png'));
-            if isempty(imageNames)
-                errordlg('No input images.','Error Code II');
-                break;
-            end
-            
-            imageNames = {imageNames.name}';
-            
-            name_begin = char(imageNames(1));
-            name_begin = name_begin(1:end-4);
-            name_last = char(imageNames(end));
-            name_last = name_last(1:end-4);
-            
-            outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
-            outputVideo.FrameRate = set_framerate;
-            
-            
-            %% make video
-            
-            open(outputVideo)
-            
-            for ii = 1:length(imageNames)
-                img = imread(fullfile(folder_name,imageNames{ii}));
-                img2 = rgb2gray(img);
-                
-                if adjust_img_enable
-                    img = img + adjust_img;
-                    img(img==245+adjust_img) = 245;
-                end
-                writeVideo(outputVideo,img)
-                clc
-                pause(0.001)
-                set(handles.text9, 'String',[num2str(100*ii/length(imageNames)) ' %'])
-            end
-            
-            close(outputVideo)
-            video_flag = 1;
-            %     img2 = img - adjust_img;
-            %     imshowpair(img,img2,'montage')
-        end
-        
-        
-    end
+% make video from input file
+file_list3 = './input_video_control.csv';
+if exist(file_list3, 'file')
+    confTable = readtable(file_list3);
+    records = table2cell(confTable);
+else
+    disp('please put input csv file into the folder');
+    return;
 end
 
+for data_th = 1:size(records,1)
+    % check active flag
+    if ~records{data_th, 1}
+        continue;
+    end
+    
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+    video_name = records{data_th, 2};
+    folder_name = strcat('./output/',video_name,'_',filename,'_pic');
 
+
+    fps = get(handles.edit2,'String');
+    fps_num = str2num(fps);
+
+    if isempty(fps_num)
+        errordlg('Please fill fps.','Error Code I');
+    else
+
+        addpath(genpath('output'))
+
+        adjust_img_enable = 0;
+        adjust_img = -20;   % additional value for adjusting the img
+
+        set_framerate = fps_num;  % set frame-rate manually here
+
+        imageNames = dir(fullfile(folder_name,'*.png'));
+        if isempty(imageNames)
+            errordlg('No input images.','Error Code II');
+            break;
+        end
+
+        imageNames = {imageNames.name}';
+
+        name_begin = char(imageNames(1));
+        name_begin = name_begin(1:end-4);
+        name_last = char(imageNames(end));
+        name_last = name_last(1:end-4);
+
+        outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
+        outputVideo.FrameRate = set_framerate;
+
+
+        %% make video
+
+        open(outputVideo)
+
+        for ii = 1:length(imageNames)
+            img = imread(fullfile(folder_name,imageNames{ii}));
+            img2 = rgb2gray(img);
+
+            if adjust_img_enable
+                img = img + adjust_img;
+                img(img==245+adjust_img) = 245;
+            end
+            writeVideo(outputVideo,img)
+            clc
+            pause(0.001)
+            set(handles.text9, 'String',[num2str(100*ii/length(imageNames)) ' %'])
+        end
+
+        close(outputVideo)
+        video_flag = 1;
+        %     img2 = img - adjust_img;
+        %     imshowpair(img,img2,'montage')
+    end
+end
 
 time = toc;
 if video_flag
