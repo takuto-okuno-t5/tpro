@@ -909,7 +909,14 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
     H.OrientationOutputPort = 1;
     H.EccentricityOutputPort = 1;
 
-    [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
+    [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_logical);
+    origAreas = AREA;
+    origCenterPoints = CENTROID;
+    origBoxes = BBOX;
+    origMajorAxis = MAJORAXIS;
+    origMinorAxis = MINORAXIS;
+    origOrient = ORIENTATION;
+    origEcc = ECCENTRICITY;
 
     labeledImage = bwlabel(blob_img_logical);   % label the image
 
@@ -958,23 +965,26 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
 
             for th_i = 1 : 40
                 blob_threshold2 = blob_threshold2 + 0.05;
+                if blob_threshold2 > 1
+                    break;
+                end
 
                 blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-                [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
+                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_trimmed2);
 
-                if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
-                    x_choose = trimmedCenterPoints(1:expect_num,1);
-                    y_choose = trimmedCenterPoints(1:expect_num,2);    % choose expect_num according to area (large)
+                if expect_num == size(AREA, 1) % change from <= to == 20161015
+                    x_choose = CENTROID(1:expect_num,1);
+                    y_choose = CENTROID(1:expect_num,2);    % choose expect_num according to area (large)
                     blobPointX = [blobPointX ; x_choose + double(rect(1))];
                     blobPointY = [blobPointY ; y_choose + double(rect(2))];
-                    blobAreas = [blobAreas ; trimmedAreas];
-                    blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
-                    blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
-                    blobOrient = [blobOrient ; trimmedOrient];
-                    blobEcc = [blobEcc ; trimmedEcc];
+                    blobAreas = [blobAreas ; AREA];
+                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
+                    blobMinorAxis = [blobMinorAxis ; MINORAXIS];
+                    blobOrient = [blobOrient ; ORIENTATION];
+                    blobEcc = [blobEcc ; ECCENTRICITY];
                     for j=1 : expect_num
-                        pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
-                        box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                        pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
+                        box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
                         blobCenterPoints = [blobCenterPoints ; pt];
                         blobBoxes = [blobBoxes ; box];
                     end
