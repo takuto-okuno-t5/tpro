@@ -1555,6 +1555,7 @@ H.MajorAxisLengthOutputPort = 1;
 H.MinorAxisLengthOutputPort = 1;
 H.OrientationOutputPort = 1;
 H.EccentricityOutputPort = 1;
+H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
 
 [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_logical);
 origAreas = AREA;
