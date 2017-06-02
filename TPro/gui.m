@@ -70,6 +70,9 @@ set(gcf, 'name', ['TPro version ', versionNumber]);
 % set initialized message
 set(handles.edit1, 'String','Welcome! Please click the buttons on the left to run')
 
+checkAllButtons(handles);
+pause(0.01);
+
 % UIWAIT makes gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
@@ -174,7 +177,7 @@ else
     set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % bg--- Executes on button press in pushbutton2.
@@ -327,7 +330,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % check_threshold--- Executes on button press in pushbutton3
@@ -378,7 +381,7 @@ end
 
 set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % detection--- Executes on button press in pushbutton4.
@@ -889,7 +892,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % tracker--- Executes on button press in pushbutton5.
@@ -1576,7 +1579,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 function edit1_Callback(hObject, eventdata, handles)
@@ -1977,6 +1980,78 @@ for i = 1 : max
 end
 
 %%
+function checkAllButtons(handles)
+% first disable all buttons
+disableAllButtons(handles)
+
+% button1 is always on
+set(handles.pushbutton1, 'Enable', 'on');
+
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    return; % no input files
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+videoFileNum = size(videoFiles,2);
+if videoFileNum == 0
+    return; % no video files
+end
+
+confFileName = [videoPath videoFiles{1} '_tpro/input_video_control.csv'];
+if ~exist(confFileName, 'file')
+    return; % no config file
+end
+confTable = readtable(confFileName);
+record = table2cell(confTable);
+start_frame = record{4};
+end_frame = record{5};
+
+% background button
+set(handles.pushbutton2, 'Enable', 'on');
+
+confPath = [videoPath videoFiles{1} '_tpro/'];
+backgroundFileName = [confPath 'background.png'];
+if ~exist(backgroundFileName, 'file')
+    return; % no background image file
+end
+
+% roi button
+set(handles.pushbutton6, 'Enable', 'on');
+
+roiFileName = [confPath 'roi.png'];
+if ~exist(roiFileName, 'file')
+    return; % no roi image file
+end
+
+% threshold check button
+set(handles.pushbutton3, 'Enable', 'on');
+% detect button
+set(handles.pushbutton4, 'Enable', 'on');
+% detect + track button
+set(handles.pushbutton8, 'Enable', 'on');
+
+filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+keepFileName = [confPath 'multi/detect_' filename 'keep_count.mat'];
+if ~exist(keepFileName, 'file')
+    return; % no keep count file
+end
+
+% track button
+set(handles.pushbutton5, 'Enable', 'on');
+
+trackImageName = [confPath 'output/' filename '_pic/' sprintf('%05d',start_frame) '.png'];
+if ~exist(trackImageName, 'file')
+    return; % no tracking image file
+end
+
+% make video button
+set(handles.pushbutton7, 'Enable', 'on');
+
+
+%%
 function [assignment, cost] = assignmentoptimal(distMatrix)
 %ASSIGNMENTOPTIMAL    Compute optimal assignment by Munkres algorithm
 %   ASSIGNMENTOPTIMAL(DISTMATRIX) computes the optimal assignment (minimum
@@ -2310,7 +2385,7 @@ end
 % show end text
 set(handles.edit1, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % --- Executes on button press in radiobutton1.
@@ -2480,7 +2555,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('making video ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
