@@ -70,6 +70,9 @@ set(gcf, 'name', ['TPro version ', versionNumber]);
 % set initialized message
 set(handles.edit1, 'String','Welcome! Please click the buttons on the left to run')
 
+checkAllButtons(handles);
+pause(0.01);
+
 % UIWAIT makes gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
@@ -96,7 +99,7 @@ set(handles.text9,'String','Running','BackgroundColor','red');
 addpath(genpath('../input_share'));
 
 % show file select modal
-[fileNames, pathName, filterIndex] = uigetfile( {  ...
+[fileNames, videoPath, filterIndex] = uigetfile( {  ...
     '*.*',  'All Files (*.*)'}, ...
     'Pick a file', ...
     'MultiSelect', 'on', '../input_share');
@@ -107,14 +110,13 @@ if ~filterIndex
 end
 
 % show starting message
-set(handles.edit1, 'String', 'creating configuration file (xlsx) ...');
+set(handles.edit1, 'String', 'creating configuration file (csv) ...');
 disableAllButtons(handles);
 pause(0.01);
 
-tic
-    
-outputFileName = './input/input_video_control.xlsx';
-A = {'Enable', 'Name', '', 'Start', 'End', 'All', 'fps', 'TH', '', 'ROI', 'rej_dist', '', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+tic;
+
+header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 if ischar(fileNames)
     fileCount = 1;
 else
@@ -122,35 +124,60 @@ else
 end
 
 % process all selected files
+videoFiles = {};
+status = true;
+
 for i = 1:fileCount
     if fileCount > 1
         fileName = fileNames{i};
     else
         fileName = fileNames;
     end
+    videoFiles = [videoFiles, fileName];
+
+    % make directory
+    outPathName = [videoPath fileName '_tpro'];
+    if ~exist(outPathName, 'dir')
+        mkdir(outPathName);
+    end
+    
+    outputFileName = [outPathName '/input_video_control.csv'];
+
+    % make control file if not exist
+    if exist(outputFileName, 'file')
+        continue;
+    end
+
     shuttleVideo = VideoReader(fileName);
     name = shuttleVideo.Name;
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {'1', name, '', '1', frameNum, frameNum, frameRate, '0.6', '0', '1', '200', '0', '12', '4', '50', '1', '0.5'};
-    A = vertcat(A,B);
+    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.5};
+    try
+        T = cell2table(B);
+        T.Properties.VariableNames = header';
+        writetable(T,outputFileName);
+        status = true;
+    catch e
+        status = false;
+        break;
+    end
 end
 
-% remove file first and output excel file
-delete(outputFileName);
-status = xlswrite(outputFileName,A,1,'A1');
+save('./input_videos.mat', 'videoPath', 'videoFiles');
+
 time = toc;
 
 % show result message
 if status 
-    set(handles.edit1, 'String',strcat('creating configuration file (xlsx) ... done!     t =',num2str(time),'s'));
+    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
     set(handles.text9,'String','Ready','BackgroundColor','green');
 else
-    set(handles.edit1, 'String',strcat('can not output configuration file (xlsx)'));
+    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % bg--- Executes on button press in pushbutton2.
@@ -159,23 +186,28 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-    else
-        disp('please put input xlsx files into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -184,28 +216,25 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 tic % start timer
 
 % background detection for active movie
-for data_th = 1:(size(raw,1)-1)
+for data_th = 1:size(records,1)
     % check active flag
-    if ~num(data_th,1)
+    if ~records{data_th, 1}
         continue;
     end
 
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+    shuttleVideo = VideoReader(strcat(videoPath, records{data_th, 2}));
 
     % show detecting message
-    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name])
+    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name]);
 
-    % make output folder
-    pathName = strcat('./bg_output/',shuttleVideo.name);
-    backgroundFileName = strcat(pathName,'/',shuttleVideo.name,'bg.png');
-    if ~exist(pathName, 'dir')
-        mkdir(pathName);
-    end
+    % set output file name
+    pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
+    backgroundFileName = strcat(pathName,'/background.png');
 
     % show startEndDialog
     [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
@@ -301,7 +330,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % check_threshold--- Executes on button press in pushbutton3
@@ -309,22 +338,29 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
-end
 
-if ~isempty(file_list2)
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-    else
-        disp('please put input xlsx files into the folder');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -333,10 +369,10 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 % loop for every movies
-for i = 1 : size(num)
+for i = 1 : size(records,1)
     % show detection optimizer
     dlg = detectoptimizer({num2str(i)});
     delete(dlg);
@@ -345,7 +381,7 @@ end
 
 set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % detection--- Executes on button press in pushbutton4.
@@ -354,23 +390,28 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-    else
-        disp('please put input xlsx files into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -379,7 +420,7 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 %% parameters setting
 tic % start timer
@@ -451,26 +492,31 @@ keep_i = [];
 keep_count = [];
 
 % added on 2016-07-28
-for data_th = 1:(size(raw,1)-1)
+for data_th = 1:size(records,1)
     % check active flag
-    if ~num(data_th,1)
+    if ~records{data_th, 1}
         continue;
     end
     
-    blob_threshold = num(data_th, 8);
-    start_frame = num(data_th, 4);
-    end_frame = num(data_th, 5);
-    frame_steps = num(data_th, 16);
-    h = num(data_th, 13);
-    sigma = num(data_th, 14);
-    area_pixel = num(data_th, 15);
-    blobSeparateRate = num(data_th, 17);
+    blob_threshold = records{data_th, 8};
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    frame_steps = records{data_th, 16};
+    h = records{data_th, 13};
+    sigma = records{data_th, 14};
+    area_pixel = records{data_th, 15};
+    blobSeparateRate = records{data_th, 17};
 
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'multi'], 'dir')
+        mkdir([confPath 'multi']);
+    end
+
+    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
 
     % ROI
     videoName = shuttleVideo.name;
-    roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+    roiFileName = strcat(confPath,'roi.png');
     if exist(roiFileName, 'file')
         img = imread(roiFileName);
         roi_mask = im2double(img);
@@ -478,7 +524,7 @@ for data_th = 1:(size(raw,1)-1)
         roi_mask = [];
     end
 
-    bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+    bgImageFile = strcat(confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
         if size(size(bgImage),2) == 2 % one plane background
@@ -495,7 +541,7 @@ for data_th = 1:(size(raw,1)-1)
 
     % make output folder
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    mkdir(strcat('./detect_output/',shuttleVideo.name,'_',filename));
+    mkdir(strcat(confPath,'detect_output/',filename));
 
     X = cell(1,length(end_frame-start_frame+1));
     Y = cell(1,length(end_frame-start_frame+1));
@@ -738,7 +784,7 @@ for data_th = 1:(size(raw,1)-1)
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',i_count) '.png'];
-            imwrite(f.cdata,strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',filename2));
+            imwrite(f.cdata, strcat(confPath,'detect_output/',filename,'/',filename2));
             pause(0.001)
         end
         % graph for detection analysis
@@ -806,14 +852,14 @@ for data_th = 1:(size(raw,1)-1)
     
     % save data
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count');
+    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count');
 
     % save data as text
-    countFileName = strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt')
+    countFileName = strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt');
     write_file_cnt = fopen(countFileName, 'wt');
-    write_file_x = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+    write_file_x = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
 
     % cook raw data before saving
     end_row = size(X, 2);
@@ -846,7 +892,7 @@ end
 time = toc;
 set(handles.edit1, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % tracker--- Executes on button press in pushbutton5.
@@ -855,32 +901,31 @@ function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('output'));
-addpath(genpath('multi'));
-addpath(genpath('../input_share'));
-
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
-end
-
-if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-        raw_a = raw(1,:);
-    else
-        disp('please put input xlsx files into the folder');
-        return;
-    end
-else
-    disp('please put input video files into the folder');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
     return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+addpath(videoPath);
 
 % show start text
 set(handles.edit1, 'String','tracking ...')
@@ -963,16 +1008,7 @@ animal_type = get(handles.popupmenu1,'Value');
 
 % kalman filter multiple object tracking
 
-if figure_enable
-    if visible_enable
-        figure('name','tracker_savefig_op.m','NumberTitle','off')
-    else
-        figure('name','tracker_savefig_op.m','NumberTitle','off','visible','off')
-    end
-
-end
-
-%% Kalman
+% Kalman
 
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
@@ -995,24 +1031,28 @@ A = [1 0 dt 0; 0 1 0 dt; 0 0 1 0; 0 0 0 1];
 B = [(dt^2/2); (dt^2/2); dt; dt];
 C = [1 0 0 0; 0 1 0 0];
 
-for data_th = 1:(size(raw,1)-1)
-    if ~num(data_th,1)
+for data_th = 1:size(records,1)
+    if ~records{data_th, 1}
         continue;
     end
     
-    reject_dist = num(data_th, 11);
-    start_frame = num(data_th, 4);
-    end_frame = num(data_th, 5);
-    frame_steps = num(data_th, 16);
-    shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
-
-    % load detection
-    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'))
+    reject_dist = records{data_th, 11};
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    frame_steps = records{data_th, 16};
+    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
 
     % make output folder
-    mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_pic'));
-    mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_data'));
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'output'], 'dir')
+        mkdir([confPath 'output']);
+    end
+    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+    mkdir(strcat(confPath,'output/',filename,'_pic'));
+    mkdir(strcat(confPath,'output/',filename,'_data'));
+
+    % load detection
+    load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
     % initialize result variables
     Q_loc_meas = []; % location measure
@@ -1054,8 +1094,20 @@ for data_th = 1:(size(raw,1)-1)
     img_h = size(img_initial,1);
     img_w = size(img_initial,2);
 
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['tracking for ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
     t = 1;
     for t_count = start_frame:frame_steps:end_frame
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+        
         % make the given detections matrix
         Q_loc_meas = [X{t} Y{t}];
         direction_meas = keep_direction_sorted{t};
@@ -1309,7 +1361,20 @@ end
         % output figure
         %%{
         if figure_enable
-            clf
+            % create new roi window if it does not exist
+            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+                if visible_enable
+                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off')
+                else
+                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off','visible','off')
+                end
+            end
+
+            % change title message
+            set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
+            figure(figureWindow);
+            clf;
+
             img = read(shuttleVideo,t_count);
             %             img = imread(strcat('./input/',file_list(t).name));
             imshow(img);
@@ -1343,47 +1408,54 @@ end
                     axis off
                 end
             end
+            hold off
 
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',t_count) '.png'];
-            imwrite(f.cdata,strcat('./output/',shuttleVideo.name,'_',filename,'_pic/',filename2));
+            imwrite(f.cdata,strcat(confPath,'output/',filename,'_pic/',filename2));
 
             pause(0.001)
-
         end
 
-
         %}
-        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*(t_count-start_frame)/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
-        %     sum(strk_trks)
-        set(handles.text9, 'String',[num2str(int64(100*(t_count-start_frame)/(end_frame-start_frame+1))) ' %']);
-        pause(0.001)
+        rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
+        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
+        % Report current estimate in the waitbar's message field
+        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
+        pause(0.001);
         t = t + 1;
     end
-    set(handles.text9, 'String', '100 %'); % done!
+    
+    % delete dialog bar
+    delete(hWaitBar);
+
+    if isCancel
+        continue;
+    end
 
     % save data as text
-    write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
-    write_file_vx = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
-    write_file_vy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
-    write_file_vxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
-    write_file_dir = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd2 = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
+    outputDataPath = [confPath 'output/' filename '_data/'];
+    write_file_x = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+    write_file_vx = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
+    write_file_vy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
+    write_file_vxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
+    write_file_dir = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
+    write_file_dd = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
+    write_file_dd2 = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
     if ecc_enable
-        write_file_ecc = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
+        write_file_ecc = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
         keep_data{7} = keep_data{7}(:,1:flyNum);
     end
     if angle_enable
-        write_file_angle = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
+        write_file_angle = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
         keep_data{8} = keep_data{8}(:,1:flyNum);
         % inverse the angle upside-down
         keep_data{8} = -keep_data{8};
     end
-    write_file_dis = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
-    write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
+    write_file_dis = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
+    write_file_svxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
 
     for i = 1:6
         keep_data{i} = keep_data{i}(:,1:flyNum);
@@ -1494,21 +1566,20 @@ end
     fclose(write_file_svxy);
 
     % save keep_data
-    save(strcat('./multi/track_',shuttleVideo.name,'_',filename,'.mat'), 'keep_data')
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
 
     % save input data used for generating this result
-    raw_b = raw(data_th+1,:);
-    raw_save = vertcat(raw_a,raw_b);
-    sheet = 1;
-    xlRange = 'A1';
-    xlswrite(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.xlsx'),raw_save,sheet,xlRange);
+    record = {records{data_th,:}};
+    T = cell2table(record);
+    T.Properties.VariableNames = confTable.Properties.VariableNames;
+    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));    
 end
 
 % show end text
 time = toc;
 set(handles.edit1, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 function edit1_Callback(hObject, eventdata, handles)
@@ -1540,8 +1611,16 @@ H.MajorAxisLengthOutputPort = 1;
 H.MinorAxisLengthOutputPort = 1;
 H.OrientationOutputPort = 1;
 H.EccentricityOutputPort = 1;
+H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
 
-[origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
+[AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_logical);
+origAreas = AREA;
+origCenterPoints = CENTROID;
+origBoxes = BBOX;
+origMajorAxis = MAJORAXIS;
+origMinorAxis = MINORAXIS;
+origOrient = ORIENTATION;
+origEcc = ECCENTRICITY;
 
 labeledImage = bwlabel(blob_img_logical);   % label the image
 
@@ -1591,23 +1670,26 @@ for i = 1 : blob_num
 
         for th_i = 1 : 40
             blob_threshold2 = blob_threshold2 + 0.05;
+            if blob_threshold2 > 1
+                break;
+            end
 
             blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-            [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
+            [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_trimmed2);
 
-            if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
-                x_choose = trimmedCenterPoints(1:expect_num,2);
-                y_choose = trimmedCenterPoints(1:expect_num,1);    % choose expect_num according to area (large)
+            if expect_num == size(AREA, 1) % change from <= to == 20161015
+                x_choose = CENTROID(1:expect_num,2);
+                y_choose = CENTROID(1:expect_num,1);    % choose expect_num according to area (large)
                 blobPointX = [blobPointX ; x_choose + double(rect(2))];
                 blobPointY = [blobPointY ; y_choose + double(rect(1))];
-                blobAreas = [blobAreas ; trimmedAreas];
-                blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
-                blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
-                blobOrient = [blobOrient ; trimmedOrient];
-                blobEcc = [blobEcc ; trimmedEcc];
+                blobAreas = [blobAreas ; AREA];
+                blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
+                blobMinorAxis = [blobMinorAxis ; MINORAXIS];
+                blobOrient = [blobOrient ; ORIENTATION];
+                blobEcc = [blobEcc ; ECCENTRICITY];
                 for j=1 : expect_num
-                    pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
-                    box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                    pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
+                    box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
                     blobCenterPoints = [blobCenterPoints ; pt];
                     blobBoxes = [blobBoxes ; box];
                 end
@@ -1898,6 +1980,78 @@ for i = 1 : max
 end
 
 %%
+function checkAllButtons(handles)
+% first disable all buttons
+disableAllButtons(handles)
+
+% button1 is always on
+set(handles.pushbutton1, 'Enable', 'on');
+
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    return; % no input files
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+videoFileNum = size(videoFiles,2);
+if videoFileNum == 0
+    return; % no video files
+end
+
+confFileName = [videoPath videoFiles{1} '_tpro/input_video_control.csv'];
+if ~exist(confFileName, 'file')
+    return; % no config file
+end
+confTable = readtable(confFileName);
+record = table2cell(confTable);
+start_frame = record{4};
+end_frame = record{5};
+
+% background button
+set(handles.pushbutton2, 'Enable', 'on');
+
+confPath = [videoPath videoFiles{1} '_tpro/'];
+backgroundFileName = [confPath 'background.png'];
+if ~exist(backgroundFileName, 'file')
+    return; % no background image file
+end
+
+% roi button
+set(handles.pushbutton6, 'Enable', 'on');
+
+roiFileName = [confPath 'roi.png'];
+if ~exist(roiFileName, 'file')
+    return; % no roi image file
+end
+
+% threshold check button
+set(handles.pushbutton3, 'Enable', 'on');
+% detect button
+set(handles.pushbutton4, 'Enable', 'on');
+% detect + track button
+set(handles.pushbutton8, 'Enable', 'on');
+
+filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+keepFileName = [confPath 'multi/detect_' filename 'keep_count.mat'];
+if ~exist(keepFileName, 'file')
+    return; % no keep count file
+end
+
+% track button
+set(handles.pushbutton5, 'Enable', 'on');
+
+trackImageName = [confPath 'output/' filename '_pic/' sprintf('%05d',start_frame) '.png'];
+if ~exist(trackImageName, 'file')
+    return; % no tracking image file
+end
+
+% make video button
+set(handles.pushbutton7, 'Enable', 'on');
+
+
+%%
 function [assignment, cost] = assignmentoptimal(distMatrix)
 %ASSIGNMENTOPTIMAL    Compute optimal assignment by Munkres algorithm
 %   ASSIGNMENTOPTIMAL(DISTMATRIX) computes the optimal assignment (minimum
@@ -2149,23 +2303,28 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    %     file_list = [];
-    file_list3 = dir('./input/input_video_control.xlsx');
-    if ~isempty(file_list3)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-    else
-        disp('please put input xlsx files into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -2174,17 +2333,16 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 % select roi for every movie
-for data_th = 1:(size(raw,1)-1)
-    if num(data_th,1) && num(data_th,10)
-        shuttleVideo = VideoReader(strcat('../input_share/',char(txt(data_th+1,2))));
+for data_th = 1:size(records,1)
+    if records{data_th, 1} && records{data_th, 10}
+        shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
         frameImage = read(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
-        pathName = strcat('./roi/',shuttleVideo.name);
-        roiFileName = strcat(pathName,'/',shuttleVideo.name,'_roi.png');
+        roiFileName = strcat(videoPath,shuttleVideo.name,'_tpro/roi.png');
 
         % create new roi window if it does not exist
         if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
@@ -2200,9 +2358,6 @@ for data_th = 1:(size(raw,1)-1)
             img = double(grayImage).*imcomplement(roiImage);
             img = uint8(img);
         else
-            if ~exist(pathName, 'dir')
-                mkdir(pathName);
-            end
             img = frameImage;
         end
         
@@ -2230,7 +2385,7 @@ end
 % show end text
 set(handles.edit1, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
-enableAllButtons(handles);
+checkAllButtons(handles);
 
 
 % --- Executes on button press in radiobutton1.
@@ -2280,130 +2435,127 @@ function pushbutton7_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+% show start text
+set(handles.edit1, 'String','making video ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
+% start tic
 tic
 
-video_flag = 0;
-
-%% make video by browsing
-
-% [filename, pathname, filterindex] = uigetfile( {  ...
-%     '*.*',  'All Files (*.*)'}, ...
-%     'Pick a file', ...
-%     'MultiSelect', 'on', './output');
-% 
-% video_name = 'video';
-% fps = get(handles.edit2,'String');
-% fps_num = str2num(fps);
-% 
-% if isempty(fps_num)
-%     errordlg('Please fill fps.','Error Code I');
-% else
-%     
-% keyboard
-
-%% make video from input file
-[num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-
-for data_th = 1:(size(raw,1)-1)
-    if num(data_th,1)
-        start_frame = num(data_th, 4);
-        end_frame = num(data_th, 5);
-        filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-        video_name = char(txt(data_th+1,2));
-        folder_name = strcat('./output/',video_name,'_',filename,'_pic');
-        
-        
-        fps = get(handles.edit2,'String');
-        fps_num = str2num(fps);
-        
-        if isempty(fps_num)
-            errordlg('Please fill fps.','Error Code I');
-        else
-            
-            addpath(genpath('output'))
-            
-            adjust_img_enable = 0;
-            adjust_img = -20;   % additional value for adjusting the img
-            
-            set_framerate = fps_num;  % set frame-rate manually here
-            
-            imageNames = dir(fullfile(folder_name,'*.png'));
-            if isempty(imageNames)
-                errordlg('No input images.','Error Code II');
-                break;
-            end
-            
-            imageNames = {imageNames.name}';
-            
-            name_begin = char(imageNames(1));
-            name_begin = name_begin(1:end-4);
-            name_last = char(imageNames(end));
-            name_last = name_last(1:end-4);
-            
-            outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
-            outputVideo.FrameRate = set_framerate;
-            
-            
-            %% make video
-            
-            open(outputVideo)
-            
-            for ii = 1:length(imageNames)
-                img = imread(fullfile(folder_name,imageNames{ii}));
-                img2 = rgb2gray(img);
-                
-                if adjust_img_enable
-                    img = img + adjust_img;
-                    img(img==245+adjust_img) = 245;
-                end
-                writeVideo(outputVideo,img)
-                clc
-                pause(0.001)
-                set(handles.text9, 'String',[num2str(100*ii/length(imageNames)) ' %'])
-            end
-            
-            close(outputVideo)
-            video_flag = 1;
-            %     img2 = img - adjust_img;
-            %     imshowpair(img,img2,'montage')
-        end
-        
-        
+for data_th = 1:size(records,1)
+    % check active flag
+    if ~records{data_th, 1}
+        continue;
     end
+    
+    start_frame = records{data_th, 4};
+    end_frame = records{data_th, 5};
+    fps_num = records{data_th, 7};
+    frame_steps = records{data_th, 16};
+    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+    video_name = records{data_th, 2};
+
+    % make output folder
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'movie'], 'dir')
+        mkdir([confPath 'movie']);
+    end
+    folder_name = strcat(confPath,'output/',filename,'_pic');
+
+    addpath([confPath 'movie']);
+
+    adjust_img_enable = 0;
+    adjust_img = -20;   % additional value for adjusting the img
+
+    imageNames = dir(fullfile(folder_name,'*.png'));
+    if isempty(imageNames)
+        errordlg('No input images.','Error');
+        continue;
+    end
+
+    imageNames = {imageNames.name}';
+
+    name_begin = char(imageNames(1));
+    name_begin = name_begin(1:end-4);
+    name_last = char(imageNames(end));
+    name_last = name_last(1:end-4);
+
+    outputVideo = VideoWriter(fullfile([confPath 'movie'], strcat(video_name,'_',name_begin,'_to_',name_last)));
+    outputVideo.FrameRate = fps_num / frame_steps;
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['making video for ', video_name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
+    % make video
+    open(outputVideo)
+
+    for ii = 1:length(imageNames)
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+
+        img = imread(fullfile(folder_name,imageNames{ii}));
+        img2 = rgb2gray(img);
+
+        if adjust_img_enable
+            img = img + adjust_img;
+            img(img==245+adjust_img) = 245;
+        end
+        writeVideo(outputVideo,img)
+        clc
+        rate = ii/length(imageNames);
+        % Report current estimate in the waitbar's message field
+        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
+        pause(0.001);
+    end
+    close(outputVideo)
+    
+    % delete dialog bar
+    delete(hWaitBar);
+
+    if isCancel
+        continue;
+    end
+    %     img2 = img - adjust_img;
+    %     imshowpair(img,img2,'montage')
 end
 
-
-
+% show end text
 time = toc;
-if video_flag
-    set(handles.edit1, 'String',strcat('video done!     t =',num2str(time),'s'))
-end
-
-
-function edit2_Callback(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit2 as text
-%        str2double(get(hObject,'String')) returns contents of edit2 as a double
-
-
-
-
-
-% --- Executes during object creation, after setting all properties.
-function edit2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
+set(handles.edit1, 'String',strcat('making video ... done!     t =',num2str(time),'s'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
+checkAllButtons(handles);
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )

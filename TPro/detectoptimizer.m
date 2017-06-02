@@ -60,15 +60,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     % UIWAIT makes detectoptimizer wait for user response (see UIRESUME)
     % uiwait(handles.figure1);
 
-    % load config file
-    configFile = dir('./input/input_video_control.xlsx');
-    if ~isempty(configFile)
-        [num,txt,raw] = xlsread('./input/input_video_control.xlsx');
-    else
-        disp('please put input xlsx files into the folder')
-        return
-    end
-
     % load environment value
     if size(varargin, 1) > 0
         rowNum = int64(str2num(char(varargin{1}(1))));
@@ -79,24 +70,47 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     if isempty(rowNum), rowNum = 1; end
 
+    % load video list
+    inputListFile = './input_videos.mat';
+    if ~exist(inputListFile, 'file')
+        errordlg('please select movies before operation.', 'Error');
+        return;
+    end
+    vl = load(inputListFile);
+    videoPath = vl.videoPath;
+    videoFiles = vl.videoFiles;
+
+    % load configuration files
+    confFileName = [videoPath videoFiles{rowNum} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    records = table2cell(confTable);
+    
     % initialize GUI
     sharedInst = sharedInstance(0); % get shared instance
-    sharedInst.shuttleVideo = VideoReader(strcat('../input_share/', char(txt(rowNum+1,2))));
+    sharedInst.videoPath = videoPath;
+    sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
+    sharedInst.confFileName = confFileName;
+    sharedInst.shuttleVideo = VideoReader(strcat(videoPath, records{2}));
     sharedInst.rowNum = rowNum;
     sharedInst.imageMode = 1;
     sharedInst.showDetectResult = 1;
     sharedInst.showDirection = 1;
     sharedInst.showIndexNumber = 0;
-    sharedInst.startFrame = num(rowNum, 4);
-    sharedInst.endFrame = num(rowNum, 5);
+    sharedInst.startFrame = records{4};
+    sharedInst.endFrame = records{5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
-    sharedInst.frameSteps = num(rowNum, 16);
+    sharedInst.frameSteps = records{16};
     sharedInst.frameNum = sharedInst.startFrame;
-    sharedInst.gaussH = num(rowNum,13);
-    sharedInst.gaussSigma = num(rowNum,14);
-    sharedInst.binaryTh = num(rowNum,8) * 100;
-    sharedInst.binaryAreaPixel = num(rowNum,15);
-    sharedInst.blobSeparateRate = num(rowNum,17);
+    sharedInst.gaussH = records{13};
+    sharedInst.gaussSigma = records{14};
+    sharedInst.binaryTh = records{8} * 100;
+    sharedInst.binaryAreaPixel = records{15};
+    sharedInst.blobSeparateRate = records{17};
     sharedInst.isModified = false;
     sharedInst.useDeepLearning = false;
 
@@ -149,7 +163,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load background image
     videoName = sharedInst.shuttleVideo.name;
-    bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+    bgImageFile = strcat(sharedInst.confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
         if size(size(bgImage),2) == 2 % one plane background
@@ -167,7 +181,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load roi image file
-    roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+    roiFileName = strcat(sharedInst.confPath,'roi.png');
     if exist(roiFileName, 'file')
         img = imread(roiFileName);
         sharedInst.roiMaskImage = im2double(img);
@@ -327,7 +341,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
         case 'Cancel'
             return;
         case 'Yes'
-            saveExcelConfigurationFile(handles);
+            saveConfigurationFile(handles);
         case 'No'
             % nothing todo
         end
@@ -487,7 +501,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     % save excel setting data
-    saveExcelConfigurationFile(handles);
+    saveConfigurationFile(handles);
 end
 
 %% --- Executes on button press in pushbutton5.
@@ -895,20 +909,28 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 end
 
 %%
-function saveExcelConfigurationFile(handles)
-    %% save excel configuration file
+function saveConfigurationFile(handles)
+    % save configuration file
     sharedInst = sharedInstance(0); % get shared
     name = sharedInst.shuttleVideo.Name;
     frameNum = sharedInst.shuttleVideo.NumberOfFrames;
     frameRate = sharedInst.shuttleVideo.FrameRate;
 
-    B = {'1', name, '', num2str(sharedInst.startFrame), num2str(sharedInst.endFrame), frameNum, frameRate, ...
-        num2str(sharedInst.binaryTh / 100), '0', '1', '200', '0', ...
-        num2str(sharedInst.gaussH), num2str(sharedInst.gaussSigma), num2str(sharedInst.binaryAreaPixel), ...
-        num2str(sharedInst.frameSteps), '0.5'};
+    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
+        (sharedInst.binaryTh / 100), 0, 1, 200, 0, ...
+        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
+        sharedInst.frameSteps, 0.5};
 
-    outputFileName = './input/input_video_control.xlsx';
-    status = xlswrite(outputFileName,B,1,['A',num2str(sharedInst.rowNum+1)]);
+    try
+        T = cell2table(B);
+        confTable = readtable(sharedInst.confFileName);
+        T.Properties.VariableNames = confTable.Properties.VariableNames;
+        writetable(T,sharedInst.confFileName);
+        status = true;
+    catch e
+        status = false;
+        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
+    end
     if status 
         sharedInst.isModified = false;
         set(handles.pushbutton4, 'Enable', 'off');
@@ -924,8 +946,16 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
     H.MinorAxisLengthOutputPort = 1;
     H.OrientationOutputPort = 1;
     H.EccentricityOutputPort = 1;
+    H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
 
-    [origAreas, origCenterPoints, origBoxes, origMajorAxis, origMinorAxis, origOrient, origEcc] = step(H, blob_img_logical);
+    [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_logical);
+    origAreas = AREA;
+    origCenterPoints = CENTROID;
+    origBoxes = BBOX;
+    origMajorAxis = MAJORAXIS;
+    origMinorAxis = MINORAXIS;
+    origOrient = ORIENTATION;
+    origEcc = ECCENTRICITY;
 
     labeledImage = bwlabel(blob_img_logical);   % label the image
 
@@ -974,23 +1004,26 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
 
             for th_i = 1 : 40
                 blob_threshold2 = blob_threshold2 + 0.05;
+                if blob_threshold2 > 1
+                    break;
+                end
 
                 blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-                [trimmedAreas, trimmedCenterPoints, trimmedBoxes, trimmedMajorAxis, trimmedMinorAxis, trimmedOrient, trimmedEcc] = step(H, blob_img_trimmed2);
+                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_trimmed2);
 
-                if expect_num == size(trimmedAreas, 1) % change from <= to == 20161015
-                    x_choose = trimmedCenterPoints(1:expect_num,1);
-                    y_choose = trimmedCenterPoints(1:expect_num,2);    % choose expect_num according to area (large)
+                if expect_num == size(AREA, 1) % change from <= to == 20161015
+                    x_choose = CENTROID(1:expect_num,1);
+                    y_choose = CENTROID(1:expect_num,2);    % choose expect_num according to area (large)
                     blobPointX = [blobPointX ; x_choose + double(rect(1))];
                     blobPointY = [blobPointY ; y_choose + double(rect(2))];
-                    blobAreas = [blobAreas ; trimmedAreas];
-                    blobMajorAxis = [blobMajorAxis ; trimmedMajorAxis];
-                    blobMinorAxis = [blobMinorAxis ; trimmedMinorAxis];
-                    blobOrient = [blobOrient ; trimmedOrient];
-                    blobEcc = [blobEcc ; trimmedEcc];
+                    blobAreas = [blobAreas ; AREA];
+                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
+                    blobMinorAxis = [blobMinorAxis ; MINORAXIS];
+                    blobOrient = [blobOrient ; ORIENTATION];
+                    blobEcc = [blobEcc ; ECCENTRICITY];
                     for j=1 : expect_num
-                        pt = trimmedCenterPoints(j,:) + [double(rect(1)) double(rect(2))];
-                        box = trimmedBoxes(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                        pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
+                        box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
                         blobCenterPoints = [blobCenterPoints ; pt];
                         blobBoxes = [blobBoxes ; box];
                     end
@@ -1056,7 +1089,7 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
     sharedInst = sharedInstance(0); % get shared
 
     % create output directory
-    path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
+    path = strcat(sharedInst.confPath,'detect_flies/');
     mkdir(path);
 
     tic;
