@@ -976,16 +976,7 @@ animal_type = get(handles.popupmenu1,'Value');
 
 % kalman filter multiple object tracking
 
-if figure_enable
-    if visible_enable
-        figure('name','tracker_savefig_op.m','NumberTitle','off')
-    else
-        figure('name','tracker_savefig_op.m','NumberTitle','off','visible','off')
-    end
-
-end
-
-%% Kalman
+% Kalman
 
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
@@ -1067,8 +1058,20 @@ for data_th = 1:size(records,1)
     img_h = size(img_initial,1);
     img_w = size(img_initial,2);
 
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['tracking for ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
     t = 1;
     for t_count = start_frame:frame_steps:end_frame
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+        
         % make the given detections matrix
         Q_loc_meas = [X{t} Y{t}];
         direction_meas = keep_direction_sorted{t};
@@ -1322,7 +1325,20 @@ end
         % output figure
         %%{
         if figure_enable
-            clf
+            % create new roi window if it does not exist
+            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+                if visible_enable
+                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off')
+                else
+                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off','visible','off')
+                end
+            end
+
+            % change title message
+            set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
+            figure(figureWindow);
+            clf;
+
             img = read(shuttleVideo,t_count);
             %             img = imread(strcat('./input/',file_list(t).name));
             imshow(img);
@@ -1356,6 +1372,7 @@ end
                     axis off
                 end
             end
+            hold off
 
             % save figure
             f=getframe;
@@ -1363,18 +1380,23 @@ end
             imwrite(f.cdata,strcat('./output/',shuttleVideo.name,'_',filename,'_pic/',filename2));
 
             pause(0.001)
-
         end
 
-
         %}
-        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*(t_count-start_frame)/(end_frame-start_frame+1)), '%', '     t : ', num2str(t)   ));
-        %     sum(strk_trks)
-        set(handles.text9, 'String',[num2str(int64(100*(t_count-start_frame)/(end_frame-start_frame+1))) ' %']);
-        pause(0.001)
+        rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
+        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
+        % Report current estimate in the waitbar's message field
+        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
+        pause(0.001);
         t = t + 1;
     end
-    set(handles.text9, 'String', '100 %'); % done!
+    
+    % delete dialog bar
+    delete(hWaitBar);
+
+    if isCancel
+        continue;
+    end
 
     % save data as text
     write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
@@ -2337,6 +2359,12 @@ else
     return;
 end
 
+% show start text
+set(handles.edit1, 'String','making video ...')
+set(handles.text9, 'String','Running','BackgroundColor','red');
+disableAllButtons(handles);
+pause(0.01);
+
 for data_th = 1:size(records,1)
     % check active flag
     if ~records{data_th, 1}
@@ -2355,61 +2383,79 @@ for data_th = 1:size(records,1)
 
     if isempty(fps_num)
         errordlg('Please fill fps.','Error Code I');
-    else
+        continue;
+    end
 
-        addpath(genpath('output'))
+    addpath(genpath('output'))
 
-        adjust_img_enable = 0;
-        adjust_img = -20;   % additional value for adjusting the img
+    adjust_img_enable = 0;
+    adjust_img = -20;   % additional value for adjusting the img
 
-        set_framerate = fps_num;  % set frame-rate manually here
+    set_framerate = fps_num;  % set frame-rate manually here
 
-        imageNames = dir(fullfile(folder_name,'*.png'));
-        if isempty(imageNames)
-            errordlg('No input images.','Error Code II');
+    imageNames = dir(fullfile(folder_name,'*.png'));
+    if isempty(imageNames)
+        errordlg('No input images.','Error Code II');
+        break;
+    end
+
+    imageNames = {imageNames.name}';
+
+    name_begin = char(imageNames(1));
+    name_begin = name_begin(1:end-4);
+    name_last = char(imageNames(end));
+    name_last = name_last(1:end-4);
+
+    outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
+    outputVideo.FrameRate = set_framerate;
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['making video for ', video_name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
+    % make video
+    open(outputVideo)
+
+    for ii = 1:length(imageNames)
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
             break;
         end
 
-        imageNames = {imageNames.name}';
+        img = imread(fullfile(folder_name,imageNames{ii}));
+        img2 = rgb2gray(img);
 
-        name_begin = char(imageNames(1));
-        name_begin = name_begin(1:end-4);
-        name_last = char(imageNames(end));
-        name_last = name_last(1:end-4);
-
-        outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
-        outputVideo.FrameRate = set_framerate;
-
-
-        %% make video
-
-        open(outputVideo)
-
-        for ii = 1:length(imageNames)
-            img = imread(fullfile(folder_name,imageNames{ii}));
-            img2 = rgb2gray(img);
-
-            if adjust_img_enable
-                img = img + adjust_img;
-                img(img==245+adjust_img) = 245;
-            end
-            writeVideo(outputVideo,img)
-            clc
-            pause(0.001)
-            set(handles.text9, 'String',[num2str(100*ii/length(imageNames)) ' %'])
+        if adjust_img_enable
+            img = img + adjust_img;
+            img(img==245+adjust_img) = 245;
         end
-
-        close(outputVideo)
-        video_flag = 1;
-        %     img2 = img - adjust_img;
-        %     imshowpair(img,img2,'montage')
+        writeVideo(outputVideo,img)
+        clc
+        rate = ii/length(imageNames);
+        % Report current estimate in the waitbar's message field
+        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
+        pause(0.001);
     end
+    close(outputVideo)
+    
+    % delete dialog bar
+    delete(hWaitBar);
+
+    if isCancel
+        continue;
+    end
+    %     img2 = img - adjust_img;
+    %     imshowpair(img,img2,'montage')
 end
 
+% show end text
 time = toc;
-if video_flag
-    set(handles.edit1, 'String',strcat('video done!     t =',num2str(time),'s'))
-end
+set(handles.edit1, 'String',strcat('making video ... done!     t =',num2str(time),'s'))
+set(handles.text9, 'String','Ready','BackgroundColor','green');
+enableAllButtons(handles);
 
 
 function edit2_Callback(hObject, eventdata, handles)
