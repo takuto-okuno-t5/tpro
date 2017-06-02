@@ -2360,29 +2360,6 @@ function pushbutton7_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-tic
-
-video_flag = 0;
-
-%% make video by browsing
-
-% [filename, pathname, filterindex] = uigetfile( {  ...
-%     '*.*',  'All Files (*.*)'}, ...
-%     'Pick a file', ...
-%     'MultiSelect', 'on', './output');
-% 
-% video_name = 'video';
-% fps = get(handles.edit2,'String');
-% fps_num = str2num(fps);
-% 
-% if isempty(fps_num)
-%     errordlg('Please fill fps.','Error Code I');
-% else
-%     
-% keyboard
-
-% make video from input file
-
 inputListFile = './input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
@@ -2413,6 +2390,9 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
+% start tic
+tic
+
 for data_th = 1:size(records,1)
     % check active flag
     if ~records{data_th, 1}
@@ -2440,7 +2420,7 @@ for data_th = 1:size(records,1)
 
     imageNames = dir(fullfile(folder_name,'*.png'));
     if isempty(imageNames)
-        errordlg('No input images.','Error Code II');
+        errordlg('No input images.','Error');
         continue;
     end
 
@@ -2501,32 +2481,6 @@ time = toc;
 set(handles.edit1, 'String',strcat('making video ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 enableAllButtons(handles);
-
-
-function edit2_Callback(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit2 as text
-%        str2double(get(hObject,'String')) returns contents of edit2 as a double
-
-
-
-
-
-% --- Executes during object creation, after setting all properties.
-function edit2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
