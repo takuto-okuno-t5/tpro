@@ -60,16 +60,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     % UIWAIT makes detectoptimizer wait for user response (see UIRESUME)
     % uiwait(handles.figure1);
 
-    % load config file
-    configFile = './input_video_control.csv';
-    if exist(configFile, 'file')
-        confTable = readtable(configFile);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
-        return;
-    end
-
     % load environment value
     if size(varargin, 1) > 0
         rowNum = int64(str2num(char(varargin{1}(1))));
@@ -80,24 +70,47 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     if isempty(rowNum), rowNum = 1; end
 
+    % load video list
+    inputListFile = './input_videos.mat';
+    if ~exist(inputListFile, 'file')
+        errordlg('please select movies before operation.', 'Error');
+        return;
+    end
+    vl = load(inputListFile);
+    videoPath = vl.videoPath;
+    videoFiles = vl.videoFiles;
+
+    % load configuration files
+    confFileName = [videoPath videoFiles{rowNum} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    records = table2cell(confTable);
+    
     % initialize GUI
     sharedInst = sharedInstance(0); % get shared instance
-    sharedInst.shuttleVideo = VideoReader(strcat('../input_share/', records{rowNum,2}));
+    sharedInst.videoPath = videoPath;
+    sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
+    sharedInst.confFileName = confFileName;
+    sharedInst.shuttleVideo = VideoReader(strcat(videoPath, records{2}));
     sharedInst.rowNum = rowNum;
     sharedInst.imageMode = 1;
     sharedInst.showDetectResult = 1;
     sharedInst.showDirection = 1;
     sharedInst.showIndexNumber = 0;
-    sharedInst.startFrame = records{rowNum, 4};
-    sharedInst.endFrame = records{rowNum, 5};
+    sharedInst.startFrame = records{4};
+    sharedInst.endFrame = records{5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
-    sharedInst.frameSteps = records{rowNum, 16};
+    sharedInst.frameSteps = records{16};
     sharedInst.frameNum = sharedInst.startFrame;
-    sharedInst.gaussH = records{rowNum,13};
-    sharedInst.gaussSigma = records{rowNum,14};
-    sharedInst.binaryTh = records{rowNum,8} * 100;
-    sharedInst.binaryAreaPixel = records{rowNum,15};
-    sharedInst.blobSeparateRate = records{rowNum,17};
+    sharedInst.gaussH = records{13};
+    sharedInst.gaussSigma = records{14};
+    sharedInst.binaryTh = records{8} * 100;
+    sharedInst.binaryAreaPixel = records{15};
+    sharedInst.blobSeparateRate = records{17};
     sharedInst.isModified = false;
 
     sharedInst.originalImage = [];
@@ -138,7 +151,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load background image
     videoName = sharedInst.shuttleVideo.name;
-    bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+    bgImageFile = strcat(sharedInst.confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
         if size(size(bgImage),2) == 2 % one plane background
@@ -156,7 +169,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load roi image file
-    roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+    roiFileName = strcat(sharedInst.confPath,'roi.png');
     if exist(roiFileName, 'file')
         img = imread(roiFileName);
         sharedInst.roiMaskImage = im2double(img);
@@ -892,19 +905,15 @@ function saveConfigurationFile(handles)
         sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
         sharedInst.frameSteps, 0.5};
 
-    outputFileName = './input_video_control.csv';
-    confTable = readtable(outputFileName);
-    records = table2cell(confTable);
-    for i=1:size(B,2)
-        records{sharedInst.rowNum, i} = B{i};
-    end
     try
-        T = cell2table(records);
+        T = cell2table(B);
+        confTable = readtable(sharedInst.confFileName);
         T.Properties.VariableNames = confTable.Properties.VariableNames;
-        writetable(T,outputFileName);
+        writetable(T,sharedInst.confFileName);
         status = true;
     catch e
         status = false;
+        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
     end
     if status 
         sharedInst.isModified = false;
@@ -1061,7 +1070,7 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
     sharedInst = sharedInstance(0); % get shared
 
     % create output directory
-    path = strcat('./detect_flies/', sharedInst.shuttleVideo.name);
+    path = strcat(sharedInst.confPath,'detect_flies/');
     mkdir(path);
 
     for frameNum = startFrame:endFrame

@@ -96,7 +96,7 @@ set(handles.text9,'String','Running','BackgroundColor','red');
 addpath(genpath('../input_share'));
 
 % show file select modal
-[fileNames, pathName, filterIndex] = uigetfile( {  ...
+[fileNames, videoPath, filterIndex] = uigetfile( {  ...
     '*.*',  'All Files (*.*)'}, ...
     'Pick a file', ...
     'MultiSelect', 'on', '../input_share');
@@ -111,9 +111,8 @@ set(handles.edit1, 'String', 'creating configuration file (csv) ...');
 disableAllButtons(handles);
 pause(0.01);
 
-tic
-    
-outputFileName = './input_video_control.csv';
+tic;
+
 header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 if ischar(fileNames)
     fileCount = 1;
@@ -122,32 +121,48 @@ else
 end
 
 % process all selected files
-A = {};
+videoFiles = {};
+status = true;
+
 for i = 1:fileCount
     if fileCount > 1
         fileName = fileNames{i};
     else
         fileName = fileNames;
     end
+    videoFiles = [videoFiles, fileName];
+
+    % make directory
+    outPathName = [videoPath fileName '_tpro'];
+    if ~exist(outPathName, 'dir')
+        mkdir(outPathName);
+    end
+    
+    outputFileName = [outPathName '/input_video_control.csv'];
+
+    % make control file if not exist
+    if exist(outputFileName, 'file')
+        continue;
+    end
+
     shuttleVideo = VideoReader(fileName);
     name = shuttleVideo.Name;
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.5};
-    A = vertcat(A,B);
+    try
+        T = cell2table(B);
+        T.Properties.VariableNames = header';
+        writetable(T,outputFileName);
+        status = true;
+    catch e
+        status = false;
+        break;
+    end
 end
 
-% remove file first and output csv file
-delete(outputFileName);
-try
-    T = cell2table(A);
-    T.Properties.VariableNames = header';
-    writetable(T,outputFileName);
-    status = true;
-catch e
-    status = false;
-end
+save('./input_videos.mat', 'videoPath', 'videoFiles');
 
 time = toc;
 
@@ -168,23 +183,28 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    file_list3 = './input_video_control.csv';
-    if exist(file_list3, 'file')
-        confTable = readtable(file_list3);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -193,7 +213,7 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 tic % start timer
 
@@ -204,17 +224,14 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
+    shuttleVideo = VideoReader(strcat(videoPath, records{data_th, 2}));
 
     % show detecting message
     set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name]);
 
-    % make output folder
-    pathName = strcat('./bg_output/',shuttleVideo.name);
-    backgroundFileName = strcat(pathName,'/',shuttleVideo.name,'bg.png');
-    if ~exist(pathName, 'dir')
-        mkdir(pathName);
-    end
+    % set output file name
+    pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
+    backgroundFileName = strcat(pathName,'/background.png');
 
     % show startEndDialog
     [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
@@ -318,23 +335,29 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
-end
 
-if ~isempty(file_list2)
-    file_list3 = './input_video_control.csv';
-    if exist(file_list3, 'file')
-        confTable = readtable(file_list3);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -343,7 +366,7 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 % loop for every movies
 for i = 1 : size(records,1)
@@ -364,23 +387,28 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    file_list3 = './input_video_control.csv';
-    if exist(file_list3, 'file')
-        confTable = readtable(file_list3);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -389,7 +417,7 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 %% parameters setting
 tic % start timer
@@ -457,10 +485,6 @@ animal_type = get(handles.popupmenu1,'Value');
 
 %%
 
-if ~exist('./multi', 'dir')
-    mkdir('./multi');
-end
-
 keep_i = [];
 keep_count = [];
 
@@ -480,11 +504,16 @@ for data_th = 1:size(records,1)
     area_pixel = records{data_th, 15};
     blobSeparateRate = records{data_th, 17};
 
-    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'multi'], 'dir')
+        mkdir([confPath 'multi']);
+    end
+
+    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
 
     % ROI
     videoName = shuttleVideo.name;
-    roiFileName = strcat('./roi/',videoName,'/',videoName,'_roi.png');
+    roiFileName = strcat(confPath,'roi.png');
     if exist(roiFileName, 'file')
         img = imread(roiFileName);
         roi_mask = im2double(img);
@@ -492,7 +521,7 @@ for data_th = 1:size(records,1)
         roi_mask = [];
     end
 
-    bgImageFile = strcat('./bg_output/',videoName,'/',videoName,'bg.png');
+    bgImageFile = strcat(confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
         if size(size(bgImage),2) == 2 % one plane background
@@ -509,7 +538,7 @@ for data_th = 1:size(records,1)
 
     % make output folder
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    mkdir(strcat('./detect_output/',shuttleVideo.name,'_',filename));
+    mkdir(strcat(confPath,'detect_output/',filename));
 
     X = cell(1,length(end_frame-start_frame+1));
     Y = cell(1,length(end_frame-start_frame+1));
@@ -752,7 +781,7 @@ for data_th = 1:size(records,1)
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',i_count) '.png'];
-            imwrite(f.cdata,strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',filename2));
+            imwrite(f.cdata, strcat(confPath,'detect_output/',filename,'/',filename2));
             pause(0.001)
         end
         % graph for detection analysis
@@ -820,14 +849,14 @@ for data_th = 1:size(records,1)
     
     % save data
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
-    save(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'), 'keep_count');
+    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count');
 
     % save data as text
-    countFileName = strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt');
+    countFileName = strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt');
     write_file_cnt = fopen(countFileName, 'wt');
-    write_file_x = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat('./detect_output/',shuttleVideo.name,'_',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+    write_file_x = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
 
     % cook raw data before saving
     end_row = size(X, 2);
@@ -869,31 +898,31 @@ function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-addpath(genpath('function'));
-addpath(genpath('input'));
-addpath(genpath('parameter'));
-addpath(genpath('output'));
-addpath(genpath('multi'));
-addpath(genpath('../input_share'));
-
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
-end
-
-if ~isempty(file_list2)
-    file_list3 = './input_video_control.csv';
-    if exist(file_list3, 'file')
-        confTable = readtable(file_list3);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
-        return;
-    end
-else
-    disp('please put input video files into the folder');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
     return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+addpath(videoPath);
 
 % show start text
 set(handles.edit1, 'String','tracking ...')
@@ -1008,15 +1037,19 @@ for data_th = 1:size(records,1)
     start_frame = records{data_th, 4};
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
-    shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
-
-    % load detection
-    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'))
+    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
 
     % make output folder
-    mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_pic'));
-    mkdir(strcat('./output/',shuttleVideo.name,'_',filename,'_data'));
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'output'], 'dir')
+        mkdir([confPath 'output']);
+    end
+    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
+    mkdir(strcat(confPath,'output/',filename,'_pic'));
+    mkdir(strcat(confPath,'output/',filename,'_data'));
+
+    % load detection
+    load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
     % initialize result variables
     Q_loc_meas = []; % location measure
@@ -1377,7 +1410,7 @@ end
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',t_count) '.png'];
-            imwrite(f.cdata,strcat('./output/',shuttleVideo.name,'_',filename,'_pic/',filename2));
+            imwrite(f.cdata,strcat(confPath,'output/',filename,'_pic/',filename2));
 
             pause(0.001)
         end
@@ -1399,26 +1432,27 @@ end
     end
 
     % save data as text
-    write_file_x = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
-    write_file_vx = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
-    write_file_vy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
-    write_file_vxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
-    write_file_dir = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd2 = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
+    outputDataPath = [confPath 'output/' filename '_data/'];
+    write_file_x = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
+    write_file_y = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+    write_file_vx = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
+    write_file_vy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
+    write_file_vxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
+    write_file_dir = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
+    write_file_dd = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
+    write_file_dd2 = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
     if ecc_enable
-        write_file_ecc = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
+        write_file_ecc = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
         keep_data{7} = keep_data{7}(:,1:flyNum);
     end
     if angle_enable
-        write_file_angle = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
+        write_file_angle = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
         keep_data{8} = keep_data{8}(:,1:flyNum);
         % inverse the angle upside-down
         keep_data{8} = -keep_data{8};
     end
-    write_file_dis = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
-    write_file_svxy = fopen(strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
+    write_file_dis = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
+    write_file_svxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
 
     for i = 1:6
         keep_data{i} = keep_data{i}(:,1:flyNum);
@@ -1529,16 +1563,13 @@ end
     fclose(write_file_svxy);
 
     % save keep_data
-    save(strcat('./multi/track_',shuttleVideo.name,'_',filename,'.mat'), 'keep_data')
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
 
     % save input data used for generating this result
-    record = {};
-    for i=1:size(records,2)
-        record = [record, records{i}];
-    end
+    record = {records{data_th,:}};
     T = cell2table(record);
     T.Properties.VariableNames = confTable.Properties.VariableNames;
-    writetable(T, strcat('./output/',shuttleVideo.name,'_',filename,'_data/',shuttleVideo.name,'_',filename,'_','config.csv'));    
+    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));    
 end
 
 % show end text
@@ -2197,23 +2228,28 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-file_list2 =  dir('../input_share/*avi');
-if isempty(file_list2)
-    file_list2 = dir('../input_share/*mov');
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
 end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
 
-if ~isempty(file_list2)
-    file_list3 = './input_video_control.csv';
-    if exist(file_list3, 'file')
-        confTable = readtable(file_list3);
-        records = table2cell(confTable);
-    else
-        disp('please put input csv file into the folder');
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
     end
-else
-    disp('please put input video files into the folder');
-    return;
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -2222,17 +2258,16 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(genpath('../input_share'));
+addpath(videoPath);
 
 % select roi for every movie
 for data_th = 1:size(records,1)
     if records{data_th, 1} && records{data_th, 10}
-        shuttleVideo = VideoReader(strcat('../input_share/',records{data_th, 2}));
+        shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
         frameImage = read(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
-        pathName = strcat('./roi/',shuttleVideo.name);
-        roiFileName = strcat(pathName,'/',shuttleVideo.name,'_roi.png');
+        roiFileName = strcat(videoPath,shuttleVideo.name,'_tpro/roi.png');
 
         % create new roi window if it does not exist
         if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
@@ -2248,9 +2283,6 @@ for data_th = 1:size(records,1)
             img = double(grayImage).*imcomplement(roiImage);
             img = uint8(img);
         else
-            if ~exist(pathName, 'dir')
-                mkdir(pathName);
-            end
             img = frameImage;
         end
         
@@ -2350,13 +2382,29 @@ video_flag = 0;
 % keyboard
 
 % make video from input file
-file_list3 = './input_video_control.csv';
-if exist(file_list3, 'file')
-    confTable = readtable(file_list3);
-    records = table2cell(confTable);
-else
-    disp('please put input csv file into the folder');
+
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
     return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
 end
 
 % show start text
@@ -2373,30 +2421,27 @@ for data_th = 1:size(records,1)
     
     start_frame = records{data_th, 4};
     end_frame = records{data_th, 5};
+    fps_num = records{data_th, 7};
+    frame_steps = records{data_th, 16};
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
     video_name = records{data_th, 2};
-    folder_name = strcat('./output/',video_name,'_',filename,'_pic');
 
-
-    fps = get(handles.edit2,'String');
-    fps_num = str2num(fps);
-
-    if isempty(fps_num)
-        errordlg('Please fill fps.','Error Code I');
-        continue;
+    % make output folder
+    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    if ~exist([confPath 'movie'], 'dir')
+        mkdir([confPath 'movie']);
     end
+    folder_name = strcat(confPath,'output/',filename,'_pic');
 
-    addpath(genpath('output'))
+    addpath([confPath 'movie']);
 
     adjust_img_enable = 0;
     adjust_img = -20;   % additional value for adjusting the img
 
-    set_framerate = fps_num;  % set frame-rate manually here
-
     imageNames = dir(fullfile(folder_name,'*.png'));
     if isempty(imageNames)
         errordlg('No input images.','Error Code II');
-        break;
+        continue;
     end
 
     imageNames = {imageNames.name}';
@@ -2406,8 +2451,8 @@ for data_th = 1:size(records,1)
     name_last = char(imageNames(end));
     name_last = name_last(1:end-4);
 
-    outputVideo = VideoWriter(fullfile(folder_name,strcat(video_name,'_',name_begin,'_to_',name_last)));
-    outputVideo.FrameRate = set_framerate;
+    outputVideo = VideoWriter(fullfile([confPath 'movie'], strcat(video_name,'_',name_begin,'_to_',name_last)));
+    outputVideo.FrameRate = fps_num / frame_steps;
 
     % show wait dialog
     hWaitBar = waitbar(0,'processing ...','Name',['making video for ', video_name],...
