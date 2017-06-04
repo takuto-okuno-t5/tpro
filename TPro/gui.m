@@ -73,11 +73,68 @@ set(handles.edit1, 'String','Welcome! Please click the buttons on the left to ru
 checkAllButtons(handles);
 pause(0.01);
 
+% initialize dndcontrol
+dndcontrol.initJava();
+
+jPanel = javaObjectEDT('javax.swing.JPanel');
+bgcolor = get(gcf, 'Color');
+jPanel.setBackground(java.awt.Color(bgcolor(1),bgcolor(2),bgcolor(3)));
+
+% Add Scrollpane to figure
+[~,hContainer] = javacomponent(jPanel,[],hObject);
+set(hContainer,'Units','normalized','Position',[0 0 1 1]);
+uistack(hContainer,'bottom');
+%hObject.Children
+
+% Set Drop callback functions
+dndobj = dndcontrol(jPanel, hContainer);
+dndobj.DropFileFcn = @onDropFile;
+dndobj.DropStringFcn = @onDropFile;
+
 % UIWAIT makes gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
+%% Callback function
+function onDropFile(hObject, eventdata)
+videoFiles = {};
+switch eventdata.DropType
+    case 'file'
+        % process all dragged files
+        for n = 1:numel(eventdata.Data)
+            [videoPath, name, ext] = fileparts(eventdata.Data{n});
+            videoFiles = [videoFiles, [name ext]];
+        end
+    case 'string'
+        % nothing to do
+end
 
-% --- Outputs from this function are returned to the command line.
+% show starting message
+hUIControl = hObject.hUIControl;
+hFig = ancestor(hUIControl, 'figure');
+handles = guidata(hFig);
+set(handles.edit1, 'String', 'creating configuration file (csv) ...');
+disableAllButtons(handles);
+pause(0.01);
+
+tic;
+
+% create config files if possible
+status = createConfigFiles([videoPath '/'], videoFiles);
+
+time = toc;
+
+% show result message
+if status 
+    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
+    set(handles.text9,'String','Ready','BackgroundColor','green');
+else
+    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
+    set(handles.text9,'String','Failed','BackgroundColor','red');
+end
+checkAllButtons(handles);
+
+
+%% --- Outputs from this function are returned to the command line.
 function varargout = gui_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
@@ -88,7 +145,7 @@ function varargout = gui_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-% prepare--- Executes on button press in pushbutton1.
+%% prepare--- Executes on button press in pushbutton1.
 function pushbutton1_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -116,7 +173,6 @@ pause(0.01);
 
 tic;
 
-header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 if ischar(fileNames)
     fileCount = 1;
 else
@@ -125,7 +181,6 @@ end
 
 % process all selected files
 videoFiles = {};
-status = true;
 
 for i = 1:fileCount
     if fileCount > 1
@@ -134,7 +189,34 @@ for i = 1:fileCount
         fileName = fileNames;
     end
     videoFiles = [videoFiles, fileName];
+end
 
+% create config files if possible
+status = createConfigFiles(videoPath, videoFiles);
+
+time = toc;
+
+% show result message
+if status 
+    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
+    set(handles.text9,'String','Ready','BackgroundColor','green');
+else
+    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
+    set(handles.text9,'String','Failed','BackgroundColor','red');
+end
+checkAllButtons(handles);
+
+
+%%
+function status = createConfigFiles(videoPath, videoFiles)
+% config header
+header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+status = true;
+
+% write config files if it is empty
+for i = 1:size(videoFiles, 2)
+    fileName = videoFiles{i};
+    
     % make directory
     outPathName = [videoPath fileName '_tpro'];
     if ~exist(outPathName, 'dir')
@@ -148,7 +230,7 @@ for i = 1:fileCount
         continue;
     end
 
-    shuttleVideo = VideoReader(fileName);
+    shuttleVideo = VideoReader([videoPath fileName]);
     name = shuttleVideo.Name;
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
@@ -166,18 +248,6 @@ for i = 1:fileCount
 end
 
 save('./input_videos.mat', 'videoPath', 'videoFiles');
-
-time = toc;
-
-% show result message
-if status 
-    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
-    set(handles.text9,'String','Ready','BackgroundColor','green');
-else
-    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
-    set(handles.text9,'String','Failed','BackgroundColor','red');
-end
-checkAllButtons(handles);
 
 
 % bg--- Executes on button press in pushbutton2.
