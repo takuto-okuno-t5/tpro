@@ -558,9 +558,6 @@ animal_type = get(handles.popupmenu1,'Value');
 
 %%
 
-keep_i = [];
-keep_count = [];
-
 % added on 2016-07-28
 for data_th = 1:size(records,1)
     % check active flag
@@ -628,6 +625,9 @@ for data_th = 1:size(records,1)
                 'CreateCancelBtn',...
                 'setappdata(gcbf,''canceling'',1)');
     setappdata(hWaitBar,'canceling',0)
+
+    keep_i = [];
+    keep_count = [];
 
     i = 1;
     for i_count = start_frame : frame_steps : end_frame
@@ -1683,7 +1683,7 @@ H.OrientationOutputPort = 1;
 H.EccentricityOutputPort = 1;
 H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
 
-[AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_logical);
+[AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical);
 origAreas = AREA;
 origCenterPoints = CENTROID;
 origBoxes = BBOX;
@@ -1745,7 +1745,7 @@ for i = 1 : blob_num
             end
 
             blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-            [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_trimmed2);
+            [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
 
             if expect_num == size(AREA, 1) % change from <= to == 20161015
                 x_choose = CENTROID(1:expect_num,2);
