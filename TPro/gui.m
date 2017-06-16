@@ -235,7 +235,7 @@ for i = 1:size(videoFiles, 2)
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.5};
+    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.4};
     try
         T = cell2table(B);
         T.Properties.VariableNames = header';
@@ -1725,7 +1725,7 @@ for i = 1 : blob_num
         chooseOne = false;
     elseif expect_num > 1
         % find separated area
-        blob_threshold2 = blob_threshold - 0.2;
+        blob_threshold2 = blob_threshold/100 - 0.2;
         if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
 
         label_mask = labeledImage==i;
@@ -1737,6 +1737,8 @@ for i = 1 : blob_num
 
         % stronger gaussian again
         blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
+        blob_th_max = max(max(blob_img_trimmed));
+        blob_img_trimmed = blob_img_trimmed / blob_th_max;
 
         for th_i = 1 : 40
             blob_threshold2 = blob_threshold2 + 0.05;
@@ -1747,16 +1749,16 @@ for i = 1 : blob_num
             blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
             [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
 
-            if expect_num == size(AREA, 1) % change from <= to == 20161015
+            if expect_num <= size(AREA, 1) % change from <= to == 20161015
                 x_choose = CENTROID(1:expect_num,2);
                 y_choose = CENTROID(1:expect_num,1);    % choose expect_num according to area (large)
                 blobPointX = [blobPointX ; x_choose + double(rect(2))];
                 blobPointY = [blobPointY ; y_choose + double(rect(1))];
-                blobAreas = [blobAreas ; AREA];
-                blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
-                blobMinorAxis = [blobMinorAxis ; MINORAXIS];
-                blobOrient = [blobOrient ; ORIENTATION];
-                blobEcc = [blobEcc ; ECCENTRICITY];
+                blobAreas = [blobAreas ; AREA(1:expect_num)];
+                blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
+                blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
+                blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
+                blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
                 for j=1 : expect_num
                     pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
                     box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
