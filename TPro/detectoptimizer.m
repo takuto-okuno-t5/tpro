@@ -122,10 +122,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.detectedPointY = [];
 
     % deep learning data
-    if exist('./deeplearningFrontBack.mat', 'file')
+    if exist('./deeplearningFrontBack2.mat', 'file')
         netForFrontBack = [];
         classifierFrontBack = [];
-        load('./deeplearningFrontBack.mat');
+        load('./deeplearningFrontBack2.mat');
 
         sharedInst.useDeepLearning = true;
         sharedInst.netForFrontBack = netForFrontBack;
@@ -1335,7 +1335,7 @@ function [ keep_direction ] = PD_direction_deepLearning(glayImage, blobAreas, bl
         img = readAndPreprocessImage(trimmedImage);
 
         % Extract image features using the CNN
-        imageFeatures = activations(sharedInst.netForFrontBack, img, 'fc7');
+        imageFeatures = activations(sharedInst.netForFrontBack, img, 11);
 
         % Make a prediction using the classifier
         label = predict(sharedInst.classifierFrontBack, imageFeatures);
@@ -1350,13 +1350,16 @@ end
 function Iout = readAndPreprocessImage(I)
     % Some images may be grayscale. Replicate the image 3 times to
     % create an RGB image. 
-    if ismatrix(I)
-        I = cat(3,I,I,I);
-    end
+%    if ismatrix(I)
+%        I = cat(3,I,I,I);
+%    end
 
     % Resize the image as required for the CNN. 
-    Iout = imresize(I, [227 227]);  
-
+    if size(I,1) ~= 64 || size(I,2) ~= 64
+        Iout = imresize(I, [64 64]);  
+    else
+        Iout = I;
+    end
     % Note that the aspect ratio is not preserved. In Caltech 101, the
     % object of interest is centered in the image and occupies a
     % majority of the image scene. Therefore, preserving the aspect
