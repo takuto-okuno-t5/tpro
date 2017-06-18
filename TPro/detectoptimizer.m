@@ -23,7 +23,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 13-May-2017 03:13:11
+    % Last Modified by GUIDE v2.5 18-Jun-2017 03:46:27
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -184,10 +184,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.startFrame);
 
     %% internal function to add a spinner
-    function jhSpinner = addLabeledSpinner(model, pos, callbackFunc)
+    function hContainer = addLabeledSpinner(model, pos, callbackFunc)
         % Set the spinner control
         jSpinner = com.mathworks.mwswing.MJSpinner(model);
-        jhSpinner = javacomponent(jSpinner, pos, handles.figure1);
+        [jhSpinner, hContainer] = javacomponent(jSpinner, pos, handles.figure1);
         %jhSpinner.setToolTipText('<html>This spinner is editable, but only the<br/>preconfigured values can be entered')
         jEditor = javaObject('javax.swing.JSpinner$NumberEditor', jhSpinner, '#');
         jhSpinner.setEditor(jEditor);
@@ -312,6 +312,24 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     uiwait(handles.figure1); % wait for finishing dialog
+end
+
+%% --- Executes when user attempts to close figure1.
+function figure1_SizeChangedFcn(hObject, eventdata, handles)
+    % initialize spinner
+    if isfield(handles, 'jhSpinner1')
+        pos = getpixelposition(handles.text2, true);
+        setpixelposition(handles.jhSpinner1, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text3, true);
+        setpixelposition(handles.jhSpinner2, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text4, true);
+        setpixelposition(handles.jhSpinner3, [pos(1)+90,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text5, true);
+        setpixelposition(handles.jhSpinner4, [pos(1)+70,pos(2)-4,60,20]);
+    end
 end
 
 %% --- Executes when user attempts to close figure1.

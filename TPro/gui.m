@@ -27,7 +27,7 @@ function varargout = gui(varargin)
 
 % Edit the above text to modify the response to help gui
 
-% Last Modified by GUIDE v2.5 17-Mar-2017 07:57:05
+% Last Modified by GUIDE v2.5 18-Jun-2017 23:45:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -851,6 +851,8 @@ for data_th = 1:size(records,1)
                 plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
                 quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
             end
+            hold off;
+            
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',i_count) '.png'];
@@ -1035,10 +1037,10 @@ line_length = 19;
 
 
 % velocity threshold enable
-velocity_thres_enable = 0;
+velocity_thres_enable = 1;
 
 % velocity threshold
-velocity_thres = 50;
+velocity_thres = 100;
 
 % velocity graph enable (0)
 velocity_graph_enable = 0;
@@ -1066,6 +1068,9 @@ cna_enable = 1;
 
 % check direction
 check_direction_enable = 1;
+
+% check ecc
+check_ecc_enable = 1;
 
 % Kalman only
 kalman_only_enable = 0;
@@ -1124,6 +1129,14 @@ for data_th = 1:size(records,1)
     % load detection
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
+    % load roi
+    roiFileName = strcat(confPath,'roi.png');
+    if exist(roiFileName, 'file')
+        roiImage = imread(roiFileName);
+    else
+        roiImage = []
+    end
+            
     % initialize result variables
     Q_loc_meas = []; % location measure
 
@@ -1256,9 +1269,15 @@ for data_th = 1:size(records,1)
                         v1 = direction_track(:,F);
                         v2 = direction_meas(:,asgn(F));
                         if (norm(v1) ~= 0) && (norm(v2) ~= 0)
-                            angle_v1_v2 = acosd(dot(v1,v2)/norm(v1)/norm(v2));  % calculate the angle between two vectors
-                            rej(F) = (-90 < angle_v1_v2) && (angle_v1_v2 < 90); % reject if direction is too different
+                            angle_v1_v2 = abs(acosd(dot(v1,v2)/norm(v1)/norm(v2)));  % calculate the angle between two vectors
+                            rej(F) = (angle_v1_v2 < 45); % reject if direction is too different
                         end
+                    end
+                    if check_ecc_enable && rej(F) == 1
+                        e1 = ecc_track(F);
+                        e2 = ecc_meas(asgn(F));
+                        ecc_e1_e2 = abs(e1 - e2);
+                        rej(F) = (ecc_e1_e2 < 0.3);
                     end
                 else
                     rej(F) = 0;
@@ -1343,11 +1362,19 @@ end
                     end
                 elseif asgn(F) == 0 % assignment for no assignment
                     if assign_for_noassign
-                        if (Q_estimate(1,k) > img_h) || (Q_estimate(2,k) > img_w) || (Q_estimate(1,k) < 0) || (Q_estimate(2,k) < 0)
-                            % if the predict is out of bound then do nothing
-
+                        y = round(Q_estimate(1,k));
+                        x = round(Q_estimate(2,k));
+                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                            % if the predict is out of bound then delete
+                            Q_estimate(:,k) = NaN;
                         else
-                            if min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                            if ~isempty(roiImage) && roiImage(y,x) == 0
+                                % if the predict is out of ROI then stop
+                                Q_estimate(1,k) = y - Q_estimate(3,k);
+                                Q_estimate(2,k) = x - Q_estimate(4,k);
+                                Q_estimate(3,k) = 0;
+                                Q_estimate(4,k) = 0;
+                            elseif min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
                                 [m,i] = min(est_dist(k,:));
                                 Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
@@ -1413,20 +1440,22 @@ end
 
         %give a strike to any tracking that didn't get matched up to a
         %detection
-        no_trk_list = find(asgn==0);
-        prev_strk_trks = strk_trks;
-        if ~isempty(no_trk_list)
-            strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+        if exist('asgn', 'var')
+            no_trk_list = find(asgn==0);
+            prev_strk_trks = strk_trks;
+            if ~isempty(no_trk_list)
+                strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+            end
+        
+            % consecutive strike
+            % if the strike is not consecutive then reset
+            strk_trks(strk_trks == prev_strk_trks) = 0;
+
+            %if a track has a strike greater than 6, delete the tracking. i.e.
+            %make it nan first vid = 3
+            bad_trks = find(strk_trks > strike_track_threshold);
+            Q_estimate(:,bad_trks) = NaN;
         end
-        %% consecutive strike
-        % if the strike is not consecutive then reset
-        strk_trks(strk_trks == prev_strk_trks) = 0;
-
-
-        %if a track has a strike greater than 6, delete the tracking. i.e.
-        %make it nan first vid = 3
-        bad_trks = find(strk_trks > strike_track_threshold);
-        Q_estimate(:,bad_trks) = NaN;
 
         % output figure
         %%{
@@ -1443,10 +1472,10 @@ end
             % change title message
             set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
             figure(figureWindow);
-            clf;
 
             img = read(shuttleVideo,t_count);
             %             img = imread(strcat('./input/',file_list(t).name));
+            clf;
             imshow(img);
             hold on;
             plot(Y{t}(:),X{t}(:),'or'); % the actual tracking
@@ -1466,6 +1495,9 @@ end
                     else
                         st = line_length;
                     end
+                    while (isnan(Q_loc_estimateX(t-st,Dc)) || Q_loc_estimateX(t-st,Dc) == 0) && st > 0
+                        st = st - 1;
+                    end
                     tmX = Q_loc_estimateX(t-st:t,Dc);
                     tmY = Q_loc_estimateY(t-st:t,Dc);
                     plot(tmY,tmX,'.-','markersize',Ms(Sz),'color',c_list(Cz),'linewidth',3)  % rodent 1 instead of Cz
@@ -1473,12 +1505,12 @@ end
                         num_txt = strcat(' = ', num2str(Dc));
                         text(tmY(end),tmX(end),num_txt)
                     end
-                    hold on
+                    %hold on;
                     %                 quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                    axis off
+                    axis off;
                 end
             end
-            hold off
+            hold off;
 
             % save figure
             f=getframe;
@@ -1531,10 +1563,12 @@ end
         keep_data{i} = keep_data{i}(:,1:flyNum);
     end
 
-    % find end of row
-    a = isnan(keep_data{1});
-    b = sum(a,2);
-    end_row = find(b==flyNum,1) - 1;
+    % find end of row (some frames has zero flies. so finding NaN is bad)
+%    a = isnan(keep_data{1});
+%    b = sum(a,2);
+%    end_row = find(b==flyNum,1) - 1;
+    end_row = t - 1;
+
     % make save string
     save_string = [];
     for s_count = 1:flyNum
@@ -1725,7 +1759,7 @@ for i = 1 : blob_num
         chooseOne = false;
     elseif expect_num > 1
         % find separated area
-        blob_threshold2 = blob_threshold/100 - 0.2;
+        blob_threshold2 = blob_threshold - 0.2;
         if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
 
         label_mask = labeledImage==i;
@@ -2028,7 +2062,7 @@ end
 %%
 function enableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8, handles.pushbutton10];
 enableButtons(buttons);
 
 %%
@@ -2041,7 +2075,7 @@ end
 %%
 function disableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8, handles.pushbutton10];
 disableButtons(buttons);
 
 %%
@@ -2113,6 +2147,14 @@ end
 
 % track button
 set(handles.pushbutton5, 'Enable', 'on');
+
+trackFileName = [confPath 'multi/track_' filename '.mat'];
+if ~exist(trackFileName, 'file')
+    return; % no tracking file
+end
+
+% show tracking result button
+set(handles.pushbutton10, 'Enable', 'on');
 
 trackImageName = [confPath 'output/' filename '_pic/' sprintf('%05d',start_frame) '.png'];
 if ~exist(trackImageName, 'file')
@@ -3342,3 +3384,41 @@ function radiobutton3_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of radiobutton3
+
+
+% --- Executes on button press in pushbutton10.
+function pushbutton10_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton10 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+% loop for every movies
+for i = 1 : size(records,1)
+    % show tracking result
+    dlg = trackingResultDialog({num2str(i)});
+    pause(0.1);
+end
