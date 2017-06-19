@@ -1150,11 +1150,17 @@ for data_th = 1:size(records,1)
     angle_enable = exist('keep_angle_sorted');
     if ecc_enable
         ecc_track = nan(1, MAX_FLIES);
-        ecc_track(:,1:size(keep_ecc_sorted{frame_start},2)) = keep_ecc_sorted{frame_start};
+        szMax = size(keep_ecc_sorted{frame_start},2);
+        if szMax > 0
+            ecc_track(:,1:szMax) = keep_ecc_sorted{frame_start};
+        end
     end
     if angle_enable
         angle_track = nan(1, MAX_FLIES);
-        angle_track(:,1:size(keep_angle_sorted{frame_start},2)) = keep_angle_sorted{frame_start};
+        szMax = size(keep_angle_sorted{frame_start},2)
+        if szMax > 0
+            angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
+        end
     end
     Q_loc_estimateY = nan(MAX_FLIES); % position estimate
     Q_loc_estimateX = nan(MAX_FLIES); % position estimate
@@ -1286,9 +1292,9 @@ for data_th = 1:size(records,1)
 
 
             %
-
-            asgn = asgn.*rej;
-
+            if size(asgn,2) > 0
+                asgn = asgn.*rej;
+            end
             if ~kalman_only_enable
                 Q_estimate_before_update(1:2, (asgn ~= 0)) = NaN;
                 Q_loc_meas2 = Q_loc_meas;
@@ -1676,7 +1682,11 @@ end
     record = {records{data_th,:}};
     T = cell2table(record);
     T.Properties.VariableNames = confTable.Properties.VariableNames;
-    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));    
+    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));
+    
+    % show tracking result
+    dlg = trackingResultDialog({num2str(data_th)});
+    pause(0.1);
 end
 
 % show end text
