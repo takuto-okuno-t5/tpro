@@ -23,7 +23,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 18-Jun-2017 03:46:27
+    % Last Modified by GUIDE v2.5 20-Jun-2017 00:51:19
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -650,6 +650,12 @@ function edit4_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+end
+
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+end
 
 % --- Executes on key release with focus on figure1 and none of its controls.
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
@@ -1309,3 +1315,4 @@ function [ keep_direction ] = PD_direction(blobAreas, blobCenterPoints, blobBoxe
         keep_direction(:,i) = vec;
     end
 end
+

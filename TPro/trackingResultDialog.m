@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 19-Jun-2017 17:34:45
+    % Last Modified by GUIDE v2.5 20-Jun-2017 01:28:02
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -106,6 +106,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.endFrame = records{5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
     sharedInst.frameSteps = records{16};
+    sharedInst.fpsNum = records{7};
     sharedInst.frameNum = sharedInst.startFrame;
     sharedInst.stepTime = 0.03;
     sharedInst.showDetectResult = 1;
@@ -114,6 +115,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.listFly = 1;
     sharedInst.lineMode = 2; % tail
     sharedInst.lineLength = 19;
+    sharedInst.backMode = 1; % movie
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -233,7 +235,8 @@ function slider1_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     sharedInst = sharedInstance(0); % get shared
-    sharedInst.frameNum = int64(get(hObject,'Value'));
+    frameNum = int64(get(hObject,'Value'));
+    sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
     sharedInstance(sharedInst); % set shared instance
     
     set(handles.edit1, 'String', sharedInst.frameNum);
@@ -288,7 +291,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = sharedInstance(0); % get shared
 
-    setappdata(hObject.Parent,'playing',1);
+    setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton2, 'Enable', 'off')
     set(handles.pushbutton3, 'Enable', 'on')
     set(handles.popupmenu2, 'Enable', 'off')
@@ -297,7 +300,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     frameNum = sharedInst.frameNum;
     while playing
         if frameNum < sharedInst.maxFrame
-            frameNum = frameNum + 1;
+            frameNum = frameNum + sharedInst.frameSteps;
             
             set(handles.slider1, 'value', frameNum);
             slider1_Callback(handles.slider1, eventdata, handles)
@@ -305,7 +308,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
         else
             pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         end
-        playing = getappdata(hObject.Parent,'playing');
+        playing = getappdata(handles.figure1,'playing');
     end
 end
 
@@ -314,7 +317,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    setappdata(hObject.Parent,'playing',0);
+    setappdata(handles.figure1,'playing',0);
     set(handles.pushbutton2, 'Enable', 'on')
     set(handles.pushbutton3, 'Enable', 'off')
     set(handles.popupmenu2, 'Enable', 'on')
@@ -328,7 +331,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     sharedInst = sharedInstance(0); % get shared
     if sharedInst.frameNum < sharedInst.maxFrame
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
-        set(handles.slider1, 'value', sharedInst.frameNum+1);
+        set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps);
         slider1_Callback(handles.slider1, eventdata, handles)
     end
 end
@@ -341,7 +344,7 @@ function pushbutton5_Callback(hObject, eventdata, handles)
     sharedInst = sharedInstance(0); % get shared
     if sharedInst.frameNum > 1
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
-        set(handles.slider1, 'value', sharedInst.frameNum-1);
+        set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps);
         slider1_Callback(handles.slider1, eventdata, handles)
     end
 end
@@ -500,6 +503,90 @@ function popupmenu5_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+% --- Executes on selection change in popupmenu6.
+function popupmenu6_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = sharedInstance(0); % get shared
+    sharedInst.backMode = get(hObject,'Value');
+    sharedInstance(sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu6_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+% --- Executes on button press in pushbutton14.
+function pushbutton14_Callback(hObject, eventdata, handles)
+    % hObject    handle to pushbutton14 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = sharedInstance(0); % get shared
+
+    setappdata(handles.figure1,'playing',1);
+    set(handles.pushbutton1, 'Enable', 'off')
+    set(handles.pushbutton2, 'Enable', 'off')
+    set(handles.pushbutton3, 'Enable', 'on')
+    set(handles.pushbutton4, 'Enable', 'off')
+    set(handles.pushbutton5, 'Enable', 'off')
+    set(handles.popupmenu2, 'Enable', 'off')
+    set(handles.pushbutton14, 'Enable', 'off')
+    
+    % make output folder
+    confPath = sharedInst.confPath;
+    if ~exist([confPath 'movie'], 'dir')
+        mkdir([confPath 'movie']);
+    end
+
+    addpath([confPath 'movie']);
+    
+    videoName = sharedInst.shuttleVideo.name;
+    filename = [videoName sprintf('_%05d',sharedInst.startFrame) sprintf('_%05d',sharedInst.endFrame) '.avi'];
+    outputVideo = VideoWriter(fullfile([confPath 'movie'], filename));
+    outputVideo.FrameRate = sharedInst.fpsNum / sharedInst.frameSteps;
+
+    % make video
+    open(outputVideo)
+
+    for frameNum = sharedInst.startFrame:sharedInst.frameSteps:sharedInst.endFrame
+        set(handles.slider1, 'value', frameNum);
+        slider1_Callback(handles.slider1, eventdata, handles)
+
+        % Check for Cancel button press
+        playing = getappdata(handles.figure1,'playing');
+        if playing == 0
+            break;
+        end
+        
+        % write video
+        f=getframe;
+        writeVideo(outputVideo, f.cdata);
+
+        % Report current estimate in the waitbar's message field
+        % rate = (frameNum - sharedInst.startFrame)/(sharedInst.endFrame - sharedInst.startFrame);
+        pause(0.03);
+    end
+    close(outputVideo)
+    
+    set(handles.pushbutton1, 'Enable', 'on')
+    set(handles.pushbutton2, 'Enable', 'on')
+    set(handles.pushbutton4, 'Enable', 'on')
+    set(handles.pushbutton5, 'Enable', 'on')
+    set(handles.popupmenu2, 'Enable', 'on')
+    set(handles.pushbutton14, 'Enable', 'on')
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -530,17 +617,21 @@ function showFrameInAxes(hObject, handles, frameNum)
     
     % show original image
     cla;
-    imshow(img);
+    if sharedInst.backMode == 1
+        imshow(img);
+    elseif sharedInst.backMode == 2
+        imshow(sharedInst.bgImage);
+    end
     
     % show detection result
-    t = sharedInst.frameNum;
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
     flyNum = size(Q_loc_estimateX, 2);
     flameMax = size(Q_loc_estimateX, 1);
     listFly = sharedInst.listFly;
     
-    if t > size(Q_loc_estimateX,1)
+    if t > size(sharedInst.X,2) || t < 1
         return;
     end
 
