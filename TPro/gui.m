@@ -217,12 +217,7 @@ status = true;
 for i = 1:size(videoFiles, 2)
     fileName = videoFiles{i};
     
-    % make directory
     outPathName = [videoPath fileName '_tpro'];
-    if ~exist(outPathName, 'dir')
-        mkdir(outPathName);
-    end
-    
     outputFileName = [outPathName '/input_video_control.csv'];
 
     % make control file if not exist
@@ -230,11 +225,23 @@ for i = 1:size(videoFiles, 2)
         continue;
     end
 
-    shuttleVideo = VideoReader([videoPath fileName]);
+    % open video file
+    try
+        shuttleVideo = TProVideoReader(videoPath, fileName);
+    catch e
+        errordlg('please select movie files or image folders.', 'Error');
+        status = false;
+        return;
+    end
     name = shuttleVideo.Name;
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
+    % make directory
+    if ~exist(outPathName, 'dir')
+        mkdir(outPathName);
+    end
+    
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.4};
     try
         T = cell2table(B);
@@ -248,7 +255,6 @@ for i = 1:size(videoFiles, 2)
 end
 
 save('./input_videos.mat', 'videoPath', 'videoFiles');
-
 
 % bg--- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
@@ -297,7 +303,7 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = VideoReader(strcat(videoPath, records{data_th, 2}));
+    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % show detecting message
     set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name]);
@@ -318,9 +324,10 @@ for data_th = 1:size(records,1)
     end
 
     % initialize output matrix 
-    frameImage = read(shuttleVideo,1);
+    frameImage = TProRead(shuttleVideo,1);
     [m,n,l] = size(frameImage);
     grayImages = uint8(zeros(m,n,checkNums));
+    clear frameImage;
 
     % generate random
     r = randperm(endFrame - startFrame + 1);
@@ -343,9 +350,10 @@ for data_th = 1:size(records,1)
         waitbar(i/checkNums, hWaitBar, [num2str(100*i/checkNums) ' %']);
         pause(0.001);
 
-        frameImage = read(shuttleVideo, r(i) + startFrame - 1);
+        frameImage = TProRead(shuttleVideo, r(i) + startFrame - 1);
         grayImage = rgb2gray(frameImage);
         grayImages(:,:,i) = grayImage;
+        clear frameImage;
     end
     bgImage = mode(grayImages,3);
 
@@ -573,7 +581,7 @@ for data_th = 1:size(records,1)
         mkdir([confPath 'multi']);
     end
 
-    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
+    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % ROI
     videoName = shuttleVideo.name;
@@ -632,8 +640,9 @@ for data_th = 1:size(records,1)
         end
         
         % process detection
-        img_real = read(shuttleVideo, i_count);
+        img_real = TProRead(shuttleVideo, i_count);
         grayImg = rgb2gray(img_real);
+        clear img_real;
         if ~isempty(bg_img_mean)
             grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
             grayImageDouble = double(grayImg);
@@ -872,7 +881,7 @@ for data_th = 1:size(records,1)
         continue;
     end
     
-    img_h = size(img_real, 1);
+    img_h = size(grayImg, 1);
 
     X = X_update2;
     Y = Y_update2;
@@ -1107,7 +1116,7 @@ for data_th = 1:size(records,1)
     start_frame = records{data_th, 4};
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
-    shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
+    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % make output folder
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1170,9 +1179,10 @@ for data_th = 1:size(records,1)
     end
 
     % size
-    img_initial = read(shuttleVideo,1);
+    img_initial = TProRead(shuttleVideo,1);
     img_h = size(img_initial,1);
     img_w = size(img_initial,2);
+    clear img_initial;
 
     % show wait dialog
     hWaitBar = waitbar(0,'processing ...','Name',['tracking for ', shuttleVideo.name],...
@@ -1494,7 +1504,7 @@ end
             set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
             figure(figureWindow);
 
-            img = read(shuttleVideo,t_count);
+            img = TProRead(shuttleVideo,t_count);
             %             img = imread(strcat('./input/',file_list(t).name));
             clf;
             imshow(img);
@@ -2469,8 +2479,8 @@ addpath(videoPath);
 % select roi for every movie
 for data_th = 1:size(records,1)
     if records{data_th, 1} && records{data_th, 10}
-        shuttleVideo = VideoReader(strcat(videoPath,records{data_th, 2}));
-        frameImage = read(shuttleVideo,1);
+        shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+        frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
         roiFileName = strcat(videoPath,shuttleVideo.name,'_tpro/roi.png');
@@ -2504,6 +2514,7 @@ for data_th = 1:size(records,1)
             % write roi file
             imwrite(newRoiImage, roiFileName);
         end
+        clear frameImage;
     end
 end
 
@@ -3282,4 +3293,38 @@ for i = 1 : size(records,1)
     % show tracking result
     dlg = trackingResultDialog({num2str(i)});
     pause(0.1);
+end
+
+
+%% TPro Video file (or image folder) reader
+function videoStructs = TProVideoReader(videoPath, fileName)
+if isdir([videoPath fileName])
+    videoStructs = struct;
+    videoStructs.Name = fileName;
+    videoStructs.name = fileName;
+    videoStructs.FrameRate = 30; % not sure. just set 30
+    listing = dir([videoPath fileName]);
+    files = cell(size(listing,1)-2,1);
+    for i = 1:(size(listing,1)-2) % not include '.' and '..'
+        files{i} = listing(i+2).name;
+    end
+    files = sort(files);
+    videoStructs.files = files;
+    videoStructs.videoPath = videoPath;
+    videoStructs.NumberOfFrames = size(files,1);
+else
+    videoStructs = VideoReader([videoPath fileName]);
+end
+
+%%
+function img = TProRead(videoStructs, frameNum)
+if isfield(videoStructs, 'files')
+    try
+        filename = [videoStructs.videoPath videoStructs.Name '/' char(videoStructs.files(frameNum))];
+        img = imread(filename);
+    catch e
+        errordlg(['failed to read image file : ' videoStructs.files(frameNum)], 'Error');
+    end
+else
+    img = read(videoStructs,frameNum);
 end
