@@ -880,7 +880,10 @@ for data_th = 1:size(records,1)
     % before saving, check standard deviation of fly count
     sd = std(keep_count);
     mcount = mean(keep_count);
-    if 0 < sd && sd < 1
+    zerocnt = sum(keep_count==0) / length(keep_count);
+    maxcnt = max(keep_count);
+    mincnt = min(keep_count);
+    if 0 < sd && sd < 1 && zerocnt < 0.2 && (maxcnt-mincnt) <= 5
         % fly count should be same every frame.
         % let's fix false positive or false negative
         errorCases = find(abs(keep_count - mcount) > 0.5);
@@ -1178,6 +1181,7 @@ for data_th = 1:size(records,1)
     setappdata(hWaitBar,'canceling',0)
 
     t = 1;
+    flyZeroCount = 0;
     for t_count = start_frame:frame_steps:end_frame
         % Check for Cancel button press
         isCancel = getappdata(hWaitBar, 'canceling');
@@ -1203,6 +1207,11 @@ for data_th = 1:size(records,1)
         % do the kalman filter
         % Predict next state
         nD = size(X{t},1); %set new number of detections
+        if nD == 0
+            flyZeroCount = flyZeroCount + 1; % counting for reseting assign
+        else
+            flyZeroCount = 0; % reset
+        end
 
         Q_estimate_before_update = Q_estimate;  % keep Q_estimate before the update
 
@@ -1327,8 +1336,6 @@ end
                 asgn2 = asgn.*0;
             end
 
-
-
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
@@ -1363,7 +1370,7 @@ end
                             Q_estimate(:,k) = NaN;
                         else
                             if ~isempty(roiImage) && roiImage(y,x) == 0
-                                % if the predict is out of ROI then stop
+                                % if the predict is out of ROI then stop fly movement
                                 Q_estimate(1,k) = y - Q_estimate(3,k);
                                 Q_estimate(2,k) = x - Q_estimate(4,k);
                                 Q_estimate(3,k) = 0;
@@ -1435,6 +1442,26 @@ end
         %give a strike to any tracking that didn't get matched up to a
         %detection
         if exist('asgn', 'var')
+            if flyZeroCount >= 3 % zero fly is continuing. so reset assign
+                if sum(asgn>0) > 0
+                    for k = 1:length(asgn)
+                        if asgn(k) == 0
+                            continue;
+                        end
+                        y = round(Q_estimate(1,k));
+                        x = round(Q_estimate(2,k));
+                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                            % if the predict is out of bound then delete
+                            Q_estimate(:,k) = NaN;
+                        elseif ~isempty(roiImage) && roiImage(y,x) == 0
+                            % if the predict is out of ROI then delete
+                            Q_estimate(:,k) = NaN;
+                        end
+                        asgn(k) = 0;
+                    end
+                end
+            end
+            
             no_trk_list = find(asgn==0);
             prev_strk_trks = strk_trks;
             if ~isempty(no_trk_list)

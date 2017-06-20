@@ -96,7 +96,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     load(strcat(confPath,'multi/track_',filename,'.mat'));
 
     % initialize GUI
-    sharedInst = sharedInstance(0); % get shared instance
+    sharedInst = struct; % allocate shared instance
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
@@ -176,7 +176,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.roiMaskImage = [];
     end
 
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 
     % show first frame
@@ -234,10 +234,10 @@ function slider1_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frameNum = int64(get(hObject,'Value'));
     sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     
     set(handles.edit1, 'String', sharedInst.frameNum);
     guidata(hObject, handles);    % Update handles structure
@@ -289,7 +289,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton2, 'Enable', 'off')
@@ -328,7 +328,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if sharedInst.frameNum < sharedInst.maxFrame
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps);
@@ -341,7 +341,7 @@ function pushbutton5_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if sharedInst.frameNum > 1
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps);
@@ -355,10 +355,10 @@ function popupmenu2_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     contents = cellstr(get(hObject,'String'));
     sharedInst.stepTime = str2num(contents{get(hObject,'Value')});
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -379,9 +379,9 @@ function checkbox1_Callback(hObject, eventdata, handles)
     % hObject    handle to checkbox1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.showNumber = get(hObject,'Value');
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles,sharedInst.frameNum);
 end
 
@@ -390,9 +390,9 @@ function checkbox2_Callback(hObject, eventdata, handles)
     % hObject    handle to checkbox2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.showDetectResult = get(hObject,'Value');
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -402,9 +402,9 @@ function radiobutton1_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 1;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.popupmenu5, 'Enable', 'off')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -414,9 +414,9 @@ function radiobutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 2;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.popupmenu5, 'Enable', 'on')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -426,9 +426,9 @@ function radiobutton5_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.lineMode = 1;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.edit3, 'Enable', 'off')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -438,9 +438,9 @@ function radiobutton6_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton6 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.lineMode = 2;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.edit3, 'Enable', 'on')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -449,7 +449,7 @@ function edit3_Callback(hObject, eventdata, handles)
     % hObject    handle to edit3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     num = str2num(get(handles.edit3, 'String'));
     if isempty(num)
         set(handles.edit3, 'String', sharedInst.lineLength);
@@ -460,7 +460,7 @@ function edit3_Callback(hObject, eventdata, handles)
             sharedInst.lineLength = num;
         end
     end
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 end
 
@@ -483,10 +483,10 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     contents = cellstr(get(hObject,'String'));
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -508,9 +508,9 @@ function popupmenu6_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu6 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.backMode = get(hObject,'Value');
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -532,7 +532,7 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton14 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton1, 'Enable', 'off')
@@ -590,24 +590,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
-%% working space local shared struct
-function shared = sharedInstance(setData)
-    persistent pStruct;
-    if ~exist('pStruct', 'var') || isempty(pStruct)
-        pStruct = struct;
-    end
-    if ~isempty(pStruct) && isstruct(setData)
-        %clear pStruct;
-        pStruct = setData;
-    end
-    shared = pStruct;
-end
-
 %% show frame function
 function showFrameInAxes(hObject, handles, frameNum)
     axes(handles.axes1); % set drawing area
 
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.originalImage) && (ndims(sharedInst.originalImage) > 1) % check cache
         img = sharedInst.originalImage;
     else
