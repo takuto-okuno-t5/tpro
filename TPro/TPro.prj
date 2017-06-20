@@ -1,18 +1,18 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="3249820309" file="D:\tools\tprowork\TPro\TPro.prj" location="D:\tools\tprowork\TPro" name="TPro" preferred-package-location="D:\tools\tprowork\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="アプリケーション コンパイラ">
+  <configuration build-checksum="1434314597" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
     <param.version>1.4</param.version>
     <param.authnamewatermark>t.okuno, pudith</param.authnamewatermark>
     <param.email />
-    <param.company>tohoku university</param.company>
-    <param.summary>detection, tracking and behavior classifier</param.summary>
-    <param.description>detection, tracking and behavior classifier</param.description>
+    <param.company>tanimoto lab. tohoku univ</param.company>
+    <param.summary />
+    <param.description>animal detection, tracking</param.description>
     <param.screenshot />
     <param.guid />
     <param.net.saved.interface />
-    <param.installpath.string>\tohoku university\TPro\</param.installpath.string>
+    <param.installpath.string>\tanimoto lab. tohoku univ\TPro\</param.installpath.string>
     <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
     <param.logo />
     <param.install.notes />
@@ -42,6 +42,7 @@
       <param.icon />
       <param.icons />
       <param.email />
+      <param.summary />
       <param.screenshot />
       <param.guid />
       <param.net.saved.interface />
@@ -72,13 +73,22 @@
     <fileset.resources>
       <file>${PROJECT_ROOT}\detectoptimizer.fig</file>
       <file>${PROJECT_ROOT}\detectoptimizer.m</file>
+      <file>${PROJECT_ROOT}\dndcontrol.m</file>
       <file>${PROJECT_ROOT}\gui.fig</file>
+      <file>${PROJECT_ROOT}\MLDropTarget.class</file>
+      <file>${PROJECT_ROOT}\MLDropTarget.java</file>
+      <file>${PROJECT_ROOT}\startEndDialog.fig</file>
+      <file>${PROJECT_ROOT}\startEndDialog.m</file>
+      <file>${PROJECT_ROOT}\trackingResultDialog.fig</file>
+      <file>${PROJECT_ROOT}\trackingResultDialog.m</file>
     </fileset.resources>
-    <fileset.package />
+    <fileset.package>
+      <file>${PROJECT_ROOT}\dndcontrol_license.txt</file>
+    </fileset.package>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\tools\tprowork\TPro\TPro\for_testing\readme.txt</file>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="TPro.exe" optional="false">D:\tools\tprowork\TPro\TPro\for_testing\TPro.exe</file>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="splash.png" optional="false">D:\tools\tprowork\TPro\TPro\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="splash.png" optional="false">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="TPro.exe" optional="false">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\TPro.exe</file>
     </build-deliverables>
     <workflow />
     <matlab>

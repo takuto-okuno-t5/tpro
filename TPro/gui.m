@@ -27,7 +27,7 @@ function varargout = gui(varargin)
 
 % Edit the above text to modify the response to help gui
 
-% Last Modified by GUIDE v2.5 17-Mar-2017 07:57:05
+% Last Modified by GUIDE v2.5 18-Jun-2017 23:45:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -235,7 +235,7 @@ for i = 1:size(videoFiles, 2)
     frameNum = shuttleVideo.NumberOfFrames;
     frameRate = shuttleVideo.FrameRate;
 
-    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.5};
+    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.4};
     try
         T = cell2table(B);
         T.Properties.VariableNames = header';
@@ -510,12 +510,6 @@ strike_track_threshold = 6;
 
 % assignment for no assignment
 assign_for_noassign = 1;
-
-% output figure enable
-detect_fig_enable = get(handles.radiobutton1,'Value'); % in detection.m
-figure_enable = 1;  % in tracker_savefig_op.m
-line_length = 19;
-
 
 % velocity threshold enable
 velocity_thres_enable = 0;
@@ -839,6 +833,7 @@ for data_th = 1:size(records,1)
         end
 
         % graph
+        %{
         if detect_fig_enable
             % create new roi window if it does not exist
             if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
@@ -861,12 +856,15 @@ for data_th = 1:size(records,1)
                 plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
                 quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
             end
+            hold off;
+            
             % save figure
             f=getframe;
             filename2 = [sprintf('%05d',i_count) '.png'];
             imwrite(f.cdata, strcat(confPath,'detect_output/',filename,'/',filename2));
             pause(0.001)
         end
+        %}
         % graph for detection analysis
         keep_i = [keep_i i];
         keep_count = [keep_count size(X_update2{i},1)];
@@ -892,7 +890,10 @@ for data_th = 1:size(records,1)
     % before saving, check standard deviation of fly count
     sd = std(keep_count);
     mcount = mean(keep_count);
-    if 0 < sd && sd < 1
+    zerocnt = sum(keep_count==0) / length(keep_count);
+    maxcnt = max(keep_count);
+    mincnt = min(keep_count);
+    if 0 < sd && sd < 1 && zerocnt < 0.2 && (maxcnt-mincnt) <= 5
         % fly count should be same every frame.
         % let's fix false positive or false negative
         errorCases = find(abs(keep_count - mcount) > 0.5);
@@ -1037,18 +1038,11 @@ strike_track_threshold = 6;
 % assignment for no assignment
 assign_for_noassign = 1;
 
-% output figure enable
-detect_fig_enable = 0; % in detection.m
-figure_enable = get(handles.radiobutton2,'Value');  % in tracker_savefig_op.m
-visible_enable = get(handles.radiobutton3,'Value');
-line_length = 19;
-
-
 % velocity threshold enable
-velocity_thres_enable = 0;
+velocity_thres_enable = 1;
 
 % velocity threshold
-velocity_thres = 50;
+velocity_thres = 100;
 
 % velocity graph enable (0)
 velocity_graph_enable = 0;
@@ -1076,6 +1070,9 @@ cna_enable = 1;
 
 % check direction
 check_direction_enable = 1;
+
+% check ecc
+check_ecc_enable = 1;
 
 % Kalman only
 kalman_only_enable = 0;
@@ -1128,12 +1125,19 @@ for data_th = 1:size(records,1)
         mkdir([confPath 'output']);
     end
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    mkdir(strcat(confPath,'output/',filename,'_pic'));
     mkdir(strcat(confPath,'output/',filename,'_data'));
 
     % load detection
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
+    % load roi
+    roiFileName = strcat(confPath,'roi.png');
+    if exist(roiFileName, 'file')
+        roiImage = imread(roiFileName);
+    else
+        roiImage = []
+    end
+            
     % initialize result variables
     Q_loc_meas = []; % location measure
 
@@ -1147,11 +1151,17 @@ for data_th = 1:size(records,1)
     angle_enable = exist('keep_angle_sorted');
     if ecc_enable
         ecc_track = nan(1, MAX_FLIES);
-        ecc_track(:,1:size(keep_ecc_sorted{frame_start},2)) = keep_ecc_sorted{frame_start};
+        szMax = size(keep_ecc_sorted{frame_start},2);
+        if szMax > 0
+            ecc_track(:,1:szMax) = keep_ecc_sorted{frame_start};
+        end
     end
     if angle_enable
         angle_track = nan(1, MAX_FLIES);
-        angle_track(:,1:size(keep_angle_sorted{frame_start},2)) = keep_angle_sorted{frame_start};
+        szMax = size(keep_angle_sorted{frame_start},2)
+        if szMax > 0
+            angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
+        end
     end
     Q_loc_estimateY = nan(MAX_FLIES); % position estimate
     Q_loc_estimateX = nan(MAX_FLIES); % position estimate
@@ -1181,6 +1191,7 @@ for data_th = 1:size(records,1)
     setappdata(hWaitBar,'canceling',0)
 
     t = 1;
+    flyZeroCount = 0;
     for t_count = start_frame:frame_steps:end_frame
         % Check for Cancel button press
         isCancel = getappdata(hWaitBar, 'canceling');
@@ -1206,6 +1217,11 @@ for data_th = 1:size(records,1)
         % do the kalman filter
         % Predict next state
         nD = size(X{t},1); %set new number of detections
+        if nD == 0
+            flyZeroCount = flyZeroCount + 1; % counting for reseting assign
+        else
+            flyZeroCount = 0; % reset
+        end
 
         Q_estimate_before_update = Q_estimate;  % keep Q_estimate before the update
 
@@ -1266,9 +1282,15 @@ for data_th = 1:size(records,1)
                         v1 = direction_track(:,F);
                         v2 = direction_meas(:,asgn(F));
                         if (norm(v1) ~= 0) && (norm(v2) ~= 0)
-                            angle_v1_v2 = acosd(dot(v1,v2)/norm(v1)/norm(v2));  % calculate the angle between two vectors
-                            rej(F) = (-90 < angle_v1_v2) && (angle_v1_v2 < 90); % reject if direction is too different
+                            angle_v1_v2 = abs(acosd(dot(v1,v2)/norm(v1)/norm(v2)));  % calculate the angle between two vectors
+                            rej(F) = (angle_v1_v2 < 45); % reject if direction is too different
                         end
+                    end
+                    if check_ecc_enable && rej(F) == 1
+                        e1 = ecc_track(F);
+                        e2 = ecc_meas(asgn(F));
+                        ecc_e1_e2 = abs(e1 - e2);
+                        rej(F) = (ecc_e1_e2 < 0.3);
                     end
                 else
                     rej(F) = 0;
@@ -1277,9 +1299,9 @@ for data_th = 1:size(records,1)
 
 
             %
-
-            asgn = asgn.*rej;
-
+            if size(asgn,2) > 0
+                asgn = asgn.*rej;
+            end
             if ~kalman_only_enable
                 Q_estimate_before_update(1:2, (asgn ~= 0)) = NaN;
                 Q_loc_meas2 = Q_loc_meas;
@@ -1324,8 +1346,6 @@ end
                 asgn2 = asgn.*0;
             end
 
-
-
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
@@ -1353,11 +1373,19 @@ end
                     end
                 elseif asgn(F) == 0 % assignment for no assignment
                     if assign_for_noassign
-                        if (Q_estimate(1,k) > img_h) || (Q_estimate(2,k) > img_w) || (Q_estimate(1,k) < 0) || (Q_estimate(2,k) < 0)
-                            % if the predict is out of bound then do nothing
-
+                        y = round(Q_estimate(1,k));
+                        x = round(Q_estimate(2,k));
+                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                            % if the predict is out of bound then delete
+                            Q_estimate(:,k) = NaN;
                         else
-                            if min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                            if ~isempty(roiImage) && roiImage(y,x) == 0
+                                % if the predict is out of ROI then stop fly movement
+                                Q_estimate(1,k) = y - Q_estimate(3,k);
+                                Q_estimate(2,k) = x - Q_estimate(4,k);
+                                Q_estimate(3,k) = 0;
+                                Q_estimate(4,k) = 0;
+                            elseif min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
                                 [m,i] = min(est_dist(k,:));
                                 Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
@@ -1423,23 +1451,45 @@ end
 
         %give a strike to any tracking that didn't get matched up to a
         %detection
-        no_trk_list = find(asgn==0);
-        prev_strk_trks = strk_trks;
-        if ~isempty(no_trk_list)
-            strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+        if exist('asgn', 'var')
+            if flyZeroCount >= 3 % zero fly is continuing. so reset assign
+                if sum(asgn>0) > 0
+                    for k = 1:length(asgn)
+                        if asgn(k) == 0
+                            continue;
+                        end
+                        y = round(Q_estimate(1,k));
+                        x = round(Q_estimate(2,k));
+                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                            % if the predict is out of bound then delete
+                            Q_estimate(:,k) = NaN;
+                        elseif ~isempty(roiImage) && roiImage(y,x) == 0
+                            % if the predict is out of ROI then delete
+                            Q_estimate(:,k) = NaN;
+                        end
+                        asgn(k) = 0;
+                    end
+                end
+            end
+            
+            no_trk_list = find(asgn==0);
+            prev_strk_trks = strk_trks;
+            if ~isempty(no_trk_list)
+                strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+            end
+        
+            % consecutive strike
+            % if the strike is not consecutive then reset
+            strk_trks(strk_trks == prev_strk_trks) = 0;
+
+            %if a track has a strike greater than 6, delete the tracking. i.e.
+            %make it nan first vid = 3
+            bad_trks = find(strk_trks > strike_track_threshold);
+            Q_estimate(:,bad_trks) = NaN;
         end
-        %% consecutive strike
-        % if the strike is not consecutive then reset
-        strk_trks(strk_trks == prev_strk_trks) = 0;
-
-
-        %if a track has a strike greater than 6, delete the tracking. i.e.
-        %make it nan first vid = 3
-        bad_trks = find(strk_trks > strike_track_threshold);
-        Q_estimate(:,bad_trks) = NaN;
 
         % output figure
-        %%{
+        %{
         if figure_enable
             % create new roi window if it does not exist
             if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
@@ -1453,10 +1503,10 @@ end
             % change title message
             set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
             figure(figureWindow);
-            clf;
 
             img = read(shuttleVideo,t_count);
             %             img = imread(strcat('./input/',file_list(t).name));
+            clf;
             imshow(img);
             hold on;
             plot(Y{t}(:),X{t}(:),'or'); % the actual tracking
@@ -1476,6 +1526,9 @@ end
                     else
                         st = line_length;
                     end
+                    while (isnan(Q_loc_estimateX(t-st,Dc)) || Q_loc_estimateX(t-st,Dc) == 0) && st > 0
+                        st = st - 1;
+                    end
                     tmX = Q_loc_estimateX(t-st:t,Dc);
                     tmY = Q_loc_estimateY(t-st:t,Dc);
                     plot(tmY,tmX,'.-','markersize',Ms(Sz),'color',c_list(Cz),'linewidth',3)  % rodent 1 instead of Cz
@@ -1483,12 +1536,12 @@ end
                         num_txt = strcat(' = ', num2str(Dc));
                         text(tmY(end),tmX(end),num_txt)
                     end
-                    hold on
+                    %hold on;
                     %                 quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                    axis off
+                    axis off;
                 end
             end
-            hold off
+            hold off;
 
             % save figure
             f=getframe;
@@ -1497,8 +1550,8 @@ end
 
             pause(0.001)
         end
-
         %}
+        
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
         disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
         % Report current estimate in the waitbar's message field
@@ -1541,10 +1594,12 @@ end
         keep_data{i} = keep_data{i}(:,1:flyNum);
     end
 
-    % find end of row
-    a = isnan(keep_data{1});
-    b = sum(a,2);
-    end_row = find(b==flyNum,1) - 1;
+    % find end of row (some frames has zero flies. so finding NaN is bad)
+%    a = isnan(keep_data{1});
+%    b = sum(a,2);
+%    end_row = find(b==flyNum,1) - 1;
+    end_row = t - 1;
+
     % make save string
     save_string = [];
     for s_count = 1:flyNum
@@ -1652,7 +1707,11 @@ end
     record = {records{data_th,:}};
     T = cell2table(record);
     T.Properties.VariableNames = confTable.Properties.VariableNames;
-    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));    
+    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));
+    
+    % show tracking result
+    dlg = trackingResultDialog({num2str(data_th)});
+    pause(0.1);
 end
 
 % show end text
@@ -1747,6 +1806,8 @@ for i = 1 : blob_num
 
         % stronger gaussian again
         blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
+        blob_th_max = max(max(blob_img_trimmed));
+        blob_img_trimmed = blob_img_trimmed / blob_th_max;
 
         for th_i = 1 : 40
             blob_threshold2 = blob_threshold2 + 0.05;
@@ -1757,16 +1818,16 @@ for i = 1 : blob_num
             blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
             [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
 
-            if expect_num == size(AREA, 1) % change from <= to == 20161015
+            if expect_num <= size(AREA, 1) % change from <= to == 20161015
                 x_choose = CENTROID(1:expect_num,2);
                 y_choose = CENTROID(1:expect_num,1);    % choose expect_num according to area (large)
                 blobPointX = [blobPointX ; x_choose + double(rect(2))];
                 blobPointY = [blobPointY ; y_choose + double(rect(1))];
-                blobAreas = [blobAreas ; AREA];
-                blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
-                blobMinorAxis = [blobMinorAxis ; MINORAXIS];
-                blobOrient = [blobOrient ; ORIENTATION];
-                blobEcc = [blobEcc ; ECCENTRICITY];
+                blobAreas = [blobAreas ; AREA(1:expect_num)];
+                blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
+                blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
+                blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
+                blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
                 for j=1 : expect_num
                     pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
                     box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
@@ -1989,7 +2050,7 @@ end
 %%
 function enableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10];
 enableButtons(buttons);
 
 %%
@@ -2002,7 +2063,7 @@ end
 %%
 function disableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton7, handles.pushbutton8];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10];
 disableButtons(buttons);
 
 %%
@@ -2075,13 +2136,13 @@ end
 % track button
 set(handles.pushbutton5, 'Enable', 'on');
 
-trackImageName = [confPath 'output/' filename '_pic/' sprintf('%05d',start_frame) '.png'];
-if ~exist(trackImageName, 'file')
-    return; % no tracking image file
+trackFileName = [confPath 'multi/track_' filename '.mat'];
+if ~exist(trackFileName, 'file')
+    return; % no tracking file
 end
 
-% make video button
-set(handles.pushbutton7, 'Enable', 'on');
+% show tracking result button
+set(handles.pushbutton10, 'Enable', 'on');
 
 
 %%
@@ -2421,24 +2482,6 @@ set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
 
-% --- Executes on button press in radiobutton1.
-function radiobutton1_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton1
-
-
-% --- Executes on button press in radiobutton2.
-function radiobutton2_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of radiobutton2
-
-
 % --- Executes on selection change in popupmenu1.
 function popupmenu1_Callback(hObject, eventdata, handles)
 % hObject    handle to popupmenu1 (see GCBO)
@@ -2460,135 +2503,6 @@ function popupmenu1_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
-% --- Executes on button press in pushbutton7.
-function pushbutton7_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton7 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-inputListFile = './input_videos.mat';
-if ~exist(inputListFile, 'file')
-    errordlg('please select movies before operation.', 'Error');
-    return;
-end
-vl = load(inputListFile);
-videoPath = vl.videoPath;
-videoFiles = vl.videoFiles;
-
-% load configuration files
-videoFileNum = size(videoFiles,2);
-records = {};
-for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
-    if ~exist(confFileName, 'file')
-        errordlg(['configuration file not found : ' confFileName], 'Error');
-        return;
-    end
-
-    confTable = readtable(confFileName);
-    C = table2cell(confTable);
-    records = [records; C];
-end
-
-% show start text
-set(handles.edit1, 'String','making video ...')
-set(handles.text9, 'String','Running','BackgroundColor','red');
-disableAllButtons(handles);
-pause(0.01);
-
-% start tic
-tic
-
-for data_th = 1:size(records,1)
-    % check active flag
-    if ~records{data_th, 1}
-        continue;
-    end
-    
-    start_frame = records{data_th, 4};
-    end_frame = records{data_th, 5};
-    fps_num = records{data_th, 7};
-    frame_steps = records{data_th, 16};
-    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    video_name = records{data_th, 2};
-
-    % make output folder
-    confPath = [videoPath videoFiles{data_th} '_tpro/'];
-    if ~exist([confPath 'movie'], 'dir')
-        mkdir([confPath 'movie']);
-    end
-    folder_name = strcat(confPath,'output/',filename,'_pic');
-
-    addpath([confPath 'movie']);
-
-    adjust_img_enable = 0;
-    adjust_img = -20;   % additional value for adjusting the img
-
-    imageNames = dir(fullfile(folder_name,'*.png'));
-    if isempty(imageNames)
-        errordlg('No input images.','Error');
-        continue;
-    end
-
-    imageNames = {imageNames.name}';
-
-    name_begin = char(imageNames(1));
-    name_begin = name_begin(1:end-4);
-    name_last = char(imageNames(end));
-    name_last = name_last(1:end-4);
-
-    outputVideo = VideoWriter(fullfile([confPath 'movie'], strcat(video_name,'_',name_begin,'_to_',name_last)));
-    outputVideo.FrameRate = fps_num / frame_steps;
-
-    % show wait dialog
-    hWaitBar = waitbar(0,'processing ...','Name',['making video for ', video_name],...
-                'CreateCancelBtn',...
-                'setappdata(gcbf,''canceling'',1)');
-    setappdata(hWaitBar,'canceling',0)
-
-    % make video
-    open(outputVideo)
-
-    for ii = 1:length(imageNames)
-        % Check for Cancel button press
-        isCancel = getappdata(hWaitBar, 'canceling');
-        if isCancel
-            break;
-        end
-
-        img = imread(fullfile(folder_name,imageNames{ii}));
-        img2 = rgb2gray(img);
-
-        if adjust_img_enable
-            img = img + adjust_img;
-            img(img==245+adjust_img) = 245;
-        end
-        writeVideo(outputVideo,img)
-        clc
-        rate = ii/length(imageNames);
-        % Report current estimate in the waitbar's message field
-        waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
-        pause(0.001);
-    end
-    close(outputVideo)
-    
-    % delete dialog bar
-    delete(hWaitBar);
-
-    if isCancel
-        continue;
-    end
-    %     img2 = img - adjust_img;
-    %     imshowpair(img,img2,'montage')
-end
-
-% show end text
-time = toc;
-set(handles.edit1, 'String',strcat('making video ... done!     t =',num2str(time),'s'))
-set(handles.text9, 'String','Ready','BackgroundColor','green');
-checkAllButtons(handles);
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
@@ -3296,10 +3210,39 @@ pushbutton4_Callback(hObject, eventdata, handles)
 pushbutton5_Callback(hObject, eventdata, handles)
 
 
-% --- Executes on button press in radiobutton3.
-function radiobutton3_Callback(hObject, eventdata, handles)
-% hObject    handle to radiobutton3 (see GCBO)
+% --- Executes on button press in pushbutton10.
+function pushbutton10_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton10 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of radiobutton3
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+% loop for every movies
+for i = 1 : size(records,1)
+    % show tracking result
+    dlg = trackingResultDialog({num2str(i)});
+    pause(0.1);
+end

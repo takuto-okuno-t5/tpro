@@ -23,7 +23,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 13-May-2017 03:13:11
+    % Last Modified by GUIDE v2.5 20-Jun-2017 00:51:19
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -91,7 +91,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     records = table2cell(confTable);
     
     % initialize GUI
-    sharedInst = sharedInstance(0); % get shared instance
+    sharedInst = struct; % allocate shared instance
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
@@ -189,17 +189,17 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.roiMaskImage = [];
     end
     
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.startFrame);
 
     %% internal function to add a spinner
-    function jhSpinner = addLabeledSpinner(model, pos, callbackFunc)
+    function hContainer = addLabeledSpinner(model, pos, callbackFunc)
         % Set the spinner control
         jSpinner = com.mathworks.mwswing.MJSpinner(model);
-        jhSpinner = javacomponent(jSpinner, pos, handles.figure1);
+        [jhSpinner, hContainer] = javacomponent(jSpinner, pos, handles.figure1);
         %jhSpinner.setToolTipText('<html>This spinner is editable, but only the<br/>preconfigured values can be entered')
         jEditor = javaObject('javax.swing.JSpinner$NumberEditor', jhSpinner, '#');
         jhSpinner.setEditor(jEditor);
@@ -218,7 +218,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             hdl = guidata(hFig);
 
             % get spinner data for the spinners
-            sharedInst = sharedInstance(0); % get shared instance
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
             sharedInst.gaussH = jSpinner.getValue;
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
@@ -226,7 +226,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.isModified = true;
-            sharedInstance(sharedInst); % set shared instance
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
@@ -247,7 +247,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             hdl = guidata(hFig);
 
             % get spinner data for the spinners
-            sharedInst = sharedInstance(0); % get shared instance
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
             sharedInst.gaussSigma = jSpinner.getValue;
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
@@ -255,7 +255,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.isModified = true;
-            sharedInstance(sharedInst); % set shared instance
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
@@ -276,7 +276,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             hdl = guidata(hFig);
 
             % get spinner data for the spinners
-            sharedInst = sharedInstance(0); % get shared instance
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
             sharedInst.binaryTh = jSpinner.getValue;
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
@@ -284,7 +284,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.isModified = true;
-            sharedInstance(sharedInst); % set shared instance
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
@@ -305,7 +305,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             hdl = guidata(hFig);
 
             % get spinner data for the spinners
-            sharedInst = sharedInstance(0); % get shared instance
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
             sharedInst.binaryAreaPixel = jSpinner.getValue;
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
@@ -313,7 +313,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.isModified = true;
-            sharedInstance(sharedInst); % set shared instance
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
@@ -327,12 +327,30 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 end
 
 %% --- Executes when user attempts to close figure1.
+function figure1_SizeChangedFcn(hObject, eventdata, handles)
+    % initialize spinner
+    if isfield(handles, 'jhSpinner1')
+        pos = getpixelposition(handles.text2, true);
+        setpixelposition(handles.jhSpinner1, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text3, true);
+        setpixelposition(handles.jhSpinner2, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text4, true);
+        setpixelposition(handles.jhSpinner3, [pos(1)+90,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text5, true);
+        setpixelposition(handles.jhSpinner4, [pos(1)+70,pos(2)-4,60,20]);
+    end
+end
+
+%% --- Executes when user attempts to close figure1.
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if sharedInst.isModified
         selection = questdlg('Do you save configuration before closing Detection Optimizer before?',...
                              'Confirmation',...
@@ -370,7 +388,7 @@ function slider1_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.frameNum = int64(get(hObject,'Value'));
     sharedInst.originalImage = [];      % frame is changed, so clear cache
     sharedInst.step2Image = [];
@@ -378,7 +396,7 @@ function slider1_Callback(hObject, eventdata, handles)
     sharedInst.step4Image = [];
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
     set(handles.edit4, 'String', sharedInst.frameNum);
     guidata(hObject, handles);    % Update handles structure
@@ -402,9 +420,9 @@ function radiobutton1_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.imageMode = 1;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
@@ -413,9 +431,9 @@ function radiobutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.imageMode = 2;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
@@ -424,9 +442,9 @@ function radiobutton3_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.imageMode = 3;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
@@ -435,9 +453,9 @@ function radiobutton4_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.imageMode = 4;
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
@@ -446,9 +464,9 @@ function checkbox1_Callback(hObject, eventdata, handles)
     % hObject    handle to checkbox1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.showDetectResult = get(hObject,'Value');
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     if ~sharedInst.showDetectResult
         set(handles.text16, 'String', '--');
         guidata(hObject, handles);    % Update handles structure
@@ -461,14 +479,14 @@ function checkbox2_Callback(hObject, eventdata, handles)
     % hObject    handle to checkbox2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.showDirection = get(hObject,'Value');
     if ~sharedInst.showDirection
         sharedInst.detectedDirection = [];
     else
         sharedInst.detectedPointX = []; % because it is necessary to calcurate direction again
     end
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
@@ -477,8 +495,9 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.bgImage)
+        cla;
         imshow(sharedInst.bgImage);
     end
 end
@@ -488,8 +507,9 @@ function pushbutton3_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.roiMaskImage)
+        cla;
         imshow(sharedInst.roiMaskImage);
     end
 end
@@ -518,7 +538,7 @@ function edit1_Callback(hObject, eventdata, handles)
     % hObject    handle to edit1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     num = str2num(get(handles.edit1, 'String'));
     if isempty(num)
         set(handles.edit1, 'String', sharedInst.startFrame);
@@ -531,7 +551,7 @@ function edit1_Callback(hObject, eventdata, handles)
             set(handles.pushbutton4, 'Enable', 'on');
         end
     end
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 end
 
@@ -553,7 +573,7 @@ function edit2_Callback(hObject, eventdata, handles)
     % hObject    handle to edit2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     num = str2num(get(handles.edit2, 'String'));
     if isempty(num)
         set(handles.edit2, 'String', sharedInst.endFrame);
@@ -566,7 +586,7 @@ function edit2_Callback(hObject, eventdata, handles)
             set(handles.pushbutton4, 'Enable', 'on');
         end
     end
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 end
 
@@ -588,7 +608,7 @@ function edit3_Callback(hObject, eventdata, handles)
     % hObject    handle to edit3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     num = str2num(get(handles.edit3, 'String'));
     if isempty(num)
         set(handles.edit3, 'String', sharedInst.frameSteps);
@@ -601,7 +621,7 @@ function edit3_Callback(hObject, eventdata, handles)
             set(handles.pushbutton4, 'Enable', 'on');
         end
     end
-    sharedInstance(sharedInst); % set shared instance
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 end
 
@@ -642,6 +662,12 @@ function edit4_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+end
+
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+end
 
 % --- Executes on key release with focus on figure1 and none of its controls.
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
@@ -651,7 +677,7 @@ function figure1_KeyReleaseFcn(hObject, eventdata, handles)
     %	Character: character interpretation of the key(s) that was released
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if strcmp(eventdata.Key, 'rightarrow')
         if sharedInst.frameNum < sharedInst.maxFrame
             set(handles.slider1, 'value', sharedInst.frameNum+1);
@@ -670,8 +696,8 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton6 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = sharedInstance(0); % get shared
-    boxSize = findFlyImageBoxSize(sharedInst.startFrame, sharedInst.endFrame);
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    boxSize = findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
     
 outputFlyImageFiles(sharedInst.startFrame, sharedInst.endFrame, boxSize);
 return;
@@ -699,22 +725,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% filter and detect functions
 
-%% working space local shared struct
-function shared = sharedInstance(setData)
-    persistent pStruct;
-    if ~exist('pStruct', 'var') || isempty(pStruct)
-        pStruct = struct;
-    end
-    if ~isempty(pStruct) && isstruct(setData)
-        %clear pStruct;
-        pStruct = setData;
-    end
-    shared = pStruct;
-end
-
 %% image calcuration 
-function outimage = applyBackgroundSub(img)
-    sharedInst = sharedInstance(0); % get shared
+function outimage = applyBackgroundSub(handles, img)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     grayImg = rgb2gray(img);
     if ~isempty(sharedInst.bgImageMean)
         grayImg = grayImg + (sharedInst.bgImageMean - mean(mean(grayImg)));
@@ -729,9 +742,9 @@ function outimage = applyBackgroundSub(img)
 end
 
 %%
-function outimage = applyFilterAndRoi(img)
+function outimage = applyFilterAndRoi(handles, img)
     % apply gaussian filter
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     img = PD_blobfilter(img, sharedInst.gaussH, sharedInst.gaussSigma);
 
     % apply ROI
@@ -742,8 +755,8 @@ function outimage = applyFilterAndRoi(img)
 end
 
 %%
-function outimage = applyBinarizeAndAreaMin(img)
-    sharedInst = sharedInstance(0); % get shared
+function outimage = applyBinarizeAndAreaMin(handles, img)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     img = im2bw(img, sharedInst.binaryTh / 100);
     outimage = bwareaopen(img, sharedInst.binaryAreaPixel);   % delete blob that has area less than 50
 end
@@ -752,7 +765,7 @@ end
 function showFrameInAxes(hObject, handles, imageMode, frameNum)
     axes(handles.axes1); % set drawing area
 
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.originalImage) && (ndims(sharedInst.originalImage) > 1) % check cache
         img = sharedInst.originalImage;
     else
@@ -761,10 +774,11 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     end
     % show original image
     if imageMode == 1
-        sharedInstance(sharedInst); % update shared
+        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
         if sharedInst.showDetectResult
             showDetectResultInAxes(hObject, handles, img);
         else
+            cla;
             imshow(img);
         end
         return;
@@ -774,14 +788,15 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
         img = sharedInst.step2Image;
     else
-        img = applyBackgroundSub(img);
+        img = applyBackgroundSub(handles, img);
         sharedInst.step2Image = img;
     end
     if imageMode == 2
-        sharedInstance(sharedInst); % update shared
+        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
         if sharedInst.showDetectResult
             showDetectResultInAxes(hObject, handles, img);
         else
+            cla;
             imshow(img);
         end
         return;
@@ -791,14 +806,15 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     if ~isempty(sharedInst.step3Image) && (ndims(sharedInst.step3Image) > 1) % check cache
         img = sharedInst.step3Image;
     else
-        img = applyFilterAndRoi(img);
+        img = applyFilterAndRoi(handles, img);
         sharedInst.step3Image = img;
     end
     if imageMode == 3
-        sharedInstance(sharedInst); % update shared
+        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
         if sharedInst.showDetectResult
             showDetectResultInAxes(hObject, handles, img);
         else
+            cla;
             imshow(img);
         end
         return;
@@ -808,14 +824,15 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     if ~isempty(sharedInst.step4Image) && (ndims(sharedInst.step4Image) > 1) % check cache
         img = sharedInst.step4Image;
     else
-        img = applyBinarizeAndAreaMin(img);
+        img = applyBinarizeAndAreaMin(handles, img);
         sharedInst.step4Image = img;
     end
     
-    sharedInstance(sharedInst); % update shared
+    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
     if sharedInst.showDetectResult
         showDetectResultInAxes(hObject, handles, img);
     else
+        cla;
         imshow(img);
     end
 end
@@ -834,12 +851,13 @@ end
 
 %% show result
 function showDetectResultInAxes(hObject, handles, frameImage)
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % check cache first. if it exists, just plot
     if ~isempty(sharedInst.detectedPointX)
         if sharedInst.showIndexNumber
             frameImage = getNumberDrawnImage(frameImage, sharedInst.detectedPointX, sharedInst.detectedPointY);
         end
+        cla;
         imshow(frameImage);
 
         hold on;
@@ -848,6 +866,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         if sharedInst.showDirection && ~isempty(sharedInst.detectedDirection)
             quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedDirection(1,:)', sharedInst.detectedDirection(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
         end
+        hold off;
         return;
     end
 
@@ -857,22 +876,22 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
             img = sharedInst.step2Image;
         else
-            img = applyBackgroundSub(img);
+            img = applyBackgroundSub(handles, img);
             sharedInst.step2Image = img;
         end
         
         if ~isempty(sharedInst.step3Image) && (ndims(sharedInst.step3Image) > 1) % check cache
             img = sharedInst.step3Image;
         else
-            img = applyFilterAndRoi(img);
+            img = applyFilterAndRoi(handles, img);
             sharedInst.step3Image = img;
         end
 
         if isempty(sharedInst.step4Image)
-            img = applyBinarizeAndAreaMin(img);
+            img = applyBinarizeAndAreaMin(handles, img);
             sharedInst.step4Image = img;
         end
-        sharedInstance(sharedInst); % update shared
+        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
     end
     
     [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
@@ -881,6 +900,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     if sharedInst.showIndexNumber
         frameImage = getNumberDrawnImage(frameImage, blobPointX, blobPointY);
     end
+    cla;
     imshow(frameImage);
 
     % show detection result    
@@ -890,18 +910,19 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     % calc and draw direction
     if sharedInst.showDirection
         if sharedInst.useDeepLearning
-            keep_direction = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            keep_direction = PD_direction_deepLearning(handles, sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         else
-            keep_direction = PD_direction(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            keep_direction = PD_direction(handles, sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
+    hold off;
     
     % store in cache
     sharedInst.detectedPointX = blobPointX;
     sharedInst.detectedPointY = blobPointY;
     sharedInst.detectedDirection = keep_direction;
-    sharedInstance(sharedInst); % update shared
+    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
 
     % update gui
     set(handles.text16, 'String', size(blobPointX,1));
@@ -911,7 +932,7 @@ end
 %%
 function saveConfigurationFile(handles)
     % save configuration file
-    sharedInst = sharedInstance(0); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     name = sharedInst.shuttleVideo.Name;
     frameNum = sharedInst.shuttleVideo.NumberOfFrames;
     frameRate = sharedInst.shuttleVideo.FrameRate;
@@ -935,7 +956,7 @@ function saveConfigurationFile(handles)
         sharedInst.isModified = false;
         set(handles.pushbutton4, 'Enable', 'off');
     end
-    sharedInstance(sharedInst); % update shared
+    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
 end
 
 %
@@ -989,7 +1010,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
             chooseOne = false;
         elseif expect_num > 1
             % find separated area
-            blob_threshold2 = blob_threshold - 0.2;
+            blob_threshold2 = blob_threshold/100 - 0.2;
             if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
 
             label_mask = labeledImage==i;
@@ -1001,6 +1022,8 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
 
             % stronger gaussian again
             blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
+            blob_th_max = max(max(blob_img_trimmed));
+            blob_img_trimmed = blob_img_trimmed / blob_th_max;
 
             for th_i = 1 : 40
                 blob_threshold2 = blob_threshold2 + 0.05;
@@ -1009,18 +1032,18 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
                 end
 
                 blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY] = step(H, blob_img_trimmed2);
+                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
 
-                if expect_num == size(AREA, 1) % change from <= to == 20161015
+                if expect_num <= size(AREA, 1) % change from <= to == 20161015
                     x_choose = CENTROID(1:expect_num,1);
                     y_choose = CENTROID(1:expect_num,2);    % choose expect_num according to area (large)
                     blobPointX = [blobPointX ; x_choose + double(rect(1))];
                     blobPointY = [blobPointY ; y_choose + double(rect(2))];
-                    blobAreas = [blobAreas ; AREA];
-                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS];
-                    blobMinorAxis = [blobMinorAxis ; MINORAXIS];
-                    blobOrient = [blobOrient ; ORIENTATION];
-                    blobEcc = [blobEcc ; ECCENTRICITY];
+                    blobAreas = [blobAreas ; AREA(1:expect_num)];
+                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
+                    blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
+                    blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
+                    blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
                     for j=1 : expect_num
                         pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
                         box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
@@ -1061,8 +1084,8 @@ end
 
 %%
 
-function boxSize = findFlyImageBoxSize(startFrame, endFrame)
-    sharedInst = sharedInstance(0); % get shared
+function boxSize = findFlyImageBoxSize(handles, startFrame, endFrame)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     step = int64((endFrame - startFrame) / 12);
     if step == 0
@@ -1072,9 +1095,9 @@ function boxSize = findFlyImageBoxSize(startFrame, endFrame)
     sumMajorAxis = 0;
     for frameNum = startFrame+step:step:endFrame-step % just use middle flames of movie
         img = read(sharedInst.shuttleVideo, frameNum);
-        step2Image = applyBackgroundSub(img);
-        step3Image = applyFilterAndRoi(step2Image);
-        step4Image = applyBinarizeAndAreaMin(step3Image);
+        step2Image = applyBackgroundSub(handles, img);
+        step3Image = applyFilterAndRoi(handles, step2Image);
+        step4Image = applyBinarizeAndAreaMin(handles, step3Image);
 
         [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
         sumMajorAxis = sumMajorAxis + mean(blobMajorAxis);
@@ -1085,8 +1108,8 @@ function boxSize = findFlyImageBoxSize(startFrame, endFrame)
 end
 
 %%
-function outputFlyImageFiles(startFrame, endFrame, boxSize)
-    sharedInst = sharedInstance(0); % get shared
+function outputFlyImageFiles(handles, startFrame, endFrame, boxSize)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % create output directory
     path = strcat(sharedInst.confPath,'detect_flies/');
@@ -1095,15 +1118,15 @@ function outputFlyImageFiles(startFrame, endFrame, boxSize)
     tic;
     for frameNum = startFrame:endFrame
         img = read(sharedInst.shuttleVideo, frameNum);
-        step2Image = applyBackgroundSub(img);
-        step3Image = applyFilterAndRoi(step2Image);
-        step4Image = applyBinarizeAndAreaMin(step3Image);
+        step2Image = applyBackgroundSub(handles, img);
+        step3Image = applyFilterAndRoi(handles, step2Image);
+        step4Image = applyBinarizeAndAreaMin(handles, step3Image);
 
         [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
         if sharedInst.useDeepLearning
-            flyDirection = PD_direction_deepLearning(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            flyDirection = PD_direction_deepLearning(handles, step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         else
-            flyDirection = PD_direction(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            flyDirection = PD_direction(handles, step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
 
         blobNumber = size(blobPointY,1);
@@ -1210,9 +1233,7 @@ function [ outVector, isFound ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, 
 end
 
 %%
-function [ keep_direction ] = PD_direction(glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
-    sharedInst = sharedInstance(0); % get shared
-
+function [ keep_direction ] = PD_direction(handles, glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
     % init
     areaNumber = size(blobAreas, 1);
     keep_direction = zeros(2, areaNumber); % allocate memory
@@ -1311,8 +1332,8 @@ function [ keep_direction ] = PD_direction(glayImage, blobAreas, blobCenterPoint
 end
 
 %%
-function [ keep_direction ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
-    sharedInst = sharedInstance(0); % get shared
+function [ keep_direction ] = PD_direction_deepLearning(handles, glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % init
     areaNumber = size(blobAreas, 1);
@@ -1367,4 +1388,3 @@ function Iout = readAndPreprocessImage(I)
     % beneficial to preserve the aspect ratio of the original image
     % when resizing.
 end
-
