@@ -355,7 +355,8 @@ for data_th = 1:size(records,1)
         grayImages(:,:,i) = grayImage;
         clear frameImage;
     end
-    bgImage = mode(grayImages,3);
+    bgImage = mode(grayImages,3); % this takes much memory and CPU power
+    pause(3); % wait for freeing memory
 
     % sometimes fly stays same position. and mode does not work well.
     % check its mean color and difference each pixels.
@@ -616,6 +617,8 @@ for data_th = 1:size(records,1)
     Y = cell(1,length(end_frame-start_frame+1));
     detection_num = nan(2,end_frame-start_frame+1);
     blobAvgSize = 0;
+    
+    disp(['start detection : ' shuttleVideo.name]);
 
 %load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'));
 %load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'keep_count.mat'));
@@ -638,7 +641,9 @@ for data_th = 1:size(records,1)
         if isCancel
             break;
         end
-        
+        if i_count == 3781
+            a=0;
+        end
         % process detection
         img_real = TProRead(shuttleVideo, i_count);
         grayImg = rgb2gray(img_real);
@@ -966,6 +971,7 @@ for data_th = 1:size(records,1)
 %    system(['start notepad ' countFileName]);
 
     set(handles.text9, 'String','100 %'); % done!
+    pause(3); % pause 3 sec
 end
 
 % show end text
@@ -1183,6 +1189,8 @@ for data_th = 1:size(records,1)
     img_h = size(img_initial,1);
     img_w = size(img_initial,2);
     clear img_initial;
+
+    disp(['start tracking : ' shuttleVideo.name]);
 
     % show wait dialog
     hWaitBar = waitbar(0,'processing ...','Name',['tracking for ', shuttleVideo.name],...
@@ -1711,7 +1719,7 @@ end
     
     % show tracking result
     dlg = trackingResultDialog({num2str(data_th)});
-    pause(0.1);
+    pause(3); % pause 3 sec
 end
 
 % show end text
@@ -1863,7 +1871,7 @@ function [ output_image ] = PD_blobfilter( image, h, sigma )
 %   laplacian of a gaussian (LOG) template
 log_kernel = fspecial('log', h, sigma);
 %   2d convolution
-output_image = conv2(image, log_kernel, 'same');
+output_image = conv2(double(image), log_kernel, 'same');
 
 %%
 function [ keep_direction, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)

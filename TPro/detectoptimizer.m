@@ -1063,7 +1063,7 @@ function [ outputImage ] = PD_blobfilter( image, h, sigma )
     %   laplacian of a gaussian (LOG) template
     logKernel = fspecial('log', h, sigma);
     %   2d convolution
-    outputImage = conv2(image, logKernel, 'same');
+    outputImage = conv2(double(image), logKernel, 'same');
 end
 
 %%

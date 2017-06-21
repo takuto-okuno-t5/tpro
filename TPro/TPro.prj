@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="1434314597" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2156012114" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -36,8 +36,8 @@
     <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
     <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
     <param.windows.command.prompt>true</param.windows.command.prompt>
-    <param.create.log>false</param.create.log>
-    <param.log.file />
+    <param.create.log>true</param.create.log>
+    <param.log.file>tpro.log</param.log.file>
     <unset>
       <param.icon />
       <param.icons />
@@ -64,8 +64,6 @@
       <param.package.mcr.name />
       <param.no.mcr.name />
       <param.windows.command.prompt />
-      <param.create.log />
-      <param.log.file />
     </unset>
     <fileset.main>
       <file>${PROJECT_ROOT}\gui.m</file>

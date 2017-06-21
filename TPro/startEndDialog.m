@@ -58,7 +58,7 @@ handles.startFrame = str2num(char(varargin{1}(1)));
 handles.endFrame = str2num(char(varargin{1}(2)));
 handles.name = char(varargin{1}(3));
 handles.maxFrame = handles.endFrame;
-handles.checkNum = 100;
+handles.checkNum = 50;
 if (handles.endFrame - handles.startFrame + 1) < handles.checkNum
     handles.checkNum = handles.endFrame - handles.startFrame + 1;
 end
