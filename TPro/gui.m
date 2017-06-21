@@ -27,7 +27,7 @@ function varargout = gui(varargin)
 
 % Edit the above text to modify the response to help gui
 
-% Last Modified by GUIDE v2.5 18-Jun-2017 23:45:45
+% Last Modified by GUIDE v2.5 22-Jun-2017 00:33:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1047,7 +1047,7 @@ assign_for_noassign = 1;
 velocity_thres_enable = 1;
 
 % velocity threshold
-velocity_thres = 100;
+velocity_thres = 160;
 
 % velocity graph enable (0)
 velocity_graph_enable = 0;
@@ -1163,7 +1163,7 @@ for data_th = 1:size(records,1)
     end
     if angle_enable
         angle_track = nan(1, MAX_FLIES);
-        szMax = size(keep_angle_sorted{frame_start},2)
+        szMax = size(keep_angle_sorted{frame_start},2);
         if szMax > 0
             angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
         end
@@ -1189,6 +1189,9 @@ for data_th = 1:size(records,1)
     img_h = size(img_initial,1);
     img_w = size(img_initial,2);
     clear img_initial;
+    
+    % adjust velocity threshold 
+    velocity_thres = velocity_thres * (img_h / 1000) * frame_steps; % TODO: how about fps
 
     disp(['start tracking : ' shuttleVideo.name]);
 
@@ -1791,7 +1794,7 @@ for i = 1 : blob_num
     if (mod(area_ratio,1) > blobSeparateRate)
         expect_num = area_ratio + (1-mod(area_ratio,1));
     else
-        expect_num = round(area_ratio); % round to the nearest integer
+        expect_num = floor(area_ratio); % floor to the nearest integer
     end
 
     % check expected number of targets (animals)
@@ -2105,7 +2108,7 @@ end
 %%
 function enableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, handles.pushbutton11];
 enableButtons(buttons);
 
 %%
@@ -2118,7 +2121,7 @@ end
 %%
 function disableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, handles.pushbutton11];
 disableButtons(buttons);
 
 %%
@@ -2198,6 +2201,8 @@ end
 
 % show tracking result button
 set(handles.pushbutton10, 'Enable', 'on');
+% show annotation button
+set(handles.pushbutton11, 'Enable', 'on');
 
 
 %%
@@ -3304,6 +3309,44 @@ for i = 1 : size(records,1)
 end
 
 
+% --- Executes on button press in pushbutton11.
+function pushbutton11_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton11 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,2);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+% loop for every movies
+for i = 1 : size(records,1)
+    % show tracking result
+    dlg = annotationDialog({num2str(i)});
+    pause(0.1);
+end
+
+
 %% TPro Video file (or image folder) reader
 function videoStructs = TProVideoReader(videoPath, fileName)
 if isdir([videoPath fileName])
@@ -3336,3 +3379,4 @@ if isfield(videoStructs, 'files')
 else
     img = read(videoStructs,frameNum);
 end
+

@@ -1,35 +1,35 @@
-function varargout = trackingResultDialog(varargin)
-    % TRACKINGRESULTDIALOG MATLAB code for trackingResultDialog.fig
-    %      TRACKINGRESULTDIALOG, by itself, creates a new TRACKINGRESULTDIALOG or raises the existing
-    %      singleton*.
-    %
-    %      H = TRACKINGRESULTDIALOG returns the handle to a new TRACKINGRESULTDIALOG or the handle to
-    %      the existing singleton*.
-    %
-    %      TRACKINGRESULTDIALOG('CALLBACK',hObject,eventData,handles,...) calls the local
-    %      function named CALLBACK in TRACKINGRESULTDIALOG.M with the given input arguments.
-    %
-    %      TRACKINGRESULTDIALOG('Property','Value',...) creates a new TRACKINGRESULTDIALOG or raises the
-    %      existing singleton*.  Starting from the left, property value pairs are
-    %      applied to the GUI before trackingResultDialog_OpeningFcn gets called.  An
-    %      unrecognized property name or invalid value makes property application
-    %      stop.  All inputs are passed to trackingResultDialog_OpeningFcn via varargin.
-    %
-    %      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
-    %      instance to run (singleton)".
-    %
-    % See also: GUIDE, GUIDATA, GUIHANDLES
+function varargout = annotationDialog(varargin)
+% ANNOTATIONDIALOG MATLAB code for annotationDialog.fig
+%      ANNOTATIONDIALOG, by itself, creates a new ANNOTATIONDIALOG or raises the existing
+%      singleton*.
+%
+%      H = ANNOTATIONDIALOG returns the handle to a new ANNOTATIONDIALOG or the handle to
+%      the existing singleton*.
+%
+%      ANNOTATIONDIALOG('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in ANNOTATIONDIALOG.M with the given input arguments.
+%
+%      ANNOTATIONDIALOG('Property','Value',...) creates a new ANNOTATIONDIALOG or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before annotationDialog_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to annotationDialog_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
 
-    % Edit the above text to modify the response to help trackingResultDialog
+% Edit the above text to modify the response to help annotationDialog
 
-    % Last Modified by GUIDE v2.5 20-Jun-2017 01:28:02
+% Last Modified by GUIDE v2.5 22-Jun-2017 00:27:43
 
-    % Begin initialization code - DO NOT EDIT
-gui_Singleton = 0;
+% Begin initialization code - DO NOT EDIT
+    gui_Singleton = 0;
     gui_State = struct('gui_Name',       mfilename, ...
                        'gui_Singleton',  gui_Singleton, ...
-                       'gui_OpeningFcn', @trackingResultDialog_OpeningFcn, ...
-                       'gui_OutputFcn',  @trackingResultDialog_OutputFcn, ...
+                       'gui_OpeningFcn', @annotationDialog_OpeningFcn, ...
+                       'gui_OutputFcn',  @annotationDialog_OutputFcn, ...
                        'gui_LayoutFcn',  [] , ...
                        'gui_Callback',   []);
     if nargin && ischar(varargin{1})
@@ -41,17 +41,17 @@ gui_Singleton = 0;
     else
         gui_mainfcn(gui_State, varargin{:});
     end
-    % End initialization code - DO NOT EDIT
+% End initialization code - DO NOT EDIT
 end
 
 
-% --- Executes just before trackingResultDialog is made visible.
-function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
+% --- Executes just before annotationDialog is made visible.
+function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % This function has no output args, see OutputFcn.
     % hObject    handle to figure
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    % varargin   command line arguments to trackingResultDialog (see VARARGIN)
+    % varargin   command line arguments to annotationDialog (see VARARGIN)
 
     % Choose default command line output for trackingResultDialog
     handles.output = hObject;
@@ -125,6 +125,14 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
 
+    % calc velocity
+    endLow = size(keep_data{3},1);
+    vxy = zeros(size(keep_data{3},1), size(keep_data{3},2));
+    for i = 1:endLow
+        vxy(i,:) = sqrt( keep_data{3}(i,:).^2 +  keep_data{4}(i,:).^2  );
+    end
+    sharedInst.vxy = vxy;
+    
     sharedInst.originalImage = [];
 
     set(handles.text4, 'String', sharedInst.shuttleVideo.NumberOfFrames);
@@ -135,10 +143,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
     set(handles.pushbutton3, 'Enable', 'off')
-    set(handles.popupmenu5, 'Enable', 'off')
-    set(handles.edit3, 'Enable', 'on')
+    set(handles.popupmenu3, 'Enable', 'off')
+    set(handles.edit2, 'Enable', 'on')
     
-    set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
+    set(hObject, 'name', ['Annotation : ', sharedInst.shuttleVideo.name]); % set window title
     
     % set fly list box
     flyNum = size(keep_data{1}, 2);
@@ -146,7 +154,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     for i = 1:flyNum
         listItem = [listItem;{i}];
     end
-    set(handles.popupmenu5,'String',listItem);
+    set(handles.popupmenu3,'String',listItem);
 
     % load background image
     videoName = sharedInst.shuttleVideo.name;
@@ -188,14 +196,14 @@ end
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = trackingResultDialog_OutputFcn(hObject, eventdata, handles) 
+function varargout = annotationDialog_OutputFcn(hObject, eventdata, handles) 
     % varargout  cell array for returning output args (see VARARGOUT);
     % hObject    handle to figure
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 
     % Get default command line output from handles structure
-    varargout{1} = handles.output;    
+    varargout{1} = handles.output;
 end
 
 
@@ -204,6 +212,8 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+
+    % Hint: delete(hObject) closes the figure
     delete(hObject);
 end
 
@@ -225,6 +235,7 @@ end
 
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
 end
+
 
 function edit1_Callback(hObject, eventdata, handles)
     % hObject    handle to edit1 (see GCBO)
@@ -408,7 +419,7 @@ function radiobutton1_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 1;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.popupmenu5, 'Enable', 'off')
+    set(handles.popupmenu3, 'Enable', 'off')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -420,42 +431,42 @@ function radiobutton2_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 2;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.popupmenu5, 'Enable', 'on')
+    set(handles.popupmenu3, 'Enable', 'on')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
-% --- Executes on button press in radiobutton5.
-function radiobutton5_Callback(hObject, eventdata, handles)
-    % hObject    handle to radiobutton5 (see GCBO)
+% --- Executes on button press in radiobutton3.
+function radiobutton3_Callback(hObject, eventdata, handles)
+    % hObject    handle to radiobutton3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.lineMode = 1;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.edit3, 'Enable', 'off')
+    set(handles.edit2, 'Enable', 'off')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
-% --- Executes on button press in radiobutton6.
-function radiobutton6_Callback(hObject, eventdata, handles)
-    % hObject    handle to radiobutton6 (see GCBO)
+% --- Executes on button press in radiobutton4.
+function radiobutton4_Callback(hObject, eventdata, handles)
+    % hObject    handle to radiobutton4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.lineMode = 2;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.edit3, 'Enable', 'on')
+    set(handles.edit2, 'Enable', 'on')
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
-function edit3_Callback(hObject, eventdata, handles)
-    % hObject    handle to edit3 (see GCBO)
+function edit2_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    num = str2num(get(handles.edit3, 'String'));
+    num = str2num(get(handles.edit2, 'String'));
     if isempty(num)
-        set(handles.edit3, 'String', sharedInst.lineLength);
+        set(handles.edit2, 'String', sharedInst.lineLength);
     else
         if num < 1 || num > sharedInst.endFrame
             set(handles.edit1, 'String', sharedInst.lineLength);
@@ -468,8 +479,8 @@ function edit3_Callback(hObject, eventdata, handles)
 end
 
 % --- Executes during object creation, after setting all properties.
-function edit3_CreateFcn(hObject, eventdata, handles)
-    % hObject    handle to edit3 (see GCBO)
+function edit2_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    empty - handles not created until after all CreateFcns called
 
@@ -481,9 +492,9 @@ function edit3_CreateFcn(hObject, eventdata, handles)
 end
 
 
-% --- Executes on selection change in popupmenu5.
-function popupmenu5_Callback(hObject, eventdata, handles)
-    % hObject    handle to popupmenu5 (see GCBO)
+% --- Executes on selection change in popupmenu3.
+function popupmenu3_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
@@ -491,11 +502,14 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    
+    velocity = sharedInst.vxy(:,sharedInst.listFly);
+    plot(handles.axes2, 1:size(sharedInst.vxy,1), velocity);
 end
 
 % --- Executes during object creation, after setting all properties.
-function popupmenu5_CreateFcn(hObject, eventdata, handles)
-    % hObject    handle to popupmenu5 (see GCBO)
+function popupmenu3_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    empty - handles not created until after all CreateFcns called
 
@@ -506,9 +520,9 @@ function popupmenu5_CreateFcn(hObject, eventdata, handles)
     end
 end
 
-% --- Executes on selection change in popupmenu6.
-function popupmenu6_Callback(hObject, eventdata, handles)
-    % hObject    handle to popupmenu6 (see GCBO)
+% --- Executes on selection change in popupmenu1.
+function popupmenu1_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
@@ -518,8 +532,8 @@ function popupmenu6_Callback(hObject, eventdata, handles)
 end
 
 % --- Executes during object creation, after setting all properties.
-function popupmenu6_CreateFcn(hObject, eventdata, handles)
-    % hObject    handle to popupmenu6 (see GCBO)
+function popupmenu1_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    empty - handles not created until after all CreateFcns called
 
@@ -528,66 +542,6 @@ function popupmenu6_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-end
-
-% --- Executes on button press in pushbutton14.
-function pushbutton14_Callback(hObject, eventdata, handles)
-    % hObject    handle to pushbutton14 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    setappdata(handles.figure1,'playing',1);
-    set(handles.pushbutton1, 'Enable', 'off')
-    set(handles.pushbutton2, 'Enable', 'off')
-    set(handles.pushbutton3, 'Enable', 'on')
-    set(handles.pushbutton4, 'Enable', 'off')
-    set(handles.pushbutton5, 'Enable', 'off')
-    set(handles.popupmenu2, 'Enable', 'off')
-    set(handles.pushbutton14, 'Enable', 'off')
-    
-    % make output folder
-    confPath = sharedInst.confPath;
-    if ~exist([confPath 'movie'], 'dir')
-        mkdir([confPath 'movie']);
-    end
-
-    addpath([confPath 'movie']);
-    
-    videoName = sharedInst.shuttleVideo.name;
-    filename = [videoName sprintf('_%05d',sharedInst.startFrame) sprintf('_%05d',sharedInst.endFrame) '.avi'];
-    outputVideo = VideoWriter(fullfile([confPath 'movie'], filename));
-    outputVideo.FrameRate = sharedInst.fpsNum / sharedInst.frameSteps;
-
-    % make video
-    open(outputVideo)
-
-    for frameNum = sharedInst.startFrame:sharedInst.frameSteps:sharedInst.endFrame
-        set(handles.slider1, 'value', frameNum);
-        slider1_Callback(handles.slider1, eventdata, handles)
-
-        % Check for Cancel button press
-        playing = getappdata(handles.figure1,'playing');
-        if playing == 0
-            break;
-        end
-        
-        % write video
-        f=getframe;
-        writeVideo(outputVideo, f.cdata);
-
-        % Report current estimate in the waitbar's message field
-        % rate = (frameNum - sharedInst.startFrame)/(sharedInst.endFrame - sharedInst.startFrame);
-        pause(0.03);
-    end
-    close(outputVideo)
-    
-    set(handles.pushbutton1, 'Enable', 'on')
-    set(handles.pushbutton2, 'Enable', 'on')
-    set(handles.pushbutton4, 'Enable', 'on')
-    set(handles.pushbutton5, 'Enable', 'on')
-    set(handles.popupmenu2, 'Enable', 'on')
-    set(handles.pushbutton14, 'Enable', 'on')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -627,7 +581,7 @@ function showFrameInAxes(hObject, handles, frameNum)
 
     % show detection number
     MARKER_SIZE = [1 1]; %marker sizes
-    C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
+    C_LIST = [];
 
     hold on;
     if sharedInst.showDetectResult
@@ -668,7 +622,7 @@ function showFrameInAxes(hObject, handles, frameNum)
 
             tmX = Q_loc_estimateX(ff:fe,fn);
             tmY = Q_loc_estimateY(ff:fe,fn);
-            plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+            plot(tmY, tmX, ':', 'markersize', MARKER_SIZE(sz), 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
 
             % show number
             if sharedInst.showNumber
@@ -690,7 +644,7 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
                 tmX = Q_loc_estimateX(t-st:t,fn);
                 tmY = Q_loc_estimateY(t-st:t,fn);
-                plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
 
                 % show number
                 if sharedInst.showNumber
