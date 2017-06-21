@@ -149,6 +149,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     spinnerModel = javax.swing.SpinnerNumberModel(sharedInst.binaryAreaPixel, 0, 500, 1);
     handles.jhSpinner4 = addLabeledSpinner(spinnerModel, [pos(1)+70,pos(2)-4,60,20], @spinner_Callback4);
 
+    pos = getpixelposition(handles.text21, true);
+    spinnerModel = javax.swing.SpinnerNumberModel(sharedInst.blobSeparateRate * 100, 0, 100, 5);
+    handles.jhSpinner5 = addLabeledSpinner(spinnerModel, [pos(1)+70,pos(2)-4,60,20], @spinner_Callback5);
+
     % load background image
     videoName = sharedInst.shuttleVideo.name;
     bgImageFile = strcat(sharedInst.confPath,'background.png');
@@ -310,6 +314,35 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         pLock = [];
     end
 
+    function spinner_Callback5(jSpinner, jEventData)
+        persistent pLock
+        try
+            % check lock
+            if ~isempty(pLock),  return;  end
+            pLock = 1;
+
+            % get handles structure
+            hFig = ancestor(hObject, 'figure');
+            hdl = guidata(hFig);
+
+            % get spinner data for the spinners
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
+            sharedInst.blobSeparateRate = jSpinner.getValue / 100;
+            sharedInst.step2Image = [];      % filter param is changed, so clear cache
+            sharedInst.step3Image = [];
+            sharedInst.step4Image = [];
+            sharedInst.detectedPointX = [];
+            sharedInst.detectedPointY = [];
+            sharedInst.isModified = true;
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            set(hdl.pushbutton4, 'Enable', 'on');
+            showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
+        catch
+            % nothing to do
+        end
+        pLock = [];
+    end
+
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     uiwait(handles.figure1); % wait for finishing dialog
 end
@@ -329,6 +362,9 @@ function figure1_SizeChangedFcn(hObject, eventdata, handles)
 
         pos = getpixelposition(handles.text5, true);
         setpixelposition(handles.jhSpinner4, [pos(1)+70,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text21, true);
+        setpixelposition(handles.jhSpinner5, [pos(1)+70,pos(2)-4,60,20]);
     end
 end
 
@@ -983,7 +1019,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobM
         if (mod(area_ratio,1) > blobSeparateRate)
             expect_num = area_ratio + (1-mod(area_ratio,1));
         else
-            expect_num = round(area_ratio); % round to the nearest integer
+            expect_num = floor(area_ratio); % floor to the nearest integer
         end
 
         % check expected number of targets (animals)
