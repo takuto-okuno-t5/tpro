@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 22-Jun-2017 00:27:43
+% Last Modified by GUIDE v2.5 22-Jun-2017 19:39:17
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -108,14 +108,18 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.frameSteps = records{16};
     sharedInst.fpsNum = records{7};
     sharedInst.frameNum = sharedInst.startFrame;
-    sharedInst.stepTime = 0.03;
+    sharedInst.stepTime = 0.1;
     sharedInst.showDetectResult = 1;
     sharedInst.showNumber = 1;
-    sharedInst.listMode = 1; % all
     sharedInst.listFly = 1;
-    sharedInst.lineMode = 2; % tail
+    sharedInst.lineMode = 1; % tail
     sharedInst.lineLength = 19;
     sharedInst.backMode = 1; % movie
+    
+    contents = cellstr(get(handles.popupmenu4,'String'));
+    sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
+    contents = cellstr(get(handles.popupmenu4,'String'));
+    sharedInst.axesType2 = contents{get(handles.popupmenu4,'Value')};
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -143,7 +147,6 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
     set(handles.pushbutton3, 'Enable', 'off')
-    set(handles.popupmenu3, 'Enable', 'off')
     set(handles.edit2, 'Enable', 'on')
     
     set(hObject, 'name', ['Annotation : ', sharedInst.shuttleVideo.name]); % set window title
@@ -226,10 +229,29 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
     %	Character: character interpretation of the key(s) that was pressed
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
     % handles    structure with handles and user data (see GUIDATA)
-    if strcmp(eventdata.Key, 'rightarrow')
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'control')
+        if strcmp(eventdata.Key, 'rightarrow')
+            if sharedInst.frameNum < sharedInst.maxFrame
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*10);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        elseif strcmp(eventdata.Key, 'leftarrow')
+            if sharedInst.frameNum > 1
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*10);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        end
+    elseif strcmp(eventdata.Key, 'rightarrow')
         pushbutton4_Callback(hObject, eventdata, handles);
     elseif strcmp(eventdata.Key, 'leftarrow')
         pushbutton5_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'uparrow')
+        pushbutton2_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'downarrow')
+        pushbutton3_Callback(hObject, eventdata, handles);
     end
 end
 
@@ -410,31 +432,6 @@ function checkbox2_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
-
-% --- Executes on button press in radiobutton1.
-function radiobutton1_Callback(hObject, eventdata, handles)
-    % hObject    handle to radiobutton1 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    sharedInst.listMode = 1;
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.popupmenu3, 'Enable', 'off')
-    showFrameInAxes(hObject, handles, sharedInst.frameNum);
-end
-
-% --- Executes on button press in radiobutton2.
-function radiobutton2_Callback(hObject, eventdata, handles)
-    % hObject    handle to radiobutton2 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    sharedInst.listMode = 2;
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    set(handles.popupmenu3, 'Enable', 'on')
-    showFrameInAxes(hObject, handles, sharedInst.frameNum);
-end
-
 % --- Executes on button press in radiobutton3.
 function radiobutton3_Callback(hObject, eventdata, handles)
     % hObject    handle to radiobutton3 (see GCBO)
@@ -502,9 +499,6 @@ function popupmenu3_Callback(hObject, eventdata, handles)
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
-    
-    velocity = sharedInst.vxy(:,sharedInst.listFly);
-    plot(handles.axes2, 1:size(sharedInst.vxy,1), velocity);
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -544,13 +538,56 @@ function popupmenu1_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+
+% --- Executes on selection change in popupmenu4.
+function popupmenu4_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    contents = cellstr(get(hObject,'String'));
+    contents{get(hObject,'Value')};
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu4_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+% --- Executes on selection change in popupmenu5.
+function popupmenu5_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    contents = cellstr(get(hObject,'String'));
+    contents{get(hObject,'Value')};
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu5_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
 %% show frame function
 function showFrameInAxes(hObject, handles, frameNum)
-    axes(handles.axes1); % set drawing area
-
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.originalImage) && (ndims(sharedInst.originalImage) > 1) % check cache
         img = sharedInst.originalImage;
@@ -560,6 +597,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     
     % show original image
+    axes(handles.axes1); % set drawing area
     cla;
     if sharedInst.backMode == 1
         imshow(img);
@@ -574,30 +612,26 @@ function showFrameInAxes(hObject, handles, frameNum)
     flyNum = size(Q_loc_estimateX, 2);
     flameMax = size(Q_loc_estimateX, 1);
     listFly = sharedInst.listFly;
+    fy = Q_loc_estimateY(t,listFly);
+    fx = Q_loc_estimateX(t,listFly);
     
     if t > size(sharedInst.X,2) || t < 1
         return;
     end
 
-    % show detection number
-    MARKER_SIZE = [1 1]; %marker sizes
-    C_LIST = [];
-
+    % show detection result
     hold on;
     if sharedInst.showDetectResult
-        if sharedInst.listMode == 1
-            plot(sharedInst.Y{t}(:),sharedInst.X{t}(:),'or'); % the actual detecting
-        else
-            plot(Q_loc_estimateY(t,listFly),Q_loc_estimateX(t,listFly),'or'); % the actual detecting
-        end
+        plot(sharedInst.Y{t}(:),sharedInst.X{t}(:),'or', 'color', [0.7 0.3 0.3]); % the actual detecting
+        plot(fy,fx,'or'); % the actual detecting
     end
 
     active_num = 0;
     for fn = 1:flyNum
-        sz  = mod(fn,2)+1; %pick marker size
-        col = mod(fn,6)+1; %pick color
-
-        if sharedInst.listMode == 2 && listFly ~= fn
+        if ~isnan(Q_loc_estimateX(t,fn))
+            active_num = active_num + 1;
+        end
+        if listFly ~= fn
             continue; % show only one fly
         end
     
@@ -622,7 +656,7 @@ function showFrameInAxes(hObject, handles, frameNum)
 
             tmX = Q_loc_estimateX(ff:fe,fn);
             tmY = Q_loc_estimateY(ff:fe,fn);
-            plot(tmY, tmX, ':', 'markersize', MARKER_SIZE(sz), 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
+            plot(tmY, tmX, ':', 'markersize', 1, 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
 
             % show number
             if sharedInst.showNumber
@@ -632,36 +666,133 @@ function showFrameInAxes(hObject, handles, frameNum)
         else
             % show tail lines
             if ~isnan(Q_loc_estimateX(t,fn))
-                active_num = active_num + 1;
-
                 if t < sharedInst.lineLength+2
                     st = t-1;
                 else
                     st = sharedInst.lineLength;
                 end
+                if t + sharedInst.lineLength < size(Q_loc_estimateX,1)
+                    ed = sharedInst.lineLength
+                else
+                    ed = size(Q_loc_estimateX,1) - t;
+                end
                 while (isnan(Q_loc_estimateX(t-st,fn)) || Q_loc_estimateX(t-st,fn) == 0) && st > 0
                     st = st - 1;
                 end
-                tmX = Q_loc_estimateX(t-st:t,fn);
-                tmY = Q_loc_estimateY(t-st:t,fn);
-                plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
+                tmX = Q_loc_estimateX(t-st:t+ed,fn);
+                tmY = Q_loc_estimateY(t-st:t+ed,fn);
+                plot(tmY, tmX, ':', 'markersize', 1, 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
 
                 % show number
                 if sharedInst.showNumber
                     num_txt = ['  ', num2str(fn)];
-                    text(tmY(end),tmX(end),num_txt, 'Color','red')
-                    % quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
+                    text(fy,fx,num_txt, 'Color','red')
                 end
             end
         end
     end
     hold off;
+%{
+velocity
+x velocity
+y velocity
+sideways velocity
+x
+y
+angle
+angle velocity
+circularity
+%}
+    % show closing up fly
+    boxsize = 128;
+    rect = [fy-boxsize/2 fx-boxsize/2 boxsize boxsize];
+    img_trimmed = imcrop(img, rect);
+    axes(handles.axes3); % set drawing area
+    cla;
+    imshow(img_trimmed);
+    % plot center line
+    hold on;
+    plot([0 boxsize], [boxsize/2 boxsize/2], ':', 'markersize', 1, 'color', 'w', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    plot([boxsize/2 boxsize/2], [0 boxsize], ':', 'markersize', 1, 'color', 'w', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    hold off;
+    
+    % show long params
+    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+
+    % show short params
+    showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
+    showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 
     % show detected count
     set(handles.text8, 'String', active_num);
     guidata(hObject, handles);    % Update handles structure
 end
 
+%% show long axis data function
+function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    velocity = sharedInst.vxy(:,listFly);
+    ymax = max(velocity);
+    if ymax < 10
+        ymax = 10;
+    end
+    axes(hObject); % set drawing area
+    cla;
+    plot(1:size(velocity,1), velocity);
+    xlim([1 size(velocity,1)]);
+    ylim([0 ymax]);
+    hObject.Box = 'off';
+    hObject.Color = [0 .1 .2];
+    hObject.FontSize = 8;
+    hObject.XMinorTick = 'off';
+%    hObject.TightInset = hObject.TightInset / 2;
+    if xtickOff
+        xticks(0);
+    end
+    % plot current time line
+    hold on;
+    plot([t t], [0 ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    hold off;
+end
+
+%% show short axis data function
+function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    ax4Len = 25;
+    dataLen = size(sharedInst.keep_data{1},1);
+    if t < ax4Len + 2
+        st = t-1;
+    else
+        st = ax4Len;
+    end
+    if t + ax4Len < dataLen
+        ed = ax4Len;
+    else
+        ed = dataLen - t;
+    end
+    velocity = sharedInst.vxy(t-st:t+ed,listFly);
+    ymax = max(velocity)*1.5;
+    if ymax < 10
+        ymax = 10;
+    end
+    
+    axes(hObject); % set drawing area
+    cla;
+    plot(t-st:t+ed, velocity);
+    xlim([t-st t+ed]);
+    ylim([0 ymax]);
+    hObject.Box = 'off';
+    hObject.Color = [0 .1 .2];
+    hObject.FontSize = 8;
+    if xtickOff
+        xticks(0);
+    end
+    % plot center line
+    hold on;
+    plot([t t], [0 ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    hold off;
+end
 
 %% TPro Video file (or image folder) reader
 function videoStructs = TProVideoReader(videoPath, fileName)

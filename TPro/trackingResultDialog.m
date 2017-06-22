@@ -220,6 +220,10 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
         pushbutton4_Callback(hObject, eventdata, handles);
     elseif strcmp(eventdata.Key, 'leftarrow')
         pushbutton5_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'uparrow')
+        pushbutton2_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'downarrow')
+        pushbutton3_Callback(hObject, eventdata, handles);
     end
 end
 
