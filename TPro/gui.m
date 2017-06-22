@@ -615,6 +615,8 @@ for data_th = 1:size(records,1)
 
     X = cell(1,length(end_frame-start_frame+1));
     Y = cell(1,length(end_frame-start_frame+1));
+    X_update2 = X;
+    Y_update2 = Y;
     detection_num = nan(2,end_frame-start_frame+1);
     blobAvgSize = 0;
     
@@ -1094,7 +1096,7 @@ animal_type = get(handles.popupmenu1,'Value');
 
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
-MAX_FLIES = 400; % maxmum number of flies
+MAX_FLIES = 800; % maxmum number of flies
 
 u = 0; % no acceleration
 noise_process = 1; % process noise
