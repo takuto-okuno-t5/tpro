@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 22-Jun-2017 19:39:17
+% Last Modified by GUIDE v2.5 23-Jun-2017 02:22:52
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -108,7 +108,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.frameSteps = records{16};
     sharedInst.fpsNum = records{7};
     sharedInst.frameNum = sharedInst.startFrame;
-    sharedInst.stepTime = 0.1;
+    sharedInst.stepPlay = 1;
     sharedInst.showDetectResult = 1;
     sharedInst.showNumber = 1;
     sharedInst.listFly = 1;
@@ -118,8 +118,8 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
-    contents = cellstr(get(handles.popupmenu4,'String'));
-    sharedInst.axesType2 = contents{get(handles.popupmenu4,'Value')};
+    contents = cellstr(get(handles.popupmenu5,'String'));
+    sharedInst.axesType2 = contents{get(handles.popupmenu5,'Value')};
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -243,6 +243,18 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
                 set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*10);
                 slider1_Callback(handles.slider1, eventdata, handles)
             end
+        elseif strcmp(eventdata.Key, 'uparrow')
+            if sharedInst.frameNum < sharedInst.maxFrame
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*100);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        elseif strcmp(eventdata.Key, 'downarrow')
+            if sharedInst.frameNum > 1
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*100);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
         end
     elseif strcmp(eventdata.Key, 'rightarrow')
         pushbutton4_Callback(hObject, eventdata, handles);
@@ -256,6 +268,21 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
 end
 
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
+end
+
+
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    if gca == handles.axes2 || gca == handles.axes4 || gca == handles.axes5 || gca == handles.axes6
+        cp = get(gca,'CurrentPoint');
+        pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+        set(handles.slider1, 'value', cp(1));
+        slider1_Callback(handles.slider1, eventdata, handles)
+    end
 end
 
 
@@ -336,11 +363,11 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     frameNum = sharedInst.frameNum;
     while playing
         if frameNum < sharedInst.maxFrame
-            frameNum = frameNum + sharedInst.frameSteps;
+            frameNum = frameNum + sharedInst.frameSteps * sharedInst.stepPlay;
             
             set(handles.slider1, 'value', frameNum);
             slider1_Callback(handles.slider1, eventdata, handles)
-            pause(sharedInst.stepTime);
+            pause(0.1);
         else
             pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         end
@@ -393,7 +420,7 @@ function popupmenu2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     contents = cellstr(get(hObject,'String'));
-    sharedInst.stepTime = str2num(contents{get(hObject,'Value')});
+    sharedInst.stepPlay = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -544,8 +571,15 @@ function popupmenu4_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     contents = cellstr(get(hObject,'String'));
-    contents{get(hObject,'Value')};
+    sharedInst.axesType1 = contents{get(hObject,'Value')};
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    listFly = sharedInst.listFly;
+    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
+    showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -566,8 +600,15 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    contents = cellstr(get(hObject,'String'));
-    contents{get(hObject,'Value')};
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    contents = cellstr(get(hObject,'String'));    
+    sharedInst.axesType2 = contents{get(hObject,'Value')};
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    listFly = sharedInst.listFly;
+    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+    showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -582,6 +623,7 @@ function popupmenu5_CreateFcn(hObject, eventdata, handles)
         set(hObject,'BackgroundColor','white');
     end
 end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -672,7 +714,7 @@ function showFrameInAxes(hObject, handles, frameNum)
                     st = sharedInst.lineLength;
                 end
                 if t + sharedInst.lineLength < size(Q_loc_estimateX,1)
-                    ed = sharedInst.lineLength
+                    ed = sharedInst.lineLength;
                 else
                     ed = size(Q_loc_estimateX,1) - t;
                 end
@@ -692,17 +734,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         end
     end
     hold off;
-%{
-velocity
-x velocity
-y velocity
-sideways velocity
-x
-y
-angle
-angle velocity
-circularity
-%}
+
     % show closing up fly
     boxsize = 128;
     rect = [fy-boxsize/2 fx-boxsize/2 boxsize boxsize];
@@ -732,16 +764,51 @@ end
 %% show long axis data function
 function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    velocity = sharedInst.vxy(:,listFly);
-    ymax = max(velocity);
-    if ymax < 10
-        ymax = 10;
+    img_h = size(sharedInst.bgImage,1);
+    img_w = size(sharedInst.bgImage,2);
+    
+    % get data
+    switch type
+        case 'velocity'
+            yval = sharedInst.vxy(:,listFly);
+            ymin = 0;
+            ymax = max(yval);
+            if ymax < 10
+                ymax = 10;
+            end
+        case 'x velocity'
+            yval = sharedInst.keep_data{4}(:,listFly);
+            ymin = min(yval);
+            ymax = max(yval);
+        case 'y velocity'
+            yval = sharedInst.keep_data{3}(:,listFly);
+            ymin = min(yval);
+            ymax = max(yval);
+        case 'sideways velocity'
+        case 'x'
+            yval = sharedInst.keep_data{2}(:,listFly);
+            ymin = 0;
+            ymax = img_w;
+        case 'y'
+            yval = sharedInst.keep_data{1}(:,listFly);
+            ymin = 0;
+            ymax = img_h;
+        case 'angle'
+            yval = sharedInst.keep_data{8}(:,listFly);
+            ymin = -90;
+            ymax = 90;
+        case 'angle velocity'
+        case 'circularity'
+            yval = sharedInst.keep_data{7}(:,listFly);
+            ymin = 0;
+            ymax = 1;
     end
     axes(hObject); % set drawing area
     cla;
-    plot(1:size(velocity,1), velocity);
-    xlim([1 size(velocity,1)]);
-    ylim([0 ymax]);
+    hold on;
+    plot(1:size(yval,1), yval, 'Color', [.6 .6 1]);
+    xlim([1 size(yval,1)]);
+    ylim([ymin ymax]);
     hObject.Box = 'off';
     hObject.Color = [0 .1 .2];
     hObject.FontSize = 8;
@@ -751,14 +818,17 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
         xticks(0);
     end
     % plot current time line
-    hold on;
-    plot([t t], [0 ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
+    text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
     hold off;
 end
 
 %% show short axis data function
 function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    img_h = size(sharedInst.bgImage,1);
+    img_w = size(sharedInst.bgImage,2);
+
     ax4Len = 25;
     dataLen = size(sharedInst.keep_data{1},1);
     if t < ax4Len + 2
@@ -771,17 +841,50 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     else
         ed = dataLen - t;
     end
-    velocity = sharedInst.vxy(t-st:t+ed,listFly);
-    ymax = max(velocity)*1.5;
-    if ymax < 10
-        ymax = 10;
+    
+    % get data
+    switch type
+        case 'velocity'
+            yval = sharedInst.vxy(t-st:t+ed,listFly);
+            ymin = 0;
+            ymax = max(yval);
+            if ymax < 10
+                ymax = 10;
+            end
+        case 'x velocity'
+            yval = sharedInst.keep_data{4}(t-st:t+ed,listFly);
+            ymin = min(yval);
+            ymax = max(yval);
+        case 'y velocity'
+            yval = sharedInst.keep_data{3}(t-st:t+ed,listFly);
+            ymin = min(yval);
+            ymax = max(yval);
+        case 'sideways velocity'
+        case 'x'
+            yval = sharedInst.keep_data{2}(t-st:t+ed,listFly);
+            ymin = 0;
+            ymax = img_w;
+        case 'y'
+            yval = sharedInst.keep_data{1}(t-st:t+ed,listFly);
+            ymin = 0;
+            ymax = img_h;
+        case 'angle'
+            yval = sharedInst.keep_data{8}(t-st:t+ed,listFly);
+            ymin = -90;
+            ymax = 90;
+        case 'angle velocity'
+        case 'circularity'
+            yval = sharedInst.keep_data{7}(t-st:t+ed,listFly);
+            ymin = 0;
+            ymax = 1;
     end
     
     axes(hObject); % set drawing area
     cla;
-    plot(t-st:t+ed, velocity);
+    hold on;
+    plot(t-st:t+ed, yval, 'linewidth', 1.5, 'Color', [.6 .6 1]);
     xlim([t-st t+ed]);
-    ylim([0 ymax]);
+    ylim([ymin ymax]);
     hObject.Box = 'off';
     hObject.Color = [0 .1 .2];
     hObject.FontSize = 8;
@@ -789,8 +892,8 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
         xticks(0);
     end
     % plot center line
-    hold on;
-    plot([t t], [0 ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 0.5)  % rodent 1 instead of Cz
+    plot([t t], [ymin ymax], ':', 'markersize', 1.5, 'color', 'r', 'linewidth', 1.5)  % rodent 1 instead of Cz
+    text(double(t-st+1), double(ymax*0.9+ymin*0.1), type, 'Color', [.6 .6 1], 'FontWeight','bold')
     hold off;
 end
 
@@ -828,3 +931,4 @@ function img = TProRead(videoStructs, frameNum)
         img = read(videoStructs,frameNum);
     end
 end
+
