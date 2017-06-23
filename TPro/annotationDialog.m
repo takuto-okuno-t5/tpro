@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 23-Jun-2017 02:22:52
+% Last Modified by GUIDE v2.5 23-Jun-2017 18:01:28
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -94,6 +94,14 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % load detection & tracking
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
     load(strcat(confPath,'multi/track_',filename,'.mat'));
+    
+    % load annotation file
+    annoFileName = [confPath 'multi/annotation_' filename '.mat'];
+    if exist(annoFileName, 'file')
+        load(annoFileName);
+    else
+        annotation = zeros(size(keep_data{1},1), size(keep_data{1},2));
+    end
 
     % initialize GUI
     sharedInst = struct; % allocate shared instance
@@ -115,7 +123,10 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.lineMode = 1; % tail
     sharedInst.lineLength = 19;
     sharedInst.backMode = 1; % movie
-    
+    sharedInst.isModified = 0;
+    sharedInst.annoStart = 0;
+    sharedInst.annoKey = -1;
+
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
     contents = cellstr(get(handles.popupmenu5,'String'));
@@ -128,15 +139,15 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_angle_sorted = keep_angle_sorted;
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
+    sharedInst.annotation = annotation;
 
     % calc velocity
-    endLow = size(keep_data{3},1);
-    vxy = zeros(size(keep_data{3},1), size(keep_data{3},2));
-    for i = 1:endLow
-        vxy(i,:) = sqrt( keep_data{3}(i,:).^2 +  keep_data{4}(i,:).^2  );
-    end
-    sharedInst.vxy = vxy;
-    
+    sharedInst.vxy = calcVxy(keep_data{3}, keep_data{4});
+    sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
+    sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
+    sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
+    sharedInst.av = calcAngularVelocity(keep_data{8});
+
     sharedInst.originalImage = [];
 
     set(handles.text4, 'String', sharedInst.shuttleVideo.NumberOfFrames);
@@ -147,6 +158,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
     set(handles.pushbutton3, 'Enable', 'off')
+    set(handles.pushbutton6, 'Enable', 'off');
     set(handles.edit2, 'Enable', 'on')
     
     set(hObject, 'name', ['Annotation : ', sharedInst.shuttleVideo.name]); % set window title
@@ -197,6 +209,51 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     %uiwait(handles.figure1); % wait for finishing dialog
 end
 
+function vxy = calcVxy(vy, vx)
+    endLow = size(vy,1);
+    vxy = zeros(size(vy,1), size(vy,2));
+    for i = 1:endLow
+        vxy(i,:) = sqrt( vy(i,:).^2 +  vx(i,:).^2  );
+    end
+end
+
+function dir = calcDir(dy, dx) 
+    endLow = size(dy,1);
+    dir = zeros(size(dy,1), size(dy,2));
+    for i = 1:endLow
+        v1 = [dy(i, :); (-1).*dx(i, :)];
+        check_v1 = sum(v1.*v1);
+        v1(:,check_v1==0) = NaN;
+        dir(i,:) = atan2d(v1(2,:),v1(1,:));
+    end
+end
+
+function sideways = calcSideways(x, y, dir) 
+    frame_num = size(dir, 1);
+    fly_num = size(dir, 2);
+
+    xx = diff(x);
+    xx = [zeros(1,fly_num);xx];
+    yy = diff(y);
+    yy = [zeros(1,fly_num);yy];
+
+    deg = acos((xx ./ sqrt((xx.*xx + yy.*yy)))) * (180/pi);
+    deg(isnan(yy)) = NaN;
+    %  deg(yy<0) = -deg(yy<0);
+
+    sideways = abs(sin((pi/180)*(deg - dir)));
+end
+
+function sv = calcSidewaysVelocity(lv, sideways) 
+    sv = lv .* sideways;
+end
+
+function av = calcAngularVelocity(angle) 
+    fly_num = size(angle, 2);
+
+    dfangle = diff(angle);
+    av = [zeros(1,fly_num);dfangle];
+end
 
 % --- Outputs from this function are returned to the command line.
 function varargout = annotationDialog_OutputFcn(hObject, eventdata, handles) 
@@ -216,6 +273,21 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.isModified
+        selection = questdlg('Do you save annotation data before closing window?',...
+                             'Confirmation',...
+                             'Yes','No','Cancel','Yes');
+        switch selection
+        case 'Cancel'
+            return;
+        case 'Yes'
+            pushbutton6_Callback(handles.pushbutton6, eventdata, handles);
+        case 'No'
+            % nothing todo
+        end
+    end
+
     % Hint: delete(hObject) closes the figure
     delete(hObject);
 end
@@ -231,39 +303,48 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'control')
-        if strcmp(eventdata.Key, 'rightarrow')
+        switch eventdata.Key
+        case 'rightarrow'
             if sharedInst.frameNum < sharedInst.maxFrame
                 pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
                 set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*10);
                 slider1_Callback(handles.slider1, eventdata, handles)
             end
-        elseif strcmp(eventdata.Key, 'leftarrow')
+        case 'leftarrow'
             if sharedInst.frameNum > 1
                 pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
                 set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*10);
                 slider1_Callback(handles.slider1, eventdata, handles)
             end
-        elseif strcmp(eventdata.Key, 'uparrow')
+        case 'uparrow'
             if sharedInst.frameNum < sharedInst.maxFrame
                 pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
                 set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*100);
                 slider1_Callback(handles.slider1, eventdata, handles)
             end
-        elseif strcmp(eventdata.Key, 'downarrow')
+        case 'downarrow'
             if sharedInst.frameNum > 1
                 pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
                 set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*100);
                 slider1_Callback(handles.slider1, eventdata, handles)
             end
         end
-    elseif strcmp(eventdata.Key, 'rightarrow')
-        pushbutton4_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'leftarrow')
-        pushbutton5_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'uparrow')
-        pushbutton2_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'downarrow')
-        pushbutton3_Callback(hObject, eventdata, handles);
+    else
+        switch eventdata.Key
+        case 'rightarrow'
+            pushbutton4_Callback(hObject, eventdata, handles);
+        case 'leftarrow'
+        	pushbutton5_Callback(hObject, eventdata, handles);
+        case 'uparrow'
+            pushbutton2_Callback(hObject, eventdata, handles);
+        case 'downarrow'
+            pushbutton3_Callback(hObject, eventdata, handles);
+        case {'1','2','3','4','5','6','7','8','9','0', ...
+              'numpad1','numpad2','numpad3','numpad4','numpad5', ...
+              'numpad6','numpad7','numpad8','numpad9','numpad0', ...
+              'delete','escape'}
+            recodeAnnotation(handles, eventdata.Key);
+        end
     end
 end
 
@@ -354,6 +435,10 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
+    if getappdata(handles.figure1,'playing') > 0
+        return; % already playing
+    end
+    
     setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton2, 'Enable', 'off')
     set(handles.pushbutton3, 'Enable', 'on')
@@ -601,7 +686,7 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    contents = cellstr(get(hObject,'String'));    
+    contents = cellstr(get(hObject,'String'));
     sharedInst.axesType2 = contents{get(hObject,'Value')};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
@@ -622,6 +707,22 @@ function popupmenu5_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+end
+
+% --- Executes on button press in pushbutton6.
+function pushbutton6_Callback(hObject, eventdata, handles)
+    % hObject    handle to pushbutton6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared    
+    annotation = sharedInst.annotation;
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    annoFileName = [sharedInst.confPath 'multi/annotation_' filename '.mat'];
+    save(annoFileName, 'annotation');
+    sharedInst.isModified = 0;
+    
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.pushbutton6, 'Enable', 'off');
 end
 
 
@@ -721,8 +822,8 @@ function showFrameInAxes(hObject, handles, frameNum)
                 while (isnan(Q_loc_estimateX(t-st,fn)) || Q_loc_estimateX(t-st,fn) == 0) && st > 0
                     st = st - 1;
                 end
-                tmX = Q_loc_estimateX(t-st:t+ed,fn);
-                tmY = Q_loc_estimateY(t-st:t+ed,fn);
+                tmX = Q_loc_estimateX((t-st):(t+ed),fn);
+                tmY = Q_loc_estimateY((t-st):(t+ed),fn);
                 plot(tmY, tmX, ':', 'markersize', 1, 'color', 'b', 'linewidth', 1)  % rodent 1 instead of Cz
 
                 % show number
@@ -756,6 +857,19 @@ function showFrameInAxes(hObject, handles, frameNum)
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 
+    % show statistics information
+    set(handles.text15, 'String', [num2str(round(fy)) ',' num2str(round(fx))]);
+    set(handles.text17, 'String', sharedInst.vxy(t,listFly));
+    set(handles.text19, 'String', sharedInst.sidewaysVelocity(t,listFly));
+    set(handles.text21, 'String', sharedInst.keep_data{8}(t,listFly));
+    set(handles.text23, 'String', sharedInst.keep_data{7}(t,listFly));
+    if sharedInst.annotation(t,listFly) > 0
+        annoStr = num2str(sharedInst.annotation(t,listFly));
+    else
+        annoStr = '--';
+    end
+    set(handles.text25, 'String', annoStr);
+    
     % show detected count
     set(handles.text8, 'String', active_num);
     guidata(hObject, handles);    % Update handles structure
@@ -784,7 +898,17 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
             yval = sharedInst.keep_data{3}(:,listFly);
             ymin = min(yval);
             ymax = max(yval);
+        case 'sideways'
+            yval = sharedInst.sideways(:,listFly);
+            ymin = 0;
+            ymax = 1;
         case 'sideways velocity'
+            yval = sharedInst.sidewaysVelocity(:,listFly);
+            ymin = 0;
+            ymax = max(yval);
+            if ymax < 10
+                ymax = 10;
+            end            
         case 'x'
             yval = sharedInst.keep_data{2}(:,listFly);
             ymin = 0;
@@ -798,6 +922,9 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
             ymin = -90;
             ymax = 90;
         case 'angle velocity'
+            yval = sharedInst.av(:,listFly);
+            ymin = -90;
+            ymax = 90;
         case 'circularity'
             yval = sharedInst.keep_data{7}(:,listFly);
             ymin = 0;
@@ -815,7 +942,13 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
     hObject.XMinorTick = 'off';
 %    hObject.TightInset = hObject.TightInset / 2;
     if xtickOff
-        xticks(0);
+%        xticks(0); % from 2016b
+    end
+    % plot recoding annotation
+    if sharedInst.annoStart > 0
+        xv = [sharedInst.annoStart-0.5 sharedInst.annoStart-0.5 t+0.5 t+0.5];
+        yv = [ymin ymax ymax ymin];
+        p = patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
     end
     % plot current time line
     plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
@@ -845,36 +978,49 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     % get data
     switch type
         case 'velocity'
-            yval = sharedInst.vxy(t-st:t+ed,listFly);
+            yval = sharedInst.vxy((t-st):(t+ed),listFly);
             ymin = 0;
             ymax = max(yval);
             if ymax < 10
                 ymax = 10;
             end
         case 'x velocity'
-            yval = sharedInst.keep_data{4}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{4}((t-st):(t+ed),listFly);
             ymin = min(yval);
             ymax = max(yval);
         case 'y velocity'
-            yval = sharedInst.keep_data{3}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{3}((t-st):(t+ed),listFly);
             ymin = min(yval);
             ymax = max(yval);
+        case 'sideways'
+            yval = sharedInst.sideways((t-st):(t+ed),listFly);
+            ymin = 0;
+            ymax = 1;
         case 'sideways velocity'
+            yval = sharedInst.sidewaysVelocity((t-st):(t+ed),listFly);
+            ymin = 0;
+            ymax = max(yval);
+            if ymax < 10
+                ymax = 10;
+            end            
         case 'x'
-            yval = sharedInst.keep_data{2}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{2}((t-st):(t+ed),listFly);
             ymin = 0;
             ymax = img_w;
         case 'y'
-            yval = sharedInst.keep_data{1}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{1}((t-st):(t+ed),listFly);
             ymin = 0;
             ymax = img_h;
         case 'angle'
-            yval = sharedInst.keep_data{8}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{8}((t-st):(t+ed),listFly);
             ymin = -90;
             ymax = 90;
         case 'angle velocity'
+            yval = sharedInst.av((t-st):(t+ed),listFly);
+            ymin = -90;
+            ymax = 90;
         case 'circularity'
-            yval = sharedInst.keep_data{7}(t-st:t+ed,listFly);
+            yval = sharedInst.keep_data{7}((t-st):(t+ed),listFly);
             ymin = 0;
             ymax = 1;
     end
@@ -882,20 +1028,101 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     axes(hObject); % set drawing area
     cla;
     hold on;
-    plot(t-st:t+ed, yval, 'linewidth', 1.5, 'Color', [.6 .6 1]);
+    plot((t-st):(t+ed), yval, 'linewidth', 1.5, 'Color', [.6 .6 1]);
     xlim([t-st t+ed]);
     ylim([ymin ymax]);
     hObject.Box = 'off';
     hObject.Color = [0 .1 .2];
     hObject.FontSize = 8;
     if xtickOff
-        xticks(0);
+%        xticks(0); % from 2016b
+    end
+    % plot recoded annotation
+    lastAnno = 0;
+    lastAnnoFrame = t-st;
+    for i=(t-st):(t+ed)
+        if sharedInst.annotation(i,listFly) > 0
+            if lastAnno == 0
+                % set start
+                lastAnno = sharedInst.annotation(i,listFly);
+                lastAnnoFrame = i;
+            elseif lastAnno ~= sharedInst.annotation(i,listFly)
+                plotAnnotationBlock(ymin,ymax,lastAnnoFrame,i,lastAnno);
+                lastAnno = sharedInst.annotation(i,listFly);
+                lastAnnoFrame = i;
+            end
+        else
+            if lastAnno > 0
+                plotAnnotationBlock(ymin,ymax,lastAnnoFrame,i,lastAnno);
+            end
+            lastAnno = 0;
+            lastAnnoFrame = 0;
+        end
+    end
+    if lastAnno > 0
+        plotAnnotationBlock(ymin,ymax,lastAnnoFrame,i,lastAnno);
+    end
+    % plot recoding annotation
+    if sharedInst.annoStart > 0
+        xv = [sharedInst.annoStart-0.5 sharedInst.annoStart-0.5 t+0.5 t+0.5];
+        yv = [ymin ymax ymax ymin];
+        patch(xv,yv,'red','FaceAlpha',.3,'EdgeColor','none');
     end
     % plot center line
     plot([t t], [ymin ymax], ':', 'markersize', 1.5, 'color', 'r', 'linewidth', 1.5)  % rodent 1 instead of Cz
     text(double(t-st+1), double(ymax*0.9+ymin*0.1), type, 'Color', [.6 .6 1], 'FontWeight','bold')
     hold off;
 end
+
+function plotAnnotationBlock(ymin, ymax, lastAnnoFrame, i, annoNum)
+    xv = [lastAnnoFrame-0.5 lastAnnoFrame-0.5 i-0.5 i-0.5];
+    yv = [ymin ymax ymax ymin];
+    patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
+end
+
+function recodeAnnotation(handles, key)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    
+    key = erase(key,'numpad');
+    switch key
+    case 'delete'
+        if sharedInst.annoStart > 0
+            sharedInst.annoStart = 0;
+            sharedInst.annoKey = -1;
+        else
+            sharedInst.annotation(sharedInst.frameNum, sharedInst.listFly) = 0;
+            sharedInst.isModified = 1;
+            set(handles.pushbutton6, 'Enable', 'on');
+        end
+    case 'escape'
+        if sharedInst.annoStart > 0
+            sharedInst.annoStart = 0;
+            sharedInst.annoKey = -1;
+        end
+    otherwise
+        if isnumeric(str2num(key))
+            if sharedInst.annoStart > 0
+                sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = sharedInst.annoKey;
+                if sharedInst.annoKey == str2num(key)
+                    sharedInst.annoStart = 0;
+                    sharedInst.annoKey = -1;
+                else
+                    sharedInst.annoStart = sharedInst.frameNum;
+                    sharedInst.annoKey = str2num(key);
+                end
+            else
+                sharedInst.annoStart = sharedInst.frameNum;
+                sharedInst.annoKey = str2num(key);
+            end
+            sharedInst.isModified = 1;
+            set(handles.pushbutton6, 'Enable', 'on');
+        end            
+    end
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    
+    showFrameInAxes(handles.axes1, handles, sharedInst.frameNum);
+end
+
 
 %% TPro Video file (or image folder) reader
 function videoStructs = TProVideoReader(videoPath, fileName)
@@ -931,4 +1158,3 @@ function img = TProRead(videoStructs, frameNum)
         img = read(videoStructs,frameNum);
     end
 end
-

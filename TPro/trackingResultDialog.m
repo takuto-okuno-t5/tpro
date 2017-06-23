@@ -298,6 +298,10 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
+    if getappdata(handles.figure1,'playing') > 0
+        return; % already playing
+    end
+
     setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton2, 'Enable', 'off')
     set(handles.pushbutton3, 'Enable', 'on')
