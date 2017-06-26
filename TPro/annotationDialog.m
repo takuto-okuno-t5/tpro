@@ -103,6 +103,23 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         annotation = zeros(size(keep_data{1},1), size(keep_data{1},2));
     end
 
+    % load annotation label
+    labelFileName = "annotation_label.csv";
+    annoLabel = [];
+    annoKeyMap = zeros(9,1);
+    if exist(labelFileName, 'file')
+        labelTable = readtable(labelFileName);
+        annoLabel = table2cell(labelTable);
+        for i=1:size(annoLabel,1)
+            for j=1:9
+                if j==annoLabel{i,3}
+                    annoKeyMap(j) = annoLabel{i,1};
+                    break;
+                end
+            end
+        end
+    end
+    
     % initialize GUI
     sharedInst = struct; % allocate shared instance
     sharedInst.videoPath = videoPath;
@@ -126,6 +143,8 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.isModified = 0;
     sharedInst.annoStart = 0;
     sharedInst.annoKey = -1;
+    sharedInst.annoLabel = annoLabel;
+    sharedInst.annoKeyMap = annoKeyMap;
 
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
@@ -863,8 +882,13 @@ function showFrameInAxes(hObject, handles, frameNum)
     set(handles.text19, 'String', sharedInst.sidewaysVelocity(t,listFly));
     set(handles.text21, 'String', sharedInst.keep_data{8}(t,listFly));
     set(handles.text23, 'String', sharedInst.keep_data{7}(t,listFly));
-    if sharedInst.annotation(t,listFly) > 0
-        annoStr = num2str(sharedInst.annotation(t,listFly));
+    annoNum = sharedInst.annotation(t,listFly);
+    if annoNum > 0
+        if isempty(sharedInst.annoLabel)
+            annoStr = num2str(annoNum);
+        else
+            annoStr = sharedInst.annoLabel{annoNum,2};
+        end
     else
         annoStr = '--';
     end
@@ -937,7 +961,7 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
     xlim([1 size(yval,1)]);
     ylim([ymin ymax]);
     hObject.Box = 'off';
-    hObject.Color = [0 .1 .2];
+    hObject.Color = [0 .05 .1];
     hObject.FontSize = 8;
     hObject.XMinorTick = 'off';
 %    hObject.TightInset = hObject.TightInset / 2;
@@ -1032,7 +1056,7 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     xlim([t-st t+ed]);
     ylim([ymin ymax]);
     hObject.Box = 'off';
-    hObject.Color = [0 .1 .2];
+    hObject.Color = [0 .05 .1];
     hObject.FontSize = 8;
     if xtickOff
 %        xticks(0); % from 2016b
@@ -1077,7 +1101,9 @@ end
 function plotAnnotationBlock(ymin, ymax, lastAnnoFrame, i, annoNum)
     xv = [lastAnnoFrame-0.5 lastAnnoFrame-0.5 i-0.5 i-0.5];
     yv = [ymin ymax ymax ymin];
-    patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
+    CLIST = {[1 0 0] [1 1 0] [1 0 1] [0 1 1] [0 1 0] [0 0 1] [1 1 1] [1 .5 .1] [.1 .5 1]};
+    cnum = mod(annoNum-1, length(CLIST)) + 1;
+    patch(xv,yv,CLIST{cnum},'FaceAlpha',.2,'EdgeColor','none');
 end
 
 function recodeAnnotation(handles, key)
@@ -1102,7 +1128,12 @@ function recodeAnnotation(handles, key)
     otherwise
         if isnumeric(str2num(key))
             if sharedInst.annoStart > 0
-                sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = sharedInst.annoKey;
+                if isempty(sharedInst.annoLabel)
+                    annoNum = sharedInst.annoKey;
+                else
+                    annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
+                end
+                sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = annoNum;
                 if sharedInst.annoKey == str2num(key)
                     sharedInst.annoStart = 0;
                     sharedInst.annoKey = -1;
@@ -1120,7 +1151,16 @@ function recodeAnnotation(handles, key)
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     
-    showFrameInAxes(handles.axes1, handles, sharedInst.frameNum);
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    listFly = sharedInst.listFly;
+
+    % show long params
+    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+
+    % show short params
+    showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
+    showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
 
