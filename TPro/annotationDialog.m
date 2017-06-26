@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 23-Jun-2017 18:01:28
+% Last Modified by GUIDE v2.5 27-Jun-2017 00:22:27
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -109,11 +109,13 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     annoKeyMap = zeros(9,1);
     if exist(labelFileName, 'file')
         labelTable = readtable(labelFileName);
-        annoLabel = table2cell(labelTable);
-        for i=1:size(annoLabel,1)
+        labels = table2cell(labelTable);
+        annoLabel = cell(size(labels,1),1);
+        for i=1:size(labels,1)
+            annoLabel{labels{i,1}} = labels{i,2};
             for j=1:9
-                if j==annoLabel{i,3}
-                    annoKeyMap(j) = annoLabel{i,1};
+                if j==labels{i,3}
+                    annoKeyMap(j) = labels{i,1};
                     break;
                 end
             end
@@ -745,6 +747,139 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 end
 
 
+% --------------------------------------------------------------------
+function Untitled_2_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    try
+        csvTable = readtable([path fileName]);
+        records = table2cell(csvTable);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+    
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    frameNum = size(sharedInst.annotation,1);
+    flyNum = size(sharedInst.annotation,2);
+    
+    if (size(records,1)+2) ~= frameNum || size(records,2) ~= flyNum
+        errordlg('input csv does not have appropriate frame or fly number.', 'Error');
+        return;
+    end
+
+    mat = cell2mat(records);
+    mat = [mat; zeros(1,flyNum); zeros(1,flyNum)];
+    sharedInst.annotation = mat;
+    sharedInst.isModified = 1;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.pushbutton6, 'Enable', 'on');
+end
+
+% --------------------------------------------------------------------
+function Untitled_5_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_6_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    hFig = ancestor(hObject, 'figure');
+    figure1_CloseRequestFcn(hFig, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function File_Callback(hObject, eventdata, handles)
+    % hObject    handle to File (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Edit_Callback(hObject, eventdata, handles)
+    % hObject    handle to Edit (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Play_Callback(hObject, eventdata, handles)
+    % hObject    handle to Play (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_8_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    pushbutton2_Callback(hObject, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_9_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_9 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    pushbutton3_Callback(hObject, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_10_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_10 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    pushbutton4_Callback(hObject, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_11_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_11 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    pushbutton5_Callback(hObject, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_13_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_13 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.frameNum < sharedInst.maxFrame
+        pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+        set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*10);
+        slider1_Callback(handles.slider1, eventdata, handles)
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_12_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_12 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.frameNum > 1
+        pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+        set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*10);
+        slider1_Callback(handles.slider1, eventdata, handles)
+    end
+end
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -887,7 +1022,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         if isempty(sharedInst.annoLabel)
             annoStr = num2str(annoNum);
         else
-            annoStr = sharedInst.annoLabel{annoNum,2};
+            annoStr = sharedInst.annoLabel{annoNum};
         end
     else
         annoStr = '--';
@@ -953,9 +1088,16 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
             yval = sharedInst.keep_data{7}(:,listFly);
             ymin = 0;
             ymax = 1;
+        case '--'
+            yval = [];
+            ymin = 0;
+            ymax = 0;
     end
     axes(hObject); % set drawing area
     cla;
+    if isempty(yval)
+        return; % noting to show
+    end
     hold on;
     plot(1:size(yval,1), yval, 'Color', [.6 .6 1]);
     xlim([1 size(yval,1)]);
@@ -1047,10 +1189,17 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             yval = sharedInst.keep_data{7}((t-st):(t+ed),listFly);
             ymin = 0;
             ymax = 1;
+        case '--'
+            yval = [];
+            ymin = 0;
+            ymax = 0;
     end
     
     axes(hObject); % set drawing area
     cla;
+    if isempty(yval)
+        return; % noting to show
+    end
     hold on;
     plot((t-st):(t+ed), yval, 'linewidth', 1.5, 'Color', [.6 .6 1]);
     xlim([t-st t+ed]);
@@ -1115,6 +1264,7 @@ function recodeAnnotation(handles, key)
         if sharedInst.annoStart > 0
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
+            recordText = '--';
         else
             sharedInst.annotation(sharedInst.frameNum, sharedInst.listFly) = 0;
             sharedInst.isModified = 1;
@@ -1124,6 +1274,7 @@ function recodeAnnotation(handles, key)
         if sharedInst.annoStart > 0
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
+            recordText = '--';
         end
     otherwise
         if isnumeric(str2num(key))
@@ -1131,25 +1282,47 @@ function recodeAnnotation(handles, key)
                 if isempty(sharedInst.annoLabel)
                     annoNum = sharedInst.annoKey;
                 else
-                    annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
+                    if sharedInst.annoKey == 0
+                        annoNum = 0;
+                    else
+                        annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
+                    end
                 end
-                sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = annoNum;
+                if sharedInst.annoStart <= sharedInst.frameNum
+                    sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = annoNum;
+                else
+                    sharedInst.annotation(sharedInst.frameNum:sharedInst.annoStart, sharedInst.listFly) = annoNum;
+                end
+                
                 if sharedInst.annoKey == str2num(key)
                     sharedInst.annoStart = 0;
                     sharedInst.annoKey = -1;
+                    recordText = '--';
                 else
                     sharedInst.annoStart = sharedInst.frameNum;
                     sharedInst.annoKey = str2num(key);
+                    recordText = sharedInst.annoLabel{annoNum};
                 end
             else
                 sharedInst.annoStart = sharedInst.frameNum;
                 sharedInst.annoKey = str2num(key);
+                if isempty(sharedInst.annoLabel)
+                    recordText = key;
+                else
+                    if sharedInst.annoKey == 0
+                        recordText = 'unknown';
+                    else
+                        annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
+                        recordText = sharedInst.annoLabel{annoNum};
+                    end
+                end
             end
             sharedInst.isModified = 1;
             set(handles.pushbutton6, 'Enable', 'on');
         end            
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.text27, 'String', recordText);
     
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
@@ -1198,3 +1371,4 @@ function img = TProRead(videoStructs, frameNum)
         img = read(videoStructs,frameNum);
     end
 end
+
