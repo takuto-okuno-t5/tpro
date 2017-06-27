@@ -104,11 +104,11 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load annotation label
-    labelFileName = "annotation_label.csv";
+    labelFileName = 'annotation_label.csv';
     annoLabel = [];
     annoKeyMap = zeros(9,1);
     if exist(labelFileName, 'file')
-        labelTable = readtable(labelFileName);
+        labelTable = readtable(labelFileName,'ReadVariableNames',false);
         labels = table2cell(labelTable);
         annoLabel = cell(size(labels,1),1);
         for i=1:size(labels,1)
@@ -1258,13 +1258,13 @@ end
 function recodeAnnotation(handles, key)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     
-    key = erase(key,'numpad');
+    key = char(strrep({key},'numpad',''));
+    recordText = '--';
     switch key
     case 'delete'
         if sharedInst.annoStart > 0
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
-            recordText = '--';
         else
             sharedInst.annotation(sharedInst.frameNum, sharedInst.listFly) = 0;
             sharedInst.isModified = 1;
@@ -1274,7 +1274,6 @@ function recodeAnnotation(handles, key)
         if sharedInst.annoStart > 0
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
-            recordText = '--';
         end
     otherwise
         if isnumeric(str2num(key))
@@ -1297,7 +1296,6 @@ function recodeAnnotation(handles, key)
                 if sharedInst.annoKey == str2num(key)
                     sharedInst.annoStart = 0;
                     sharedInst.annoKey = -1;
-                    recordText = '--';
                 else
                     sharedInst.annoStart = sharedInst.frameNum;
                     sharedInst.annoKey = str2num(key);
