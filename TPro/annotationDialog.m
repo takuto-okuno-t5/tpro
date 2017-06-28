@@ -223,6 +223,11 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
+    showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
+
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
     
@@ -379,7 +384,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    if gca == handles.axes2 || gca == handles.axes4 || gca == handles.axes5 || gca == handles.axes6
+    if gca == handles.axes2 || gca == handles.axes4 || gca == handles.axes5 || gca == handles.axes6 || gca == handles.axes7
         cp = get(gca,'CurrentPoint');
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         set(handles.slider1, 'value', cp(1));
@@ -685,6 +690,7 @@ function popupmenu4_Callback(hObject, eventdata, handles)
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
     showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
+    showLongAxesTimeLine(handles, t, listFly);
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
 end
 
@@ -714,6 +720,7 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
     showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+    showLongAxesTimeLine(handles, t, listFly);
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
@@ -782,6 +789,7 @@ function Untitled_2_Callback(hObject, eventdata, handles)
     sharedInst.isModified = 1;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.pushbutton6, 'Enable', 'on');
+    h = msgbox({'import csv file successfully!'});
 end
 
 % --------------------------------------------------------------------
@@ -789,6 +797,25 @@ function Untitled_5_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared    
+    frameNum = size(sharedInst.annotation,1);
+    mat = sharedInst.annotation;
+    mat(frameNum,:) = [];
+    mat(frameNum-1,:) = []; % remove last 2 rows, these are just empty.
+
+    try
+        T = array2table(mat);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
 end
 
 % --------------------------------------------------------------------
@@ -1004,8 +1031,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold off;
     
     % show long params
-    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
-    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+    showLongAxesTimeLine(handles, t, listFly);
 
     % show short params
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
@@ -1116,9 +1142,30 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
         yv = [ymin ymax ymax ymin];
         p = patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
     end
-    % plot current time line
-    plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
     text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
+    hold off;
+end
+
+function showLongAxesTimeLine(handles, t, listFly)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    yval = sharedInst.vxy(:,listFly);
+    ymin = 0;
+    ymax = 1;
+
+    % plot current time line
+    handles.axes7.Box = 'off';
+    handles.axes7.Color = 'None';
+    handles.axes7.FontSize = 1;
+    handles.axes7.XMinorTick = 'off';
+    handles.axes7.YMinorTick = 'off';
+    handles.axes7.XTick = [0];
+    handles.axes7.YTick = [0];
+    axes(handles.axes7); % set drawing area
+    cla;    
+    hold on;
+    plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
+    xlim([1 size(yval,1)]);
+    ylim([ymin ymax]);
     hold off;
 end
 
@@ -1328,6 +1375,7 @@ function recodeAnnotation(handles, key)
     % show long params
     showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
     showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+    showLongAxesTimeLine(handles, t, listFly);
 
     % show short params
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
