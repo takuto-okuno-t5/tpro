@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 27-Jun-2017 00:22:27
+% Last Modified by GUIDE v2.5 30-Jun-2017 02:15:14
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -102,25 +102,6 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     else
         annotation = zeros(size(keep_data{1},1), size(keep_data{1},2));
     end
-
-    % load annotation label
-    labelFileName = 'annotation_label.csv';
-    annoLabel = [];
-    annoKeyMap = zeros(9,1);
-    if exist(labelFileName, 'file')
-        labelTable = readtable(labelFileName,'ReadVariableNames',false);
-        labels = table2cell(labelTable);
-        annoLabel = cell(max(labels,1),1);
-        for i=1:size(annoLabel,1)
-            annoLabel{labels{i,1}} = labels{i,2};
-            for j=1:9
-                if j==labels{i,3}
-                    annoKeyMap(j) = labels{i,1};
-                    break;
-                end
-            end
-        end
-    end
     
     % initialize GUI
     sharedInst = struct; % allocate shared instance
@@ -145,8 +126,6 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.isModified = 0;
     sharedInst.annoStart = 0;
     sharedInst.annoKey = -1;
-    sharedInst.annoLabel = annoLabel;
-    sharedInst.annoKeyMap = annoKeyMap;
 
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
@@ -222,7 +201,10 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
-
+    
+    % load annotation label
+    loadAnnotationLabel(handles);
+    
     % show long params
     showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
     showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
@@ -233,6 +215,31 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     %uiwait(handles.figure1); % wait for finishing dialog
+end
+
+function loadAnnotationLabel(handles)
+    labelFileName = 'annotation_label.csv';
+    annoLabel = [];
+    annoKeyMap = zeros(9,1);
+    if exist(labelFileName, 'file')
+        labelTable = readtable(labelFileName,'ReadVariableNames',false);
+        labels = table2cell(labelTable);
+        annoLabel = cell(max(cell2mat(labels(:,1))),1);
+        for i=1:size(annoLabel,1)
+            annoLabel{labels{i,1}} = labels{i,2};
+            for j=1:9
+                if j==labels{i,3}
+                    annoKeyMap(j) = labels{i,1};
+                    break;
+                end
+            end
+        end
+    end
+    
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.annoLabel = annoLabel;
+    sharedInst.annoKeyMap = annoKeyMap;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
 function vxy = calcVxy(vy, vx)
@@ -753,6 +760,16 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     set(handles.pushbutton6, 'Enable', 'off');
 end
 
+% --- Executes on button press in pushbutton7.
+function pushbutton7_Callback(hObject, eventdata, handles)
+    % hObject    handle to pushbutton7 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    dlg = labelConfigDialog({});
+    delete(dlg);
+    pause(0.1);
+    loadAnnotationLabel(handles);
+end
 
 % --------------------------------------------------------------------
 function Untitled_2_Callback(hObject, eventdata, handles)
@@ -1354,7 +1371,7 @@ function recodeAnnotation(handles, key)
                 if isempty(sharedInst.annoLabel)
                     recordText = key;
                 else
-                    if sharedInst.annoKey == 0
+                    if sharedInst.annoKey == 0 || sharedInst.annoKeyMap(sharedInst.annoKey) == 0
                         recordText = 'unknown';
                     else
                         annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
@@ -1417,4 +1434,3 @@ function img = TProRead(videoStructs, frameNum)
         img = read(videoStructs,frameNum);
     end
 end
-

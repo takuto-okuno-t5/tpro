@@ -89,7 +89,7 @@ function labelConfigDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     guidata(hObject, handles);  % Update handles structure
     
     % UIWAIT makes labelConfigDialog wait for user response (see UIRESUME)
-    % uiwait(handles.figure1);
+    uiwait(handles.figure1);
 end
 
 % --- Outputs from this function are returned to the command line.
@@ -122,9 +122,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
             % nothing todo
         end
     end
-
-    % Hint: delete(hObject) closes the figure
-    delete(hObject);
+    uiresume(handles.figure1);
 end
 
 % --- Executes on button press in pushbutton1.
@@ -141,9 +139,19 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    labelFileName = 'annotation_label.csv';
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.isModified = 0;
     sharedInst.isSaved = 1;
+    sz = size(sharedInst.annoLabel,1);
+    annoLabel = [cell(sz,1) sharedInst.annoLabel];
+    for i = 1:sz
+        annoLabel(i,1) = {i};
+    end
+    T = array2table(annoLabel);
+    writetable(T,labelFileName,'WriteVariableNames',false);
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.pushbutton2, 'Enable', 'off');
 end
 
 
@@ -154,7 +162,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     annoLabel = sharedInst.annoLabel;
-    sharedInst.annoLabel = [annoLabel; {'new label', ''}];
+    sharedInst.annoLabel = [annoLabel; {'new label', NaN}];
     sharedInst.isModified = 1;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
@@ -188,7 +196,9 @@ function uitable1_CellSelectionCallback(hObject, eventdata, handles)
     %	Indices: row and column indices of the cell(s) currently selecteds
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    sharedInst.selectedRow = eventdata.Indices(1,1);
+    if size(eventdata.Indices,1) > 0
+        sharedInst.selectedRow = eventdata.Indices(1,1);
+    end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     
     set(handles.pushbutton4, 'Enable', 'on');
@@ -206,9 +216,31 @@ function uitable1_CellEditCallback(hObject, eventdata, handles)
     %	Error: error string when failed to convert EditData to appropriate value for Data
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    sharedInst.isModified = 1;
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    row = eventdata.Indices(1,1);
+    modified = 1;
+    if eventdata.Indices(1,2) == 1
+        sharedInst.annoLabel{row,1} = eventdata.NewData;
+    else
+        % check number
+        for i=1:size(sharedInst.annoLabel,1)
+            if i==row continue; end
+            if sharedInst.annoLabel{i,2} == eventdata.NewData
+                modified = 0;
+            end
+        end
+        if eventdata.NewData > 9 || eventdata.NewData < 1
+            modified = 0;
+        end
+        if modified
+            sharedInst.annoLabel{row,2} = eventdata.NewData;
+        end
+    end
+    if modified
+        sharedInst.isModified = 1;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance    
+        set(handles.pushbutton2, 'Enable', 'on');
+    end
     
-    set(handles.pushbutton2, 'Enable', 'on');
+    handles.uitable1.Data = sharedInst.annoLabel;
     guidata(hObject, handles);  % Update handles structure
 end
