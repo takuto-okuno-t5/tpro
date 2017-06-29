@@ -110,8 +110,8 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if exist(labelFileName, 'file')
         labelTable = readtable(labelFileName,'ReadVariableNames',false);
         labels = table2cell(labelTable);
-        annoLabel = cell(size(labels,1),1);
-        for i=1:size(labels,1)
+        annoLabel = cell(max(labels,1),1);
+        for i=1:size(annoLabel,1)
             annoLabel{labels{i,1}} = labels{i,2};
             for j=1:9
                 if j==labels{i,3}
