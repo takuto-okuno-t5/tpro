@@ -72,6 +72,7 @@ function labelConfigDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     handles.uitable1.Data = annoLabel;
     handles.uitable1.ColumnName = {'  label','allocated key'};
     handles.uitable1.ColumnEditable = true;
+    handles.uitable1.ColumnWidth = {150,77};
 
     % initialize GUI
     sharedInst = struct; % allocate shared instance
@@ -83,7 +84,6 @@ function labelConfigDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % set gui status
     set(handles.pushbutton2, 'Enable', 'off');
     set(handles.pushbutton4, 'Enable', 'off');
-    set(handles.uitable1,'ColumnWidth', {150,77});
     
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure

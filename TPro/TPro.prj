@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="76965592" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2331953317" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -87,6 +87,7 @@
     <fileset.package>
       <file>${PROJECT_ROOT}\annotation_label.csv</file>
       <file>${PROJECT_ROOT}\dndcontrol_license.txt</file>
+      <file>${PROJECT_ROOT}\ui</file>
     </fileset.package>
     <build-deliverables>
       <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\readme.txt</file>

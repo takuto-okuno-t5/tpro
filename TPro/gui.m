@@ -59,8 +59,6 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for gui
 handles.output = hObject;
-
-% Update handles structure
 guidata(hObject, handles);
 
 % set window title
@@ -68,8 +66,25 @@ versionNumber = '1.4';
 set(gcf, 'name', ['TPro version ', versionNumber]);
 
 % set initialized message
-set(handles.edit1, 'String','Welcome! Please click the buttons on the left to run')
+set(handles.text14, 'String','Welcome! Please click the buttons on the left to run')
 
+% init gui parts
+handles.uitable2.ColumnName = {'file name','path'};
+handles.uitable2.ColumnWidth = {200,440};
+handles.uitable2.RowName = [];
+
+axes(handles.axes1); % set drawing area
+imshow(imread('ui/drag_and_drop.png'));
+handles.axes1.Box = 'off';
+handles.axes1.Color = 'None';
+handles.axes1.FontSize = 1;
+handles.axes1.XMinorTick = 'off';
+handles.axes1.YMinorTick = 'off';
+handles.axes1.XTick = [0];
+handles.axes1.YTick = [0];
+uistack(handles.axes1,'top');
+
+initFileUITable(handles);
 checkAllButtons(handles);
 pause(0.01);
 
@@ -94,15 +109,38 @@ dndobj.DropStringFcn = @onDropFile;
 % UIWAIT makes gui wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
+
+%% 
+function initFileUITable(handles)
+inputListFile = './input_videos.mat';
+if ~exist(inputListFile, 'file')
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+tebleItems = {};
+
+for i = 1:size(videoFiles,1)
+    row = {videoFiles{i}, videoPath};
+    tebleItems = [tebleItems; row];
+end
+% update uitable
+handles.uitable2.Data = tebleItems;
+
+
 %% Callback function
 function onDropFile(hObject, eventdata)
 videoFiles = {};
+tebleItems = {};
 switch eventdata.DropType
     case 'file'
         % process all dragged files
         for n = 1:numel(eventdata.Data)
             [videoPath, name, ext] = fileparts(eventdata.Data{n});
-            videoFiles = [videoFiles, [name ext]];
+            row = {[name ext], videoPath};
+            tebleItems = [tebleItems; row];
+            videoFiles = [videoFiles; [name ext]];
         end
     case 'string'
         % nothing to do
@@ -112,7 +150,7 @@ end
 hUIControl = hObject.hUIControl;
 hFig = ancestor(hUIControl, 'figure');
 handles = guidata(hFig);
-set(handles.edit1, 'String', 'creating configuration file (csv) ...');
+set(handles.text14, 'String', 'creating configuration file (csv) ...');
 disableAllButtons(handles);
 pause(0.01);
 
@@ -125,13 +163,16 @@ time = toc;
 
 % show result message
 if status 
-    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
+    set(handles.text14, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
     set(handles.text9,'String','Ready','BackgroundColor','green');
 else
-    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
+    set(handles.text14, 'String',strcat('can not output configuration file (csv)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
 checkAllButtons(handles);
+
+% update uitable
+handles.uitable2.Data = tebleItems;
 
 
 %% --- Outputs from this function are returned to the command line.
@@ -167,7 +208,7 @@ if ~filterIndex
 end
 
 % show starting message
-set(handles.edit1, 'String', 'creating configuration file (csv) ...');
+set(handles.text14, 'String', 'creating configuration file (csv) ...');
 disableAllButtons(handles);
 pause(0.01);
 
@@ -181,6 +222,7 @@ end
 
 % process all selected files
 videoFiles = {};
+tebleItems = {};
 
 for i = 1:fileCount
     if fileCount > 1
@@ -188,7 +230,9 @@ for i = 1:fileCount
     else
         fileName = fileNames;
     end
-    videoFiles = [videoFiles, fileName];
+    row = {fileName, videoPath};
+    tebleItems = [tebleItems; row];
+    videoFiles = [videoFiles; fileName];
 end
 
 % create config files if possible
@@ -198,13 +242,15 @@ time = toc;
 
 % show result message
 if status 
-    set(handles.edit1, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
+    set(handles.text14, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
     set(handles.text9,'String','Ready','BackgroundColor','green');
 else
-    set(handles.edit1, 'String',strcat('can not output configuration file (csv)'));
+    set(handles.text14, 'String',strcat('can not output configuration file (csv)'));
     set(handles.text9,'String','Failed','BackgroundColor','red');
 end
 checkAllButtons(handles);
+% update uitable
+handles.uitable2.Data = tebleItems;
 
 
 %%
@@ -214,7 +260,7 @@ header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 
 status = true;
 
 % write config files if it is empty
-for i = 1:size(videoFiles, 2)
+for i = 1:size(videoFiles, 1)
     fileName = videoFiles{i};
     
     outPathName = [videoPath fileName '_tpro'];
@@ -272,7 +318,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -287,7 +333,7 @@ for i = 1:videoFileNum
 end
 
 % show start text
-set(handles.edit1, 'String','detecting background ...')
+set(handles.text14, 'String','detecting background ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
@@ -306,7 +352,7 @@ for data_th = 1:size(records,1)
     shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % show detecting message
-    set(handles.edit1, 'String', ['detecting background for ', shuttleVideo.name]);
+    set(handles.text14, 'String', ['detecting background for ', shuttleVideo.name]);
 
     % set output file name
     pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
@@ -407,7 +453,7 @@ end
 
 % show end text
 time = toc;
-set(handles.edit1, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
+set(handles.text14, 'String',strcat('detecting background ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
@@ -428,7 +474,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -443,7 +489,7 @@ for i = 1:videoFileNum
 end
 
 % show start text
-set(handles.edit1, 'String','checking detection threashold ...')
+set(handles.text14, 'String','checking detection threashold ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
@@ -458,7 +504,7 @@ for i = 1 : size(records,1)
     pause(0.1);
 end
 
-set(handles.edit1, 'String',strcat('checking detection threashold ... done!'))
+set(handles.text14, 'String',strcat('checking detection threashold ... done!'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
@@ -479,7 +525,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -494,7 +540,7 @@ for i = 1:videoFileNum
 end
 
 % show start text
-set(handles.edit1, 'String','detection ...')
+set(handles.text14, 'String','detection ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
@@ -555,9 +601,6 @@ kalman_only_enable = 0;
 
 % shift the intensity
 intensity_shift = 0;
-
-% choose animal type
-animal_type = get(handles.popupmenu1,'Value');
 
 %%
 
@@ -978,7 +1021,7 @@ end
 
 % show end text
 time = toc;
-set(handles.edit1, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
+set(handles.text14, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
@@ -999,7 +1042,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -1016,7 +1059,7 @@ end
 addpath(videoPath);
 
 % show start text
-set(handles.edit1, 'String','tracking ...')
+set(handles.text14, 'String','tracking ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
@@ -1086,9 +1129,6 @@ kalman_only_enable = 0;
 
 % shift the intensity
 intensity_shift = -20;
-
-% choose animal type
-animal_type = get(handles.popupmenu1,'Value');
 
 % kalman filter multiple object tracking
 
@@ -1729,31 +1769,10 @@ end
 
 % show end text
 time = toc;
-set(handles.edit1, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
+set(handles.text14, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
-
-function edit1_Callback(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit1 as text
-%        str2double(get(hObject,'String')) returns contents of edit1 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn)
 
@@ -2149,7 +2168,7 @@ vl = load(inputListFile);
 videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 if videoFileNum == 0
     return; % no video files
 end
@@ -2469,7 +2488,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -2484,7 +2503,7 @@ for i = 1:videoFileNum
 end
 
 % show start text
-set(handles.edit1, 'String','selecting "Region of Interest" ...')
+set(handles.text14, 'String','selecting "Region of Interest" ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
@@ -2540,32 +2559,9 @@ if exist('figureWindow','var') && ~isempty(figureWindow) && ishandle(figureWindo
 end
 
 % show end text
-set(handles.edit1, 'String','selecting "Region of Interest" ... done!')
+set(handles.text14, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
-
-
-% --- Executes on selection change in popupmenu1.
-function popupmenu1_Callback(hObject, eventdata, handles)
-% hObject    handle to popupmenu1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu1 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from popupmenu1
-
-
-% --- Executes during object creation, after setting all properties.
-function popupmenu1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to popupmenu1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )
@@ -3289,7 +3285,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
@@ -3327,7 +3323,7 @@ videoPath = vl.videoPath;
 videoFiles = vl.videoFiles;
 
 % load configuration files
-videoFileNum = size(videoFiles,2);
+videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
     confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
