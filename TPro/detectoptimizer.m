@@ -112,6 +112,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.binaryAreaPixel = records{15};
     sharedInst.blobSeparateRate = records{17};
     sharedInst.isModified = false;
+    sharedInst.roiNum = records{10};
+    sharedInst.currentROI = 0;
 
     sharedInst.originalImage = [];
     sharedInst.step2Image = [];
@@ -173,12 +175,18 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load roi image file
-    roiFileName = strcat(sharedInst.confPath,'roi.png');
-    if exist(roiFileName, 'file')
-        img = imread(roiFileName);
-        sharedInst.roiMaskImage = im2double(img);
-    else
-        sharedInst.roiMaskImage = [];
+    sharedInst.roiMaskImage = [];
+    for i=1:sharedInst.roiNum
+        if i==1 idx=''; else idx=num2str(i); end
+        roiFileName = [sharedInst.confPath 'roi' idx '.png'];
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            if i==1
+                sharedInst.roiMaskImage = im2double(img);
+            else
+                sharedInst.roiMaskImage = sharedInst.roiMaskImage | im2double(img);
+            end
+        end
     end
     
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -958,7 +966,7 @@ function saveConfigurationFile(handles)
     frameRate = sharedInst.shuttleVideo.FrameRate;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (sharedInst.binaryTh / 100), 0, 1, 200, 0, ...
+        (sharedInst.binaryTh / 100), 0, sharedInst.roiNum, 200, 0, ...
         sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
         sharedInst.frameSteps, 0.5};
 

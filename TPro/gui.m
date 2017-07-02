@@ -62,8 +62,9 @@ handles.output = hObject;
 guidata(hObject, handles);
 
 % set window title
-versionNumber = '1.4';
+versionNumber = '1.4.3';
 set(gcf, 'name', ['TPro version ', versionNumber]);
+set(handles.text14, 'String', ['TPro ', versionNumber])
 
 % set initialized message
 set(handles.text14, 'String','Welcome! Please click the buttons on the left to run')
@@ -73,16 +74,19 @@ handles.uitable2.ColumnName = {'file name','path'};
 handles.uitable2.ColumnWidth = {200,440};
 handles.uitable2.RowName = [];
 
-axes(handles.axes1); % set drawing area
-imshow(imread('ui/drag_and_drop.png'));
-handles.axes1.Box = 'off';
-handles.axes1.Color = 'None';
-handles.axes1.FontSize = 1;
-handles.axes1.XMinorTick = 'off';
-handles.axes1.YMinorTick = 'off';
-handles.axes1.XTick = [0];
-handles.axes1.YTick = [0];
-uistack(handles.axes1,'top');
+if exist('ui/drag_and_drop.png','file')
+    axes(handles.axes1); % set drawing area
+    imshow(imread('ui/drag_and_drop.png'));
+    handles.axes1.Box = 'off';
+    handles.axes1.Color = 'None';
+    handles.axes1.FontSize = 1;
+    handles.axes1.XMinorTick = 'off';
+    handles.axes1.YMinorTick = 'off';
+    handles.axes1.XTick = [0];
+    handles.axes1.YTick = [0];
+else
+    handles.axes1.Visible = 'off';
+end
 
 initFileUITable(handles);
 checkAllButtons(handles);
@@ -255,8 +259,6 @@ handles.uitable2.Data = tebleItems;
 
 %%
 function status = createConfigFiles(videoPath, videoFiles)
-% config header
-header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 status = true;
 
 % write config files if it is empty
@@ -289,18 +291,27 @@ for i = 1:size(videoFiles, 1)
     end
     
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.4};
-    try
-        T = cell2table(B);
-        T.Properties.VariableNames = header';
-        writetable(T,outputFileName);
-        status = true;
-    catch e
-        status = false;
+    status = saveInputControlFile(outputFileName, B);
+    if ~status
         break;
     end
 end
 
 save('./input_videos.mat', 'videoPath', 'videoFiles');
+
+%% save a input_video_control.csv
+function status = saveInputControlFile(outputFileName, B)
+% config header
+header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+try
+    T = cell2table(B);
+    T.Properties.VariableNames = header';
+    writetable(T,outputFileName);
+    status = true;
+catch e
+    status = false;
+end
+
 
 % bg--- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
@@ -619,6 +630,7 @@ for data_th = 1:size(records,1)
     sigma = records{data_th, 14};
     area_pixel = records{data_th, 15};
     blobSeparateRate = records{data_th, 17};
+    roiNum = records{data_th, 10};
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'multi'], 'dir')
@@ -628,13 +640,20 @@ for data_th = 1:size(records,1)
     shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % ROI
-    videoName = shuttleVideo.name;
-    roiFileName = strcat(confPath,'roi.png');
-    if exist(roiFileName, 'file')
-        img = imread(roiFileName);
-        roi_mask = im2double(img);
-    else
-        roi_mask = [];
+    roi_mask = [];
+    roiMasks = {};
+    for i=1:roiNum
+        if i==1 idx=''; else idx=num2str(i); end
+        roiFileName = [confPath 'roi' idx '.png'];
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            roiMasks = [roiMasks, im2double(img)];
+            if i==1
+                roi_mask = roiMasks{i};
+            else
+                roi_mask = roi_mask | roiMasks{i};
+            end
+        end
     end
 
     bgImageFile = strcat(confPath,'background.png');
@@ -654,8 +673,12 @@ for data_th = 1:size(records,1)
 
     % make output folder
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    mkdir(strcat(confPath,'detect_output/',filename));
-
+    for i=1:roiNum
+        outputPath = [confPath 'detect_output/' filename '_roi' num2str(i)];
+        if ~exist(outputPath, 'dir')
+            mkdir(outputPath);
+        end
+    end
     X = cell(1,length(end_frame-start_frame+1));
     Y = cell(1,length(end_frame-start_frame+1));
     X_update2 = X;
@@ -981,38 +1004,45 @@ for data_th = 1:size(records,1)
     end
     
     % save data
-    filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
     save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
     save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count');
-
+    
     % save data as text
-    countFileName = strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_count','.txt');
-    write_file_cnt = fopen(countFileName, 'wt');
-    write_file_x = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat(confPath,'detect_output/',filename,'/',shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
+    for i=1:roiNum
+        outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
+        countFileName = [outputPath shuttleVideo.name '_' filename '_count.txt'];
+        write_file_cnt = fopen(countFileName, 'wt');
+        write_file_x = fopen([outputPath shuttleVideo.name '_' filename '_x.txt'], 'wt');
+        write_file_y = fopen([outputPath shuttleVideo.name '_' filename '_y.txt'], 'wt');
 
-    % cook raw data before saving
-    end_row = size(X, 2);
-    for row_count = 1:end_row
-        % make save string
-        flyNum = size(X{row_count}, 1);
-        save_string = [];
-        for s_count = 1:flyNum
-            save_string = [save_string '%.4f\t'];
+        % cook raw data before saving
+        end_row = size(X, 2);
+        for row_count = 1:end_row
+            fx = X{row_count}(:);
+            fy = Y{row_count}(:);
+            flyNum = length(fx);
+            for j = flyNum:-1:1
+                if roiMasks{i}(round(fy(j)),round(fx(j))) <= 0
+                    fx(j) = [];
+                    fy(j) = [];
+                end
+            end
+            % make save string
+            flyNum = length(fx);
+            fmtString = generatePrintFormatString(flyNum);
+
+            fprintf(write_file_cnt, '%d\n', flyNum);
+            fprintf(write_file_x, fmtString, fx);
+            fprintf(write_file_y, fmtString, img_h - fy);
         end
-        save_string = [save_string '\n'];
-    
-        fprintf(write_file_cnt, '%d\n', keep_count(row_count));
-        fprintf(write_file_x, save_string, X{row_count}(:));
-        fprintf(write_file_y, save_string, img_h - Y{row_count}(:));
-    end
-    
-    fclose(write_file_cnt);
-    fclose(write_file_x);
-    fclose(write_file_y);
 
-    % open text file with notepad (only windows)
-    winopen(countFileName);
+        fclose(write_file_cnt);
+        fclose(write_file_x);
+        fclose(write_file_y);
+
+        % open text file with notepad (only windows)
+        winopen(countFileName);
+    end
 %    system(['start notepad ' countFileName]);
 
     set(handles.text9, 'String','100 %'); % done!
@@ -1024,6 +1054,15 @@ time = toc;
 set(handles.text14, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
+
+
+%% generate format string
+function save_string = generatePrintFormatString(flyNum)
+save_string = [];
+for s_count = 1:flyNum
+    save_string = [save_string '%.4f\t'];
+end
+save_string = [save_string '\n'];
 
 
 % tracker--- Executes on button press in pushbutton5.
@@ -1164,6 +1203,7 @@ for data_th = 1:size(records,1)
     start_frame = records{data_th, 4};
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
+    roiNum = records{data_th, 10};
     shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % make output folder
@@ -1172,19 +1212,33 @@ for data_th = 1:size(records,1)
         mkdir([confPath 'output']);
     end
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    mkdir(strcat(confPath,'output/',filename,'_data'));
+    for i=1:roiNum
+        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+        if ~exist(outputDataPath, 'dir')
+            mkdir(outputDataPath);
+        end
+    end
 
     % load detection
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
     % load roi
-    roiFileName = strcat(confPath,'roi.png');
-    if exist(roiFileName, 'file')
-        roiImage = imread(roiFileName);
-    else
-        roiImage = []
+    roiImage = [];
+    roiMasks = {};
+    for i=1:roiNum
+        if i==1 idx=''; else idx=num2str(i); end
+        roiFileName = [confPath 'roi' idx '.png'];
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            roiMasks = [roiMasks, im2double(img)];
+            if i==1
+                roiImage = roiMasks{i};
+            else
+                roiImage = roiImage | roiMasks{i};
+            end
+        end
     end
-            
+
     % initialize result variables
     Q_loc_meas = []; % location measure
 
@@ -1620,147 +1674,148 @@ end
         continue;
     end
 
-    % save data as text
-    outputDataPath = [confPath 'output/' filename '_data/'];
-    write_file_x = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_x','.txt'),'wt');
-    write_file_y = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_y','.txt'),'wt');
-    write_file_vx = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vx','.txt'),'wt');
-    write_file_vy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vy','.txt'),'wt');
-    write_file_vxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_vxy','.txt'),'wt');
-    write_file_dir = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dir','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd','.txt'),'wt');    % direction 2016-11-10
-    write_file_dd2 = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dd2','.txt'),'wt');    % direction 2016-11-11
-    if ecc_enable
-        write_file_ecc = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_ecc','.txt'),'wt');    % direction 2016-11-29
-        keep_data{7} = keep_data{7}(:,1:flyNum);
+    for j = 1:8
+        keep_data{j} = keep_data{j}(:,1:flyNum);
     end
-    if angle_enable
-        write_file_angle = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_angle','.txt'),'wt');    % bodyline 2017-03-17
-        keep_data{8} = keep_data{8}(:,1:flyNum);
-        % inverse the angle upside-down
-        keep_data{8} = -keep_data{8};
-    end
-    write_file_dis = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_dis','.txt'),'wt');
-    write_file_svxy = fopen(strcat(outputDataPath,shuttleVideo.name,'_',filename,'_svxy','.txt'),'wt');
-
-    for i = 1:6
-        keep_data{i} = keep_data{i}(:,1:flyNum);
-    end
+    % inverse the angle upside-down
+    keep_data{8} = -keep_data{8};
 
     % find end of row (some frames has zero flies. so finding NaN is bad)
-%    a = isnan(keep_data{1});
-%    b = sum(a,2);
-%    end_row = find(b==flyNum,1) - 1;
     end_row = t - 1;
-
-    % make save string
-    save_string = [];
-    for s_count = 1:flyNum
-        save_string = [save_string '%.4f\t'];
-    end
-    save_string = [save_string '\n'];
-
-
-    % cook raw data before saving
-    for row_count = 1:end_row
-        fprintf(write_file_y,save_string , img_h - keep_data{1}(row_count, :));
-        fprintf(write_file_x,save_string , keep_data{2}(row_count, :));
-        if row_count > 1
-            distance_travel = sqrt((keep_data{2}(row_count, :) - keep_data{2}(row_count-1, :)).^2 + (keep_data{1}(row_count, :) - keep_data{1}(row_count-1, :)).^2);
-            fprintf(write_file_dis,save_string , distance_travel);
-        end
-        fprintf(write_file_vy,save_string , (-1).*keep_data{3}(row_count, :));
-        fprintf(write_file_vx,save_string , keep_data{4}(row_count, :));
-        vxy = sqrt( keep_data{3}(row_count, :).^2 +  keep_data{4}(row_count, :).^2  );
-        fprintf(write_file_vxy,save_string , vxy);
-        if row_count == 1
-            v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
-            check_v1 = sum(v1.*v1);
-            v1(:,check_v1==0) = NaN;
-            angle_v1 = atan2d(v1(2,:),v1(1,:));
-            fprintf(write_file_dd,save_string , (0).*keep_data{5}(row_count, :) );
-            fprintf(write_file_dd2,save_string , (0).*keep_data{5}(row_count, :) );
-        else
-            v0 = v1;    % v2 contains the previous v1
-            v1 = [keep_data{5}(row_count, :); (-1).*keep_data{6}(row_count, :)];
-            check_v1 = sum(v1.*v1);
-            v1(:,check_v1==0) = NaN;
-            angle_v1 = atan2d(v1(2,:),v1(1,:));
-            angle_v0 = atan2d(v0(2,:),v0(1,:));
-            angle_v1_v0 = angle_v1 - angle_v0;  % in degree
-            for i_angle_mo = 1:size(angle_v1_v0,2)
-                if angle_v1_v0(i_angle_mo) > 180
-                    angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)-360;
-                elseif angle_v1_v0(i_angle_mo) < -180
-                    angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)+360;
-                end
-            end
-            angle_v1_v0_2 = angle_v1_v0;
-            for i_angle_mo = 1:size(angle_v1_v0_2,2)
-                if angle_v1_v0_2(i_angle_mo) > 90
-                    angle_v1_v0_2(i_angle_mo) = 180 - angle_v1_v0_2(i_angle_mo);
-                elseif angle_v1_v0_2(i_angle_mo) < -90
-                    angle_v1_v0_2(i_angle_mo) = 180 + angle_v1_v0_2(i_angle_mo);
-                end
-                angle_v1_v0_2(i_angle_mo) = abs(angle_v1_v0_2(i_angle_mo));
-            end
-            fprintf(write_file_dd,save_string , angle_v1_v0 );
-            fprintf(write_file_dd2,save_string , angle_v1_v0_2 );
-        end
-        fprintf(write_file_dir,save_string , angle_v1 );
-        if ecc_enable
-            fprintf(write_file_ecc,save_string , keep_data{7}(row_count, :));
-        end
-        if angle_enable
-            fprintf(write_file_angle,save_string , keep_data{8}(row_count, :));
-        end
-
-        % calculate sideway velocity
-        bodyline_y = v1(2,:);
-        bodyline_x = v1(1,:);
-        % fill nan with data from angle
-        nan_index = isnan(bodyline_y);
-        bodyline_y(nan_index) = sind(keep_data{8}(row_count, nan_index));
-        bodyline_x(nan_index) = cosd(keep_data{8}(row_count, nan_index));
-        vy = (-1).*keep_data{3}(row_count, :);
-        vx = keep_data{4}(row_count, :);
-        setA = [bodyline_x' bodyline_y' zeros(size(bodyline_x,2),1)];
-        setB = [vx' vy' zeros(size(vx,2),1)];
-        corss_pro = cross(setA,setB);
-        norm_setA = sqrt(sum(abs(setA).^2,2));
-        svxy = corss_pro(:,3)./norm_setA;
-        fprintf(write_file_svxy,save_string , svxy');   % sideway velocity
-%                 dir_vxy = atan2d(vy,vx);
-%                 angle_for_svxy = dir_vxy-angle_v1;
-%                 fprintf(write_file_svxy,save_string , vxy.*sind(angle_for_svxy));
-
-    end
-
-    fclose(write_file_x);
-    fclose(write_file_y);
-    fclose(write_file_vx);
-    fclose(write_file_vy);
-    fclose(write_file_vxy);
-    fclose(write_file_dir);
-    fclose(write_file_dd);
-    fclose(write_file_dd2);
-    if ecc_enable
-        fclose(write_file_ecc);
-    end
-    if angle_enable
-        fclose(write_file_angle);
-    end
-    fclose(write_file_dis);
-    fclose(write_file_svxy);
 
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
 
-    % save input data used for generating this result
-    record = {records{data_th,:}};
-    T = cell2table(record);
-    T.Properties.VariableNames = confTable.Properties.VariableNames;
-    writetable(T, strcat(outputDataPath,shuttleVideo.name,'_',filename,'_','config.csv'));
+    % save data as text
+    for i=1:roiNum
+        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+        dataFileName = [outputDataPath shuttleVideo.name '_' filename];
+        write_file_x = fopen([dataFileName '_x.txt'],'wt');
+        write_file_y = fopen([dataFileName '_y.txt'],'wt');
+        write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
+        write_file_vy = fopen([dataFileName '_vy.txt'],'wt');
+        write_file_vxy = fopen([dataFileName '_vxy.txt'],'wt');
+        write_file_dir = fopen([dataFileName '_dir.txt'],'wt');    % direction 2016-11-10
+        write_file_dd = fopen([dataFileName '_dd.txt'],'wt');    % direction 2016-11-10
+        write_file_dd2 = fopen([dataFileName '_dd2.txt'],'wt');    % direction 2016-11-11
+        write_file_ecc = fopen([dataFileName '_ecc.txt'],'wt');    % direction 2016-11-29
+        write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % bodyline 2017-03-17
+        write_file_dis = fopen([dataFileName '_dis.txt'],'wt');
+        write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
+
+        % cook raw data before saving
+        for row_count = 1:end_row
+            fx = keep_data{2}(row_count, :);
+            fy = keep_data{1}(row_count, :);
+            vx = keep_data{4}(row_count, :);
+            vy = keep_data{3}(row_count, :);
+            ddx = keep_data{6}(row_count, :);
+            ddy = keep_data{5}(row_count, :);
+            ecc = keep_data{7}(row_count, :);
+            angle = keep_data{8}(row_count, :);
+            if row_count > 1
+                distance_travel = sqrt((fx - keep_data{2}(row_count-1, :)).^2 + (fy - keep_data{1}(row_count-1, :)).^2);
+            end
+            for j = flyNum:-1:1
+                if isnan(fy(j)) || isnan(fx(j)) || roiMasks{i}(round(fy(j)),round(fx(j))) <= 0
+                    fx(j) = NaN; fy(j) = NaN;
+                    vx(j) = NaN; vy(j) = NaN;
+                    ddx(j) = NaN; ddy(j) = NaN;
+                    ecc(j) = NaN;
+                    angle(j) = NaN;
+                    if row_count > 1
+                        distance_travel(j) = NaN;
+                    end
+                end
+            end
+            % make save string
+            roiFlyNum = length(fx);
+            fmtString = generatePrintFormatString(roiFlyNum);
+            
+            fprintf(write_file_x, fmtString, fx);
+            fprintf(write_file_y, fmtString, img_h - fy);
+            if row_count > 1
+                fprintf(write_file_dis, fmtString, distance_travel);
+            end
+            fprintf(write_file_vy, fmtString, (-1).*vy);
+            fprintf(write_file_vx, fmtString, vx);
+            vxy = sqrt( vy.^2 +  vx.^2 );
+            fprintf(write_file_vxy, fmtString, vxy);
+
+            v0 = v1;    % v2 contains the previous v1
+            v1 = [ddy; (-1).*ddx];
+            check_v1 = sum(v1.*v1);
+            v1(:,check_v1==0) = NaN;
+            angle_v1 = atan2d(v1(2,:),v1(1,:));
+
+            if row_count == 1
+                fprintf(write_file_dd, fmtString, (0).*ddy );
+                fprintf(write_file_dd2, fmtString, (0).*ddy );
+            else
+                angle_v0 = atan2d(v0(2,:),v0(1,:));
+                angle_v1_v0 = angle_v1 - angle_v0;  % in degree
+                for i_angle_mo = 1:size(angle_v1_v0,2)
+                    if angle_v1_v0(i_angle_mo) > 180
+                        angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)-360;
+                    elseif angle_v1_v0(i_angle_mo) < -180
+                        angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)+360;
+                    end
+                end
+                angle_v1_v0_2 = angle_v1_v0;
+                for i_angle_mo = 1:size(angle_v1_v0_2,2)
+                    if angle_v1_v0_2(i_angle_mo) > 90
+                        angle_v1_v0_2(i_angle_mo) = 180 - angle_v1_v0_2(i_angle_mo);
+                    elseif angle_v1_v0_2(i_angle_mo) < -90
+                        angle_v1_v0_2(i_angle_mo) = 180 + angle_v1_v0_2(i_angle_mo);
+                    end
+                    angle_v1_v0_2(i_angle_mo) = abs(angle_v1_v0_2(i_angle_mo));
+                end
+                fprintf(write_file_dd, fmtString, angle_v1_v0 );
+                fprintf(write_file_dd2, fmtString, angle_v1_v0_2 );
+            end
+            fprintf(write_file_dir, fmtString, angle_v1 );
+            fprintf(write_file_ecc, fmtString, ecc);
+            fprintf(write_file_angle, fmtString, angle);
+
+            % calculate sideway velocity
+            bodyline_y = v1(2,:);
+            bodyline_x = v1(1,:);
+            % fill nan with data from angle
+            nan_index = isnan(bodyline_y);
+            bodyline_y(nan_index) = sind(angle(nan_index));
+            bodyline_x(nan_index) = cosd(angle(nan_index));
+            vy = (-1).*vy;
+            setA = [bodyline_x' bodyline_y' zeros(size(bodyline_x,2),1)];
+            setB = [vx' vy' zeros(size(vx,2),1)];
+            corss_pro = cross(setA,setB);
+            norm_setA = sqrt(sum(abs(setA).^2,2));
+            svxy = corss_pro(:,3)./norm_setA;
+            fprintf(write_file_svxy, fmtString, svxy');   % sideway velocity
+    %                 dir_vxy = atan2d(vy,vx);
+    %                 angle_for_svxy = dir_vxy-angle_v1;
+    %                 fprintf(write_file_svxy, fmtString, vxy.*sind(angle_for_svxy));
+
+        end
+
+        fclose(write_file_x);
+        fclose(write_file_y);
+        fclose(write_file_vx);
+        fclose(write_file_vy);
+        fclose(write_file_vxy);
+        fclose(write_file_dir);
+        fclose(write_file_dd);
+        fclose(write_file_dd2);
+        fclose(write_file_ecc);
+        fclose(write_file_angle);
+        fclose(write_file_dis);
+        fclose(write_file_svxy);
+
+        % save input data used for generating this result
+        record = {records{data_th,:}};
+        T = cell2table(record);
+        T.Properties.VariableNames = confTable.Properties.VariableNames;
+        writetable(T, [dataFileName '_config.csv']);
+    end
     
     % show tracking result
     dlg = trackingResultDialog({num2str(data_th)});
@@ -2512,43 +2567,70 @@ addpath(videoPath);
 
 % select roi for every movie
 for data_th = 1:size(records,1)
-    if records{data_th, 1} && records{data_th, 10}
+    if records{data_th, 1}
         shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
         frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
-        roiFileName = strcat(videoPath,shuttleVideo.name,'_tpro/roi.png');
+        for i=1:16 % TODO: should not be limited
+            % create new roi window if it does not exist
+            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+                figureWindow = figure('name','selecting roi','NumberTitle','off');
+            end
 
-        % create new roi window if it does not exist
-        if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-            figureWindow = figure('name','selecting roi','NumberTitle','off');
-        end
-        
-        % change title message
-        set(figureWindow, 'name', ['select roi for ', shuttleVideo.name]);
+            % change title message
+            set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
 
-        if exist(roiFileName, 'file')
-            roiImage = imread(roiFileName);
-            roiImage = im2double(roiImage);
-            img = double(grayImage).*imcomplement(roiImage);
-            img = uint8(img);
-        else
-            img = frameImage;
-        end
-        
-        % show polygon selection window
-        newRoiImage = roipoly(img);
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [videoPath shuttleVideo.name '_tpro/roi' idx '.png'];
+            if exist(roiFileName, 'file')
+                roiImage = imread(roiFileName);
+                roiImage = im2double(roiImage);
+                img = double(grayImage).*(imcomplement(roiImage*0.5));
+                img = uint8(img);
+            else
+                img = frameImage;
+            end
 
-        % if canceled, do not show and save roi file
-        if ~isempty(newRoiImage)
-            img = double(grayImage).*imcomplement(newRoiImage);
-            img = uint8(img);
-            imshow(img)
+            % show polygon selection window
+            newRoiImage = roipoly(img);
 
-            % write roi file
-            imwrite(newRoiImage, roiFileName);
+            % if canceled, do not show and save roi file
+            if ~isempty(newRoiImage)
+                img = double(grayImage).*imcomplement(newRoiImage);
+                img = uint8(img);
+                imshow(img)
+
+                % write roi file
+                imwrite(newRoiImage, roiFileName);
+            end
+            
+            % confirm to set next ROI
+            roiFileName = [videoPath shuttleVideo.name '_tpro/roi' num2str(i+1) '.png'];
+            if records{data_th, 10} <= i || ~exist(roiFileName, 'file')
+                selection = questdlg('Do you create one more ROI for same movie?',...
+                                     'Confirmation',...
+                                     'Yes','No','No');
+                switch selection
+                case 'Yes'
+                    % nothing to do; show next dialog
+                case 'No'
+                    break;
+                otherwise
+                    break;
+                end
+            end
         end
         clear frameImage;
+
+        % update ROI param in configuration
+        record = {records{data_th,:}};
+        record{10} = i;
+        confFileName = [videoPath videoFiles{data_th} '_tpro/input_video_control.csv'];
+        status = saveInputControlFile(confFileName, record);
+        if ~status
+            errordlg(['failed to save a configuration file : ' confFileName], 'Error');
+        end
     end
 end
 
