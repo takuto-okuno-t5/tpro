@@ -746,10 +746,12 @@ function showFrameInAxes(hObject, handles, frameNum)
             tmX = Q_loc_estimateX(ff:fe,fn);
             tmY = Q_loc_estimateY(ff:fe,fn);
             % check ROI
-            for j = length(tmX):-1:1
-                if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
-                    tmX(j) = NaN;
-                    tmY(j) = NaN;
+            if sharedInst.currentROI > 0
+                for j = length(tmX):-1:1
+                    if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                        tmX(j) = NaN;
+                        tmY(j) = NaN;
+                    end
                 end
             end
             plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
@@ -775,10 +777,12 @@ function showFrameInAxes(hObject, handles, frameNum)
                 tmX = Q_loc_estimateX(t-st:t,fn);
                 tmY = Q_loc_estimateY(t-st:t,fn);
                 % check ROI
-                for j = length(tmX):-1:1
-                    if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
-                        tmX(j) = NaN;
-                        tmY(j) = NaN;
+                if sharedInst.currentROI > 0
+                    for j = length(tmX):-1:1
+                        if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                            tmX(j) = NaN;
+                            tmY(j) = NaN;
+                        end
                     end
                 end
                 plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
