@@ -2572,6 +2572,18 @@ for data_th = 1:size(records,1)
         frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
+        % show startEndDialog
+        roiFileName = [videoPath shuttleVideo.name '_tpro/roi.png'];
+        csvFileName = [videoPath shuttleVideo.name '_tpro/roi.csv'];
+        if ~exist(roiFileName, 'file') && ~exist(csvFileName, 'file')
+            [dlg, selectType] = selectRoiWayDialog({});
+            delete(dlg);
+
+            if selectType < 0
+                continue;
+            end
+        end
+
         for i=1:16 % TODO: should not be limited
             % create new roi window if it does not exist
             if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
