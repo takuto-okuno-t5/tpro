@@ -642,9 +642,18 @@ for data_th = 1:size(records,1)
     % ROI
     roi_mask = [];
     roiMasks = {};
+    csvFileName = [confPath 'roi.csv'];
+    if exist(csvFileName, 'file')
+        roiTable = readtable(csvFileName,'ReadVariableNames',false);
+        roiFiles = table2cell(roiTable);
+    end
     for i=1:roiNum
-        if i==1 idx=''; else idx=num2str(i); end
-        roiFileName = [confPath 'roi' idx '.png'];
+        if exist(csvFileName, 'file')
+            roiFileName = roiFiles{i};
+        else
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [confPath 'roi' idx '.png'];
+        end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
             roiMasks = [roiMasks, im2double(img)];
@@ -1225,9 +1234,18 @@ for data_th = 1:size(records,1)
     % load roi
     roiImage = [];
     roiMasks = {};
+    csvFileName = [confPath 'roi.csv'];
+    if exist(csvFileName, 'file')
+        roiTable = readtable(csvFileName,'ReadVariableNames',false);
+        roiFiles = table2cell(roiTable);
+    end
     for i=1:roiNum
-        if i==1 idx=''; else idx=num2str(i); end
-        roiFileName = [confPath 'roi' idx '.png'];
+        if exist(csvFileName, 'file')
+            roiFileName = roiFiles{i};
+        else
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [confPath 'roi' idx '.png'];
+        end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
             roiMasks = [roiMasks, im2double(img)];
@@ -2575,63 +2593,27 @@ for data_th = 1:size(records,1)
         % show startEndDialog
         roiFileName = [videoPath shuttleVideo.name '_tpro/roi.png'];
         csvFileName = [videoPath shuttleVideo.name '_tpro/roi.csv'];
-        if ~exist(roiFileName, 'file') && ~exist(csvFileName, 'file')
-            [dlg, selectType] = selectRoiWayDialog({});
+        if exist(csvFileName, 'file')
+            selectedType = 2;
+        elseif exist(roiFileName, 'file')
+            selectedType = 1;
+        else
+            [dlg, selectedType] = selectRoiWayDialog({});
             delete(dlg);
 
-            if selectType < 0
+            if selectedType < 0
                 continue;
             end
         end
 
-        for i=1:16 % TODO: should not be limited
-            % create new roi window if it does not exist
-            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-                figureWindow = figure('name','selecting roi','NumberTitle','off');
+        % select fixed ROI image files or create new ROI images
+        if selectedType == 2
+            while true
+                i = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
+                if i>=0 break; end
             end
-
-            % change title message
-            set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
-
-            if i==1 idx=''; else idx=num2str(i); end
-            roiFileName = [videoPath shuttleVideo.name '_tpro/roi' idx '.png'];
-            if exist(roiFileName, 'file')
-                roiImage = imread(roiFileName);
-                roiImage = im2double(roiImage);
-                img = double(grayImage).*(imcomplement(roiImage*0.5));
-                img = uint8(img);
-            else
-                img = frameImage;
-            end
-
-            % show polygon selection window
-            newRoiImage = roipoly(img);
-
-            % if canceled, do not show and save roi file
-            if ~isempty(newRoiImage)
-                img = double(grayImage).*imcomplement(newRoiImage);
-                img = uint8(img);
-                imshow(img)
-
-                % write roi file
-                imwrite(newRoiImage, roiFileName);
-            end
-            
-            % confirm to set next ROI
-            roiFileName = [videoPath shuttleVideo.name '_tpro/roi' num2str(i+1) '.png'];
-            if records{data_th, 10} <= i || ~exist(roiFileName, 'file')
-                selection = questdlg('Do you create one more ROI for same movie?',...
-                                     'Confirmation',...
-                                     'Yes','No','No');
-                switch selection
-                case 'Yes'
-                    % nothing to do; show next dialog
-                case 'No'
-                    break;
-                otherwise
-                    break;
-                end
-            end
+        else
+            i = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, records{data_th, 10});
         end
         clear frameImage;
 
@@ -2656,6 +2638,129 @@ end
 set(handles.text14, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
+
+
+%% create new ROI images
+function count = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, roiNum)
+for i=1:16 % TODO: should not be limited
+    % create new roi window if it does not exist
+    if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
+        figureWindow = figure('name','selecting roi','NumberTitle','off');
+    end
+
+    % change title message
+    set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
+
+    if i==1 idx=''; else idx=num2str(i); end
+    roiFileName = [videoPath shuttleVideo.name '_tpro/roi' idx '.png'];
+    if exist(roiFileName, 'file')
+        roiImage = imread(roiFileName);
+        roiImage = im2double(roiImage);
+        img = double(grayImage).*(imcomplement(roiImage*0.5));
+        img = uint8(img);
+    else
+        img = frameImage;
+    end
+
+    % show polygon selection window
+    newRoiImage = roipoly(img);
+
+    % if canceled, do not show and save roi file
+    if ~isempty(newRoiImage)
+        img = double(grayImage).*imcomplement(newRoiImage);
+        img = uint8(img);
+        imshow(img)
+
+        % write roi file
+        imwrite(newRoiImage, roiFileName);
+    end
+
+    % confirm to set next ROI
+    roiFileName = [videoPath shuttleVideo.name '_tpro/roi' num2str(i+1) '.png'];
+    if roiNum <= i || ~exist(roiFileName, 'file')
+        selection = questdlg('Do you create one more ROI for same movie?',...
+                             'Confirmation',...
+                             'Yes','No','No');
+        switch selection
+        case 'Yes'
+            % nothing to do; show next dialog
+        case 'No'
+            break;
+        otherwise
+            break;
+        end
+    end
+end
+count = i;
+
+%% select ROI files
+function count = selectRoiFiles(csvFileName, shuttleVideo, grayImage)
+if exist(csvFileName, 'file')
+    roiTable = readtable(csvFileName,'ReadVariableNames',false);
+    roiFiles = table2cell(roiTable);
+    fileCount = length(roiFiles);
+else
+    % show file select modal
+    [fileNames, imagePath, filterIndex] = uigetfile( {  ...
+        '*.*',  'All Files (*.*)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'on', '.');
+
+    if ~filterIndex
+        fileCount = 0;
+    elseif ischar(fileNames)
+        fileCount = 1;
+    else
+        fileCount = size(fileNames,2);
+    end
+
+    % process all selected files
+    roiFiles = {};
+    for i = 1:fileCount
+        if fileCount > 1
+            fileName = fileNames{i};
+        else
+            fileName = fileNames;
+        end
+        roiFiles = [roiFiles; [imagePath fileName]];
+    end
+end
+
+for i=1:fileCount
+    % create new roi window
+    figureWindow = figure('name','selecting roi','NumberTitle','off');
+    set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
+
+    roiFileName = roiFiles{i};
+    if exist(roiFileName, 'file')
+        try
+            roiImage = imread(roiFileName);
+            roiImage = im2double(roiImage);
+            img = double(grayImage).*(imcomplement(roiImage*0.5));
+            img = uint8(img);
+        catch e
+            errordlg(['failed to load a ROI image file : ' roiFileName], 'Error');
+            count = 0;
+            return;
+        end
+        imshow(img)
+    end
+    pause(0.1);
+end
+
+% save roi.csv
+T = array2table(roiFiles);
+writetable(T,csvFileName,'WriteVariableNames',false);
+count = fileCount;
+
+selection = questdlg('Do you finish to select ROI images?',...
+                     'Confirmation',...
+                     'Yes','Reset','Yes');
+switch selection
+case 'Reset'
+    delete(csvFileName);
+    count = -1;
+end
 
 
 function [ keep_direction, XY_update_to_keep_direction, keep_ecc ] = PD_wing( H, img, img_gray, blob_img_logical, X_update2, Y_update2 )

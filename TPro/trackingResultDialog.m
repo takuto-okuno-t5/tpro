@@ -172,9 +172,18 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % load roi image file
     roiMaskImage = [];
     roiMasks = {};
+    csvFileName = [sharedInst.confPath 'roi.csv'];
+    if exist(csvFileName, 'file')
+        roiTable = readtable(csvFileName,'ReadVariableNames',false);
+        roiFiles = table2cell(roiTable);
+    end
     for i=1:sharedInst.roiNum
-        if i==1 idx=''; else idx=num2str(i); end
-        roiFileName = [sharedInst.confPath 'roi' idx '.png'];
+        if exist(csvFileName, 'file')
+            roiFileName = roiFiles{i};
+        else
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [sharedInst.confPath 'roi' idx '.png'];
+        end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
             roiMasks = [roiMasks, im2double(img)];
