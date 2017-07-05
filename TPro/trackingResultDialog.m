@@ -719,7 +719,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         else
             fy = Q_loc_estimateY(t,listFly);
             fx = Q_loc_estimateX(t,listFly);
-            if currentMask(round(fx),round(fy)) > 0
+            if isnan(fy) || isnan(fx) || currentMask(round(fx),round(fy)) > 0
                 plot(fy,fx,'or'); % the actual detecting
             end
         end

@@ -2268,7 +2268,8 @@ end
 set(handles.pushbutton6, 'Enable', 'on');
 
 roiFileName = [confPath 'roi.png'];
-if ~exist(roiFileName, 'file')
+csvFileName = [confPath 'roi.csv'];
+if ~exist(roiFileName, 'file') && ~exist(csvFileName, 'file')
     return; % no roi image file
 end
 
