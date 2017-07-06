@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 30-Jun-2017 02:15:14
+% Last Modified by GUIDE v2.5 05-Jul-2017 12:35:46
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -126,6 +126,14 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.isModified = 0;
     sharedInst.annoStart = 0;
     sharedInst.annoKey = -1;
+    sharedInst.mmPerPixel = records{9};
+
+    sharedInst.roiNum = records{10};
+    sharedInst.gaussH = records{13};
+    sharedInst.gaussSigma = records{14};
+    sharedInst.binaryTh = records{8} * 100;
+    sharedInst.binaryAreaPixel = records{15};
+    sharedInst.blobSeparateRate = records{17};
 
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
@@ -141,12 +149,10 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_data = keep_data;
     sharedInst.annotation = annotation;
 
-    % calc velocity
-    sharedInst.vxy = calcVxy(keep_data{3}, keep_data{4});
-    sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
-    sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
-    sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
-    sharedInst.av = calcAngularVelocity(keep_data{8});
+    % fix old parameters
+    if sharedInst.mmPerPixel <= 0
+        sharedInst.mmPerPixel = 0.1;
+    end
 
     sharedInst.originalImage = [];
 
@@ -154,6 +160,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.text6, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
     set(handles.edit1, 'String', sharedInst.frameNum);
+    set(handles.edit3, 'String', sharedInst.mmPerPixel);
     set(handles.checkbox1, 'Value', sharedInst.showNumber);
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
@@ -165,11 +172,11 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     % set fly list box
     flyNum = size(keep_data{1}, 2);
-    listItem = [];
+    listItems = [];
     for i = 1:flyNum
-        listItem = [listItem;{i}];
+        listItems = [listItems;{i}];
     end
-    set(handles.popupmenu3,'String',listItem);
+    set(handles.popupmenu3,'String',listItems);
 
     % load background image
     videoName = sharedInst.shuttleVideo.name;
@@ -205,6 +212,9 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % load annotation label
     loadAnnotationLabel(handles);
     
+    % calc velocity data
+    calcVelocitys(handles, keep_data);
+
     % show long params
     showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
     showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
@@ -215,6 +225,19 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     %uiwait(handles.figure1); % wait for finishing dialog
+end
+
+function calcVelocitys(handles, keep_data)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.vxy = calcVxy(keep_data{3}, keep_data{4}) * sharedInst.fpsNum * sharedInst.mmPerPixel;
+    sharedInst.accVxy = calcDifferential2(sharedInst.vxy);
+    bin = calcBinarize(sharedInst.accVxy, 0);
+    sharedInst.updownVxy = calcDifferential(bin);
+    sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
+    sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
+    sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
+    sharedInst.av = calcAngularVelocity(keep_data{8});
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
 function loadAnnotationLabel(handles)
@@ -259,6 +282,24 @@ function dir = calcDir(dy, dx)
         v1(:,check_v1==0) = NaN;
         dir(i,:) = atan2d(v1(2,:),v1(1,:));
     end
+end
+
+function xx = calcDifferential(x)
+    fly_num = size(x, 2);
+    xx = diff(x);
+    xx = [zeros(1,fly_num);xx];
+end
+
+function xx = calcDifferential2(x)
+    fly_num = size(x, 2);
+    xx = diff(x);
+    xx = [xx;zeros(1,fly_num)];
+end
+
+function matout = calcBinarize(mat, threshold)
+    mat(mat <= threshold) = 0;
+    mat(mat > threshold) = 1;    
+    matout = mat;
 end
 
 function sideways = calcSideways(x, y, dir) 
@@ -923,6 +964,64 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     end
 end
 
+function edit3_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    mmPerPixel = str2double(get(hObject,'String'));
+    if isnan(mmPerPixel) || mmPerPixel <= 0
+        set(hObject, 'String', sharedInst.mmPerPixel);
+        return;
+    end
+    sharedInst.mmPerPixel = mmPerPixel;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    guidata(hObject, handles);  % Update handles structure
+    
+    % update configuration file
+    saveConfigurationFile(handles);
+    
+    % calc velocity data
+    calcVelocitys(handles, sharedInst.keep_data);
+
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
+    showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
+
+    % show first frame
+    showFrameInAxes(hObject, handles, sharedInst.startFrame);
+end
+
+% --- Executes during object creation, after setting all properties.
+function edit3_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+
+% --------------------------------------------------------------------
+function Untitled_14_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_14 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_15_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_15 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    trapezoidNNCluster(handles);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -1051,8 +1150,8 @@ function showFrameInAxes(hObject, handles, frameNum)
     showLongAxesTimeLine(handles, t, listFly);
 
     % show short params
-    showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
-    showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
+    axValue = showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
+    axValue = showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 
     % show statistics information
     set(handles.text15, 'String', [num2str(round(fy)) ',' num2str(round(fx))]);
@@ -1060,6 +1159,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     set(handles.text19, 'String', sharedInst.sidewaysVelocity(t,listFly));
     set(handles.text21, 'String', sharedInst.keep_data{8}(t,listFly));
     set(handles.text23, 'String', sharedInst.keep_data{7}(t,listFly));
+    set(handles.text30, 'String', axValue);
     annoNum = sharedInst.annotation(t,listFly);
     if annoNum > 0
         if isempty(sharedInst.annoLabel)
@@ -1071,6 +1171,9 @@ function showFrameInAxes(hObject, handles, frameNum)
         annoStr = '--';
     end
     set(handles.text25, 'String', annoStr);
+    
+    % reset current axes (prevent miss click)
+    axes(handles.axes1); % set drawing area
     
     % show detected count
     set(handles.text8, 'String', active_num);
@@ -1135,6 +1238,17 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
             yval = [];
             ymin = 0;
             ymax = 0;
+        otherwise
+            data = getappdata(handles.figure1, type); % get data
+            if isnan(data)
+                yval = [];
+                ymin = 0;
+                ymax = 0;
+            else
+                yval = data(:,listFly);
+                ymin = min(yval);
+                ymax = max(yval);
+            end
     end
     axes(hObject); % set drawing area
     cla;
@@ -1187,7 +1301,7 @@ function showLongAxesTimeLine(handles, t, listFly)
 end
 
 %% show short axis data function
-function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
+function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     img_h = size(sharedInst.bgImage,1);
     img_w = size(sharedInst.bgImage,2);
@@ -1209,6 +1323,7 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     switch type
         case 'velocity'
             yval = sharedInst.vxy((t-st):(t+ed),listFly);
+            value = sharedInst.vxy(t,listFly);
             ymin = 0;
             ymax = max(yval);
             if ymax < 10
@@ -1216,18 +1331,22 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             end
         case 'x velocity'
             yval = sharedInst.keep_data{4}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{4}(t,listFly);
             ymin = min(yval);
             ymax = max(yval);
         case 'y velocity'
             yval = sharedInst.keep_data{3}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{3}(t,listFly);
             ymin = min(yval);
             ymax = max(yval);
         case 'sideways'
             yval = sharedInst.sideways((t-st):(t+ed),listFly);
+            value = sharedInst.sideways(t,listFly);
             ymin = 0;
             ymax = 1;
         case 'sideways velocity'
             yval = sharedInst.sidewaysVelocity((t-st):(t+ed),listFly);
+            value = sharedInst.sidewaysVelocity(t,listFly);
             ymin = 0;
             ymax = max(yval);
             if ymax < 10
@@ -1235,28 +1354,47 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             end            
         case 'x'
             yval = sharedInst.keep_data{2}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{2}(t,listFly);
             ymin = 0;
             ymax = img_w;
         case 'y'
             yval = sharedInst.keep_data{1}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{1}(t,listFly);
             ymin = 0;
             ymax = img_h;
         case 'angle'
             yval = sharedInst.keep_data{8}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{8}(t,listFly);
             ymin = -90;
             ymax = 90;
         case 'angle velocity'
             yval = sharedInst.av((t-st):(t+ed),listFly);
+            value = sharedInst.av(t,listFly);
             ymin = -90;
             ymax = 90;
         case 'circularity'
             yval = sharedInst.keep_data{7}((t-st):(t+ed),listFly);
+            value = sharedInst.keep_data{7}(t,listFly);
             ymin = 0;
             ymax = 1;
         case '--'
             yval = [];
+            value = 0;
             ymin = 0;
             ymax = 0;
+        otherwise
+            data = getappdata(handles.figure1, type); % get data
+            if isnan(data)
+                yval = [];
+                value = 0;
+                ymin = 0;
+                ymax = 0;
+            else
+                yval = data((t-st):(t+ed),listFly);
+                value = data(t,listFly);
+                ymin = min(yval);
+                ymax = max(yval);
+            end
     end
     
     axes(hObject); % set drawing area
@@ -1301,7 +1439,7 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     end
     % plot recoding annotation
     if sharedInst.annoStart > 0
-        xv = [sharedInst.annoStart-0.5 sharedInst.annoStart-0.5 t+0.5 t+0.5];
+        xv = [double(sharedInst.annoStart)-0.5 double(sharedInst.annoStart)-0.5 double(t)+0.5 double(t)+0.5];
         yv = [ymin ymax ymax ymin];
         patch(xv,yv,'red','FaceAlpha',.3,'EdgeColor','none');
     end
@@ -1312,7 +1450,7 @@ function showShortAxes(hObject, handles, t, listFly, type, xtickOff)
 end
 
 function plotAnnotationBlock(ymin, ymax, lastAnnoFrame, i, annoNum)
-    xv = [lastAnnoFrame-0.5 lastAnnoFrame-0.5 i-0.5 i-0.5];
+    xv = [double(lastAnnoFrame)-0.5 double(lastAnnoFrame)-0.5 double(i)-0.5 double(i)-0.5];
     yv = [ymin ymax ymax ymin];
     CLIST = {[1 0 0] [1 1 0] [1 0 1] [0 1 1] [0 1 0] [0 0 1] [1 1 1] [1 .5 .1] [.1 .5 1]};
     cnum = mod(annoNum-1, length(CLIST)) + 1;
@@ -1400,6 +1538,33 @@ function recodeAnnotation(handles, key)
 end
 
 
+%%
+function saveConfigurationFile(handles)
+    % save configuration file
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    name = sharedInst.shuttleVideo.Name;
+    frameNum = sharedInst.shuttleVideo.NumberOfFrames;
+    frameRate = sharedInst.shuttleVideo.FrameRate;
+
+    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
+        (sharedInst.binaryTh / 100), sharedInst.mmPerPixel, sharedInst.roiNum, 200, 0, ...
+        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
+        sharedInst.frameSteps, 0.5};
+
+    try
+        T = cell2table(B);
+        confTable = readtable(sharedInst.confFileName);
+        T.Properties.VariableNames = confTable.Properties.VariableNames;
+        writetable(T,sharedInst.confFileName);
+        status = true;
+    catch e
+        status = false;
+        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
+    end
+    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
+end
+
+
 %% TPro Video file (or image folder) reader
 function videoStructs = TProVideoReader(videoPath, fileName)
     if isdir([videoPath fileName])
@@ -1433,4 +1598,219 @@ function img = TProRead(videoStructs, frameNum)
     else
         img = read(videoStructs,frameNum);
     end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% behavior classifiers
+
+function result = trapezoidThBehaviorClassifier(handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    frame_num = size(sharedInst.vxy, 1);
+    fly_num = size(sharedInst.vxy, 2);
+    result = zeros(frame_num,fly_num);
+end
+
+function result = trapezoidNNCluster(handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
+    
+    % get cells of {flynum, beginframe, endframe, 0, maxvalue, slope}
+    % TODO: this takes too much memory. so currently fly_max = 4
+    t = getTrapezoidList(sharedInst.vxy, sharedInst.updownVxy, 4);
+    updateWaitbar(0.2, hWaitBar);
+
+    % ----- clustering first level -----
+    cname = 'v_acc_nn_clustering';
+    clustered = calcClasteringAndPlot(handles, t, 100, cname);
+    updateWaitbar(0.5, hWaitBar);
+    
+    result = saveClusteredCsvAndShow(handles, t, clustered, [cname '.txt']);
+    updateWaitbar(0.6, hWaitBar);
+    
+    % add clustering result to axes
+    addClusteringResult2Axes(handles, result, [cname '_result']);
+
+    % ----- clustering deep level 2 -----
+    % TODO: cluster1,2,8,11 is just now case. 
+    cname = [cname '2'];
+    t2 = getTrapezoidListInCluster(handles, t, clustered, [1,2,8,11]);
+    
+    clustered = calcClasteringAndPlot(handles, t2, 100, cname);
+    updateWaitbar(0.8, hWaitBar);
+
+    result = saveClusteredCsvAndShow(handles, t2, clustered, [cname '.txt']);
+    updateWaitbar(0.9, hWaitBar);
+    
+    % add clustering result to axes
+    addClusteringResult2Axes(handles, result, [cname '_result']);
+
+    % delete dialog bar
+    delete(hWaitBar);
+end
+
+function updateWaitbar(rate, handle)
+    waitbar(rate, handle, [num2str(int64(100*rate)) ' %']);
+end
+
+function t2 = getTrapezoidListInCluster(handles, t, clustered, indexes)
+    spikeNum = sum(sum(clustered==indexes));
+    t2 = cell(spikeNum,1);
+    k = 1;
+    for j = 1:size(clustered,1)
+        c = clustered(j);
+        if sum(c==indexes) > 0
+            t5 = t{j}(1,:);
+            t2{k} = [t5(1) t5(2) t5(3) t5(4) t5(5) t5(6)];
+            k = k + 1;
+        end
+    end    
+end
+
+function clustered = calcClasteringAndPlot(handles, t, numCluster, cname)
+    % clastering
+    tsize = size(t,1);
+    points = zeros(tsize,2);
+    x = zeros(tsize,1);
+    y = zeros(tsize,1);
+    for j = 1:tsize
+        points(j,:) = [t{j}(1,5) t{j}(1,6)];
+        x(j) = t{j}(1,5);
+        y(j) = t{j}(1,6);
+    end
+    try
+        dist = pdist(points);
+        tree = linkage(dist,'average');
+        c = cophenet(tree,dist)
+    catch e
+        errordlg(e.message, 'Error');
+        throw(e);
+    end
+%    clustered = cluster(tree,'cutoff',1.2);
+%    clustered = cluster(tree,'maxclust',50);
+
+    % plot Scatter
+    f = figure;
+    set(f, 'name', [cname, ' scatter']); % set window title
+    scatter(x,y);
+
+    % plot dendrogram
+    f = figure;
+    set(f, 'name', [cname, ' dendrogram']); % set window title
+    [h,clustered,outperm] = dendrogram(tree, numCluster);
+    ax = gca; % current axes
+    ax.FontSize = 6;
+end
+
+function result = saveClusteredCsvAndShow(handles, t, clustered, filename)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    frame_num = size(sharedInst.vxy, 1);
+    fly_num = size(sharedInst.vxy, 2);
+    tsize = size(t,1);
+
+    result = zeros(frame_num,fly_num);
+    t2 = cell(tsize,7);
+    for j = 1:tsize
+        t3 = t{j}(1,:);
+        t2(j,:) = {t3(1) t3(2) t3(3) t3(4) t3(5) t3(6) clustered(j)};
+        result(t3(2):t3(3), t3(1)) = clustered(j);
+    end
+    T = cell2table(t2);
+    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', 'MaxVelocity', 'Slope', 'Cluster'};
+    T.Properties.VariableNames = header;
+
+    clusterFileName = [sharedInst.confPath 'output/' filename];
+    writetable(T,clusterFileName, 'delimiter', '\t');
+    winopen(clusterFileName);
+end
+
+function addClusteringResult2Axes(handles, result, itemName)
+    listItems = cellstr(get(handles.popupmenu4,'String'));
+    added = sum(strcmp(itemName, listItems));
+    if added == 0
+        listItems = [listItems;{itemName}];
+        set(handles.popupmenu4,'String',listItems);
+        set(handles.popupmenu5,'String',listItems);
+    end
+    
+    setappdata(handles.figure1,itemName,result); % update shared
+end
+
+function list = getTrapezoidList(mat, updown, fly_max)
+    frame_num = size(mat, 1);
+    fly_num = size(mat, 2);
+    if fly_max > 0
+        fly_num = fly_max;
+    end
+
+    % count spike number
+    spikeNum = sum(sum(updown~=0)) - fly_num;
+%    spikeNum = sum(updown(:,1)~=0) - 1;
+    list = cell(spikeNum,1);
+    
+    j = 1;
+    for fn = 1:fly_num
+        spikes = find(updown(:,fn) ~= 0);
+        for i = 1:(length(spikes)-1)
+            f1 = mat(spikes(i), fn);
+            f2 = mat(spikes(i+1), fn);
+            maxvalue = max([f1 f2]);
+            slope = abs((f2 - f1) / (spikes(i+1) - spikes(i)));
+            if ~isnan(slope)
+                list{j} = [fn, spikes(i), spikes(i+1), 0, maxvalue, slope];
+                j = j + 1;
+            end
+        end
+    end
+    if j < spikeNum
+        list(j:spikeNum) = [];
+    end
+end
+
+function list = getNearestNeighbor(trapezoids, hierarchy)
+    MAX_DIST = 9999;
+    sz = length(trapezoids);
+    mat = zeros(sz,sz) + MAX_DIST;
+    list = cell(floor(sz/2),1);
+    x = zeros(floor(sz/2),1);
+    y = zeros(floor(sz/2),1);
+
+    % get distance matrix
+    for i=1:(sz-1)
+        for j=(i+1):sz
+            dx = trapezoids{i}(1,5) - trapezoids{j}(1,5);
+            dy = trapezoids{i}(1,6) - trapezoids{j}(1,6);
+            mat(i,j) = sqrt(dx*dx + dy*dy);
+        end
+    end
+    % get pairs
+    for j = 1:floor(sz/2)
+        mat_min = min(min(mat));
+        if mat_min == MAX_DIST 
+          break;
+        end
+        min_pair = find(mat==mat_min);
+        p = rem(min_pair(1), sz);
+        q = floor(min_pair(1) / sz) + 1;
+        if trapezoids{p}(1,5) > trapezoids{q}(1,5)
+            maxvalue = trapezoids{p}(1,5);
+            slope = trapezoids{p}(1,6);
+        else
+            maxvalue = trapezoids{q}(1,5);
+            slope = trapezoids{q}(1,6);
+        end
+        list{j} = [trapezoids{p}(1,1), p, q, mat(min_pair(1)), maxvalue, slope];
+        x(j) = maxvalue;
+        y(j) = slope;
+        mat(p,:) = MAX_DIST;
+        mat(q,:) = MAX_DIST;
+        mat(:,p) = MAX_DIST;
+        mat(:,q) = MAX_DIST;
+    end
+    if j < floor(sz/2)
+        list(j:spikeNum) = [];
+    end
+%    T = cell2table(list);
+%    writetable(T,['testout' num2str(hierarchy) '.csv'],'WriteVariableNames',false);
 end

@@ -23,7 +23,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 20-Jun-2017 00:51:19
+    % Last Modified by GUIDE v2.5 05-Jul-2017 13:12:17
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -114,6 +114,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.isModified = false;
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
+    sharedInst.mmPerPixel = records{9};
 
     sharedInst.originalImage = [];
     sharedInst.step2Image = [];
@@ -122,6 +123,11 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
 
+    % fix old parameters
+    if sharedInst.mmPerPixel <= 0
+        sharedInst.mmPerPixel = 0.1;
+    end
+    
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
@@ -131,6 +137,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.edit2, 'String', sharedInst.endFrame);
     set(handles.edit3, 'String', sharedInst.frameSteps);
     set(handles.edit4, 'String', sharedInst.frameNum);
+    set(handles.edit5, 'String', sharedInst.mmPerPixel);
 
     set(hObject, 'name', ['Detection Optimizer for ', sharedInst.shuttleVideo.name]); % set window title
 
@@ -763,6 +770,40 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     end
 end
 
+
+function edit5_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    % Hints: get(hObject,'String') returns contents of edit5 as text
+    %        str2double(get(hObject,'String')) returns contents of edit5 as a double
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    mmPerPixel = str2double(get(hObject,'String'));
+    if isnan(mmPerPixel) || mmPerPixel <= 0
+        set(hObject, 'String', sharedInst.mmPerPixel);
+        return;
+    end
+    sharedInst.mmPerPixel = mmPerPixel;
+    sharedInst.isModified = true;
+    set(handles.pushbutton4, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    guidata(hObject, handles);  % Update handles structure
+end
+
+% --- Executes during object creation, after setting all properties.
+function edit5_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% filter and detect functions
 
@@ -975,7 +1016,7 @@ function saveConfigurationFile(handles)
     frameRate = sharedInst.shuttleVideo.FrameRate;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (sharedInst.binaryTh / 100), 0, sharedInst.roiNum, 200, 0, ...
+        (sharedInst.binaryTh / 100), sharedInst.mmPerPixel, sharedInst.roiNum, 200, 0, ...
         sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
         sharedInst.frameSteps, 0.5};
 

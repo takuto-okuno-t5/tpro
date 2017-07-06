@@ -290,7 +290,7 @@ for i = 1:size(videoFiles, 1)
         mkdir(outPathName);
     end
     
-    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0, 1, 200, 0, 12, 4, 50, 1, 0.4};
+    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0.1, 1, 200, 0, 12, 4, 50, 1, 0.4};
     status = saveInputControlFile(outputFileName, B);
     if ~status
         break;
@@ -302,13 +302,14 @@ save('./input_videos.mat', 'videoPath', 'videoFiles');
 %% save a input_video_control.csv
 function status = saveInputControlFile(outputFileName, B)
 % config header
-header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'Dmy2', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
 try
     T = cell2table(B);
-    T.Properties.VariableNames = header';
+    T.Properties.VariableNames = header;
     writetable(T,outputFileName);
     status = true;
 catch e
+    errordlg(['failed to save configuration file : ' outputFileName], 'Error');
     status = false;
 end
 
@@ -1050,9 +1051,9 @@ for data_th = 1:size(records,1)
         fclose(write_file_y);
 
         % open text file with notepad (only windows)
+        % system(['start notepad ' countFileName]);
         winopen(countFileName);
     end
-%    system(['start notepad ' countFileName]);
 
     set(handles.text9, 'String','100 %'); % done!
     pause(3); % pause 3 sec
