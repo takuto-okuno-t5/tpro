@@ -2626,6 +2626,7 @@ for data_th = 1:size(records,1)
         if selectedType == 2
             while true
                 [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
+                figureWindow = [];
                 if i>=0 break; end
             end
         else
@@ -2677,18 +2678,37 @@ for i=1:16 % TODO: should not be limited
     else
         img = frameImage;
     end
+    % show previous multi roi images
+    if i>1 && ~isempty(multiRoiImage)
+        % to color
+        if ismatrix(img)
+            redImage = uint8(double(img).*(imcomplement(multiRoiImage*0.1)));
+            img = cat(3,img,redImage,img);
+        else
+            redImage = img(:,:,2);
+            redImage = uint8(double(redImage).*(imcomplement(multiRoiImage*0.1)));
+            img(:,:,2) = redImage;
+        end
+    end
 
     % show polygon selection window
     newRoiImage = roipoly(img);
 
     % if canceled, do not show and save roi file
     if ~isempty(newRoiImage)
-        img = double(grayImage).*imcomplement(newRoiImage);
+        img = double(grayImage).*imcomplement(newRoiImage*0.5);
         img = uint8(img);
         imshow(img)
 
         % write roi file
         imwrite(newRoiImage, roiFileName);
+    else
+        newRoiImage = roiImage;
+    end
+    if i==1
+        multiRoiImage = im2double(newRoiImage);
+    else
+        multiRoiImage = multiRoiImage | im2double(newRoiImage);
     end
 
     % confirm to set next ROI
