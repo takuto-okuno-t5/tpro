@@ -128,11 +128,29 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.mmPerPixel = 0.1;
     end
     
+    % load last detection setting
+    lastConfigFile = './last_detect_config.mat';
+    if exist(lastConfigFile, 'file')
+        cf = load(lastConfigFile);
+        sharedInst.frameSteps = cf.frameSteps;
+        sharedInst.gaussH = cf.gaussH;
+        sharedInst.gaussSigma = cf.gaussSigma;
+        sharedInst.binaryTh = cf.binaryTh;
+        sharedInst.binaryAreaPixel = cf.binaryAreaPixel;
+        sharedInst.blobSeparateRate = cf.blobSeparateRate;
+        sharedInst.mmPerPixel = cf.mmPerPixel;
+        sharedInst.isModified = true;
+    end
+
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
     set(handles.checkbox1, 'Value', sharedInst.showDetectResult);
-    set(handles.pushbutton4, 'Enable', 'off')
+    if sharedInst.isModified
+        set(handles.pushbutton4, 'Enable', 'on')
+    else
+        set(handles.pushbutton4, 'Enable', 'off')
+    end
     set(handles.edit1, 'String', sharedInst.startFrame);
     set(handles.edit2, 'String', sharedInst.endFrame);
     set(handles.edit3, 'String', sharedInst.frameSteps);
@@ -1014,17 +1032,26 @@ function saveConfigurationFile(handles)
     name = sharedInst.shuttleVideo.Name;
     frameNum = sharedInst.shuttleVideo.NumberOfFrames;
     frameRate = sharedInst.shuttleVideo.FrameRate;
+    frameSteps = sharedInst.frameSteps;
+    gaussH = sharedInst.gaussH;
+    gaussSigma = sharedInst.gaussSigma;
+    binaryTh = sharedInst.binaryTh;
+    binaryAreaPixel = sharedInst.binaryAreaPixel;
+    blobSeparateRate = sharedInst.blobSeparateRate;
+    mmPerPixel = sharedInst.mmPerPixel;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (sharedInst.binaryTh / 100), sharedInst.mmPerPixel, sharedInst.roiNum, 200, 0, ...
-        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
-        sharedInst.frameSteps, 0.5};
+        (binaryTh / 100), mmPerPixel, sharedInst.roiNum, 200, 0, ...
+        gaussH, gaussSigma, binaryAreaPixel, frameSteps, blobSeparateRate};
 
     try
         T = cell2table(B);
         confTable = readtable(sharedInst.confFileName);
         T.Properties.VariableNames = confTable.Properties.VariableNames;
         writetable(T,sharedInst.confFileName);
+
+        % save last detection setting
+        save('./last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate','mmPerPixel');
         status = true;
     catch e
         status = false;

@@ -142,12 +142,16 @@ switch eventdata.DropType
         % process all dragged files
         for n = 1:numel(eventdata.Data)
             [videoPath, name, ext] = fileparts(eventdata.Data{n});
-            row = {[name ext], videoPath};
-            tebleItems = [tebleItems; row];
             videoFiles = [videoFiles; [name ext]];
         end
     case 'string'
         % nothing to do
+end
+% sort input files
+videoFiles = sort(videoFiles);
+for n = 1:length(videoFiles)
+    row = {videoFiles{n}, videoPath};
+    tebleItems = [tebleItems; row];
 end
 
 % show starting message
@@ -234,9 +238,13 @@ for i = 1:fileCount
     else
         fileName = fileNames;
     end
-    row = {fileName, videoPath};
-    tebleItems = [tebleItems; row];
     videoFiles = [videoFiles; fileName];
+end
+% sort input files
+videoFiles = sort(videoFiles);
+for n = 1:length(videoFiles)
+    row = {videoFiles{n}, videoPath};
+    tebleItems = [tebleItems; row];
 end
 
 % create config files if possible
@@ -507,6 +515,12 @@ disableAllButtons(handles);
 pause(0.01);
 
 addpath(videoPath);
+
+% delete last config cache
+lastConfigFile = './last_detect_config.mat';
+if exist(lastConfigFile, 'file')
+    delete('./last_detect_config.mat');
+end
 
 % loop for every movies
 for i = 1 : size(records,1)
