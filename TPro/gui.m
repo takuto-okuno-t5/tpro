@@ -2606,7 +2606,7 @@ for data_th = 1:size(records,1)
         frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
-        % show startEndDialog
+        % show selectRoiWayDialog
         roiFileName = [videoPath shuttleVideo.name '_tpro/roi.png'];
         csvFileName = [videoPath shuttleVideo.name '_tpro/roi.csv'];
         if exist(csvFileName, 'file')

@@ -1613,41 +1613,47 @@ end
 function result = trapezoidNNCluster(handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
-    % show wait dialog
-    hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
+    % show nnClusteringStartDialog
+    [dlg, flyIDs, numClusters] = nnClusteringStartDialog({});
+    delete(dlg);
+    if numClusters < 0
+        return;
+    end
     
-    % get cells of {flynum, beginframe, endframe, 0, maxvalue, slope}
-    % TODO: this takes too much memory. so currently fly_max = 4
-    t = getTrapezoidList(sharedInst.vxy, sharedInst.updownVxy, 4);
-    updateWaitbar(0.2, hWaitBar);
+    % ----- clustering loop -----
+    i = 0;
+    while true
+        i = i + 1;
+        cname = ['v_acc_nn_clustering' num2str(i)];
+        % show wait dialog
+        hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
+        if i==1
+            % get cells of TrapezoidList {flynum, beginframe, endframe, 0, maxvalue, slope}
+            t = getTrapezoidList(sharedInst.vxy, sharedInst.updownVxy, flyIDs);
+        else
+            t = getTrapezoidListInCluster(handles, t, clustered, clusterIDs);
+        end
+        updateWaitbar(0.2, hWaitBar);
+        
+        clustered = calcClasteringAndPlot(handles, t, numClusters, cname);
+        updateWaitbar(0.5, hWaitBar);
 
-    % ----- clustering first level -----
-    cname = 'v_acc_nn_clustering';
-    clustered = calcClasteringAndPlot(handles, t, 100, cname);
-    updateWaitbar(0.5, hWaitBar);
-    
-    result = saveClusteredCsvAndShow(handles, t, clustered, [cname '.txt']);
-    updateWaitbar(0.6, hWaitBar);
-    
-    % add clustering result to axes
-    addClusteringResult2Axes(handles, result, [cname '_result']);
+        result = saveClusteredCsvAndShow(handles, t, clustered, [cname '.txt']);
+        updateWaitbar(0.8, hWaitBar);
 
-    % ----- clustering deep level 2 -----
-    % TODO: cluster1,2,8,11 is just now case. 
-    cname = [cname '2'];
-    t2 = getTrapezoidListInCluster(handles, t, clustered, [1,2,8,11]);
-    
-    clustered = calcClasteringAndPlot(handles, t2, 100, cname);
-    updateWaitbar(0.8, hWaitBar);
+        % add clustering result to axes
+        addClusteringResult2Axes(handles, result, [cname '_result']);
 
-    result = saveClusteredCsvAndShow(handles, t2, clustered, [cname '.txt']);
-    updateWaitbar(0.9, hWaitBar);
-    
-    % add clustering result to axes
-    addClusteringResult2Axes(handles, result, [cname '_result']);
-
-    % delete dialog bar
-    delete(hWaitBar);
+        % delete dialog bar
+        delete(hWaitBar);
+        
+        % show nnClusteringContinueDialog
+        [dlg, clusterIDs, numClusters] = nnClusteringContinueDialog({});
+        delete(dlg);
+        if numClusters < 0
+            break;
+        end
+    end
 end
 
 function updateWaitbar(rate, handle)
@@ -1733,16 +1739,24 @@ function addClusteringResult2Axes(handles, result, itemName)
         set(handles.popupmenu4,'String',listItems);
         set(handles.popupmenu5,'String',listItems);
     end
-    
     setappdata(handles.figure1,itemName,result); % update shared
+
+    % update axes
+    idx = 0;
+    for i=1:length(listItems)
+        if strcmp(listItems{i},itemName)
+            idx = i; break;
+        end
+    end
+    if idx > 0
+        set(handles.popupmenu5,'Value',idx);
+        popupmenu5_Callback(handles.popupmenu5,0,handles);
+    end
 end
 
-function list = getTrapezoidList(mat, updown, fly_max)
+function list = getTrapezoidList(mat, updown, flyIDs)
     frame_num = size(mat, 1);
     fly_num = size(mat, 2);
-    if fly_max > 0
-        fly_num = fly_max;
-    end
 
     % count spike number
     spikeNum = sum(sum(updown~=0)) - fly_num;
@@ -1751,6 +1765,9 @@ function list = getTrapezoidList(mat, updown, fly_max)
     
     j = 1;
     for fn = 1:fly_num
+        if length(flyIDs) > 0 && sum(flyIDs==fn) == 0
+            continue;
+        end
         spikes = find(updown(:,fn) ~= 0);
         for i = 1:(length(spikes)-1)
             f1 = mat(spikes(i), fn);
