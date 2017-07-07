@@ -1042,8 +1042,8 @@ for data_th = 1:size(records,1)
         % cook raw data before saving
         end_row = size(X, 2);
         for row_count = 1:end_row
-            fx = X{row_count}(:);
-            fy = Y{row_count}(:);
+            fy = X{row_count}(:);
+            fx = Y{row_count}(:);
             flyNum = length(fx);
             for j = flyNum:-1:1
                 if roiMasks{i}(round(fy(j)),round(fx(j))) <= 0
@@ -2625,11 +2625,11 @@ for data_th = 1:size(records,1)
         % select fixed ROI image files or create new ROI images
         if selectedType == 2
             while true
-                i = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
+                [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
                 if i>=0 break; end
             end
         else
-            i = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, records{data_th, 10});
+            [i, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, records{data_th, 10});
         end
         clear frameImage;
 
@@ -2657,7 +2657,7 @@ checkAllButtons(handles);
 
 
 %% create new ROI images
-function count = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, roiNum)
+function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, roiNum)
 for i=1:16 % TODO: should not be limited
     % create new roi window if it does not exist
     if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
@@ -2710,7 +2710,7 @@ end
 count = i;
 
 %% select ROI files
-function count = selectRoiFiles(csvFileName, shuttleVideo, grayImage)
+function [count, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage)
 if exist(csvFileName, 'file')
     roiTable = readtable(csvFileName,'ReadVariableNames',false);
     roiFiles = table2cell(roiTable);
