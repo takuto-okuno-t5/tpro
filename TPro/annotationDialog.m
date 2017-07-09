@@ -323,11 +323,28 @@ function sv = calcSidewaysVelocity(lv, sideways)
     sv = lv .* sideways;
 end
 
-function av = calcAngularVelocity(angle) 
+%% calc angular velocity for angle (not dir)
+function av = calcAngularVelocity(angle)
+    frame_num = size(angle, 1);
     fly_num = size(angle, 2);
 
-    dfangle = diff(angle);
-    av = [zeros(1,fly_num);dfangle];
+    av = zeros(frame_num,fly_num);
+    for fly_n=1:fly_num
+        for j=1:(frame_num-1)
+            a1 = angle(j,   fly_n);
+            a2 = angle(j+1, fly_n);
+            adf2 = abs(a2 - a1);
+            if(adf2 > 135)
+                if(a2 > 0)
+                  av(j,fly_n) = (a2 - 180) - a1;
+                else
+                  av(j,fly_n) = (a2 + 180) - a1;
+                end
+            else
+                av(j,fly_n) = a2 - a1;
+            end
+        end
+    end        
 end
 
 % --- Outputs from this function are returned to the command line.
@@ -685,6 +702,9 @@ function popupmenu3_Callback(hObject, eventdata, handles)
     contents = cellstr(get(hObject,'String'));
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
