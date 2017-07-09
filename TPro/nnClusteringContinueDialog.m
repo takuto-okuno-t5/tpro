@@ -22,7 +22,7 @@ function varargout = nnClusteringContinueDialog(varargin)
 
 % Edit the above text to modify the response to help nnClusteringContinueDialog
 
-% Last Modified by GUIDE v2.5 07-Jul-2017 18:10:03
+% Last Modified by GUIDE v2.5 10-Jul-2017 00:38:59
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -77,6 +77,10 @@ function varargout = nnClusteringContinueDialog_OutputFcn(hObject, eventdata, ha
     end
     varargout{2} = ids;
     varargout{3} = str2num(get(handles.edit2,'String'));
+    contents = cellstr(get(handles.popupmenu1,'String'));
+    varargout{4} = contents{get(handles.popupmenu1,'Value')};
+    contents = cellstr(get(handles.popupmenu2,'String'));
+    varargout{5} = contents{get(handles.popupmenu2,'Value')};
 end
 
 % --- Executes when user attempts to close figure1.
@@ -145,6 +149,46 @@ function edit2_CreateFcn(hObject, eventdata, handles)
     % handles    empty - handles not created until after all CreateFcns called
 
     % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+% --- Executes on selection change in popupmenu1.
+function popupmenu1_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu1_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+% --- Executes on selection change in popupmenu2.
+function popupmenu2_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu2_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
     %       See ISPC and COMPUTER.
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');

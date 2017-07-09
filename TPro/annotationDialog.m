@@ -237,6 +237,7 @@ function calcVelocitys(handles, keep_data)
     sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
     sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
     sharedInst.av = calcAngularVelocity(keep_data{8});
+    sharedInst.ecc = keep_data{7};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -1614,7 +1615,7 @@ function result = trapezoidNNCluster(handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % show nnClusteringStartDialog
-    [dlg, flyIDs, numClusters] = nnClusteringStartDialog({});
+    [dlg, flyIDs, numClusters, type1, type2] = nnClusteringStartDialog({});
     delete(dlg);
     if numClusters < 0
         return;
@@ -1623,22 +1624,39 @@ function result = trapezoidNNCluster(handles)
     % ----- clustering loop -----
     i = 0;
     while true
+        switch type1
+        case 'velocity'
+            v1str = 'v';
+        end
+        switch type2
+        case 'acceralation'
+            v2str = 'acc';
+        case 'circularity'
+            v2str = 'cir';
+        case 'angle_velocity'
+            v2str = 'av';
+        case 'sideways'
+            v2str = 'side';
+        case 'sideways_velocity'
+            v2str = 'sv';
+        end
+            
         i = i + 1;
-        cname = ['v_acc_nn_clustering' num2str(i)];
+        cname = [v1str '_' v2str '_nn_clustering' num2str(i)];
         % show wait dialog
         hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
         if i==1
             % get cells of TrapezoidList {flynum, beginframe, endframe, 0, maxvalue, slope}
-            t = getTrapezoidList(sharedInst.vxy, sharedInst.updownVxy, flyIDs);
+            t = getTrapezoidList(handles, type1, type2, flyIDs);
         else
-            t = getTrapezoidListInCluster(handles, t, clustered, clusterIDs);
+            t = getTrapezoidListInCluster(handles, t, clustered, type1, type2, clusterIDs);
         end
         updateWaitbar(0.2, hWaitBar);
         
-        clustered = calcClasteringAndPlot(handles, t, numClusters, cname);
+        clustered = calcClasteringAndPlot(handles, t, numClusters, type1, type2, cname);
         updateWaitbar(0.5, hWaitBar);
 
-        result = saveClusteredCsvAndShow(handles, t, clustered, [cname '.txt']);
+        result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, [cname '.txt']);
         updateWaitbar(0.8, hWaitBar);
 
         % add clustering result to axes
@@ -1648,7 +1666,7 @@ function result = trapezoidNNCluster(handles)
         delete(hWaitBar);
         
         % show nnClusteringContinueDialog
-        [dlg, clusterIDs, numClusters] = nnClusteringContinueDialog({});
+        [dlg, clusterIDs, numClusters, type1, type2] = nnClusteringContinueDialog({});
         delete(dlg);
         if numClusters < 0
             break;
@@ -1660,7 +1678,8 @@ function updateWaitbar(rate, handle)
     waitbar(rate, handle, [num2str(int64(100*rate)) ' %']);
 end
 
-function t2 = getTrapezoidListInCluster(handles, t, clustered, indexes)
+function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, indexes)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     spikeNum = sum(sum(clustered==indexes));
     t2 = cell(spikeNum,1);
     k = 1;
@@ -1668,13 +1687,37 @@ function t2 = getTrapezoidListInCluster(handles, t, clustered, indexes)
         c = clustered(j);
         if sum(c==indexes) > 0
             t5 = t{j}(1,:);
-            t2{k} = [t5(1) t5(2) t5(3) t5(4) t5(5) t5(6)];
+            fn = t5(1);
+            fstart = t5(2);
+            fend = t5(3);
+            % clustering value 1
+            switch type1
+            case 'velocity'
+                vxy = sharedInst.vxy(fstart:fend, fn);
+                f2 = max(vxy);
+                f1 = min(vxy);
+                v1 = f2;
+            end
+            % clustering value 2
+            switch type2
+            case 'acceralation'
+                v2 = abs((f2 - f1) / (fend - fstart));
+            case 'circularity'
+                v2 = (1 - min(sharedInst.ecc(fstart:fend, fn))) * 100;
+            case 'angle_velocity'
+                v2 = max(sharedInst.av(fstart:fend, fn));
+            case 'sideways'
+                v2 = max(sharedInst.sideways(fstart:fend, fn)) * 100;
+            case 'sideways_velocity'
+                v2 = max(sharedInst.sidewaysVelocity(fstart:fend, fn));
+            end
+            t2{k} = [fn fstart fend t5(4) v1 v2];
             k = k + 1;
         end
     end    
 end
 
-function clustered = calcClasteringAndPlot(handles, t, numCluster, cname)
+function clustered = calcClasteringAndPlot(handles, t, numCluster, type1, type2, cname)
     % clastering
     tsize = size(t,1);
     points = zeros(tsize,2);
@@ -1709,7 +1752,7 @@ function clustered = calcClasteringAndPlot(handles, t, numCluster, cname)
     ax.FontSize = 6;
 end
 
-function result = saveClusteredCsvAndShow(handles, t, clustered, filename)
+function result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, filename)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frame_num = size(sharedInst.vxy, 1);
     fly_num = size(sharedInst.vxy, 2);
@@ -1723,7 +1766,7 @@ function result = saveClusteredCsvAndShow(handles, t, clustered, filename)
         result(t3(2):t3(3), t3(1)) = clustered(j);
     end
     T = cell2table(t2);
-    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', 'MaxVelocity', 'Slope', 'Cluster'};
+    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', type1, type2, 'Cluster'};
     T.Properties.VariableNames = header;
 
     clusterFileName = [sharedInst.confPath 'output/' filename];
@@ -1754,12 +1797,13 @@ function addClusteringResult2Axes(handles, result, itemName)
     end
 end
 
-function list = getTrapezoidList(mat, updown, flyIDs)
-    frame_num = size(mat, 1);
-    fly_num = size(mat, 2);
-
+function list = getTrapezoidList(handles, type1, type2, flyIDs)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    frame_num = size(sharedInst.vxy, 1);
+    fly_num = size(sharedInst.vxy, 2);
+    
     % count spike number
-    spikeNum = sum(sum(updown~=0)) - fly_num;
+    spikeNum = sum(sum(sharedInst.updownVxy~=0)) - fly_num;
 %    spikeNum = sum(updown(:,1)~=0) - 1;
     list = cell(spikeNum,1);
     
@@ -1768,14 +1812,31 @@ function list = getTrapezoidList(mat, updown, flyIDs)
         if length(flyIDs) > 0 && sum(flyIDs==fn) == 0
             continue;
         end
-        spikes = find(updown(:,fn) ~= 0);
+        spikes = find(sharedInst.updownVxy(:,fn) ~= 0);
         for i = 1:(length(spikes)-1)
-            f1 = mat(spikes(i), fn);
-            f2 = mat(spikes(i+1), fn);
-            maxvalue = max([f1 f2]);
-            slope = abs((f2 - f1) / (spikes(i+1) - spikes(i)));
-            if ~isnan(slope)
-                list{j} = [fn, spikes(i), spikes(i+1), 0, maxvalue, slope];
+            % clustering value 1
+            switch type1
+            case 'velocity'
+                f1 = sharedInst.vxy(spikes(i), fn);
+                f2 = sharedInst.vxy(spikes(i+1), fn);
+                v1 = max([f1 f2]);
+            end
+            % clustering value 2
+            switch type2
+            case 'acceralation'
+                v2 = abs((f2 - f1) / (spikes(i+1) - spikes(i)));
+            case 'circularity'
+                v2 = (1 - min(sharedInst.ecc(spikes(i):spikes(i+1), fn))) * 100;
+            case 'angle_velocity'
+                v2 = max(sharedInst.av(spikes(i):spikes(i+1), fn));
+            case 'sideways'
+                v2 = max(sharedInst.sideways(spikes(i):spikes(i+1), fn)) * 100;
+            case 'sideways_velocity'
+                v2 = max(sharedInst.sidewaysVelocity(spikes(i):spikes(i+1), fn));
+            end
+            
+            if ~isnan(v2)
+                list{j} = [fn, spikes(i), spikes(i+1), 0, v1, v2];
                 j = j + 1;
             end
         end
