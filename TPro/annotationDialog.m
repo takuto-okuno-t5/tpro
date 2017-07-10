@@ -1271,6 +1271,10 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
                 ymax = max(yval);
             end
     end
+    if ymin==ymax
+        ymax = ymin + 1;
+    end
+    
     axes(hObject); % set drawing area
     cla;
     if isempty(yval)
@@ -1416,6 +1420,9 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
                 ymin = min(yval);
                 ymax = max(yval);
             end
+    end
+    if ymin==ymax
+        ymax = ymin + 1;
     end
     
     axes(hObject); % set drawing area
@@ -1700,7 +1707,11 @@ end
 
 function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, indexes)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    spikeNum = sum(sum(clustered==indexes));
+    spikeNum = 0;
+    for j = 1:size(indexes,2)
+        spikeNum = spikeNum + sum(clustered==indexes(j));
+    end
+    
     t2 = cell(spikeNum,1);
     k = 1;
     for j = 1:size(clustered,1)
