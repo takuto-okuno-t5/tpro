@@ -52,6 +52,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to annotationDialog (see VARARGIN)
+    addpath('./io');
 
     % Choose default command line output for trackingResultDialog
     handles.output = hObject;
@@ -1567,68 +1568,6 @@ function recodeAnnotation(handles, key)
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
-
-%%
-function saveConfigurationFile(handles)
-    % save configuration file
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    name = sharedInst.shuttleVideo.Name;
-    frameNum = sharedInst.shuttleVideo.NumberOfFrames;
-    frameRate = sharedInst.shuttleVideo.FrameRate;
-
-    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (sharedInst.binaryTh / 100), sharedInst.mmPerPixel, sharedInst.roiNum, 200, 0, ...
-        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
-        sharedInst.frameSteps, 0.5};
-
-    try
-        T = cell2table(B);
-        confTable = readtable(sharedInst.confFileName);
-        T.Properties.VariableNames = confTable.Properties.VariableNames;
-        writetable(T,sharedInst.confFileName);
-        status = true;
-    catch e
-        status = false;
-        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
-    end
-    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-end
-
-
-%% TPro Video file (or image folder) reader
-function videoStructs = TProVideoReader(videoPath, fileName)
-    if isdir([videoPath fileName])
-        videoStructs = struct;
-        videoStructs.Name = fileName;
-        videoStructs.name = fileName;
-        videoStructs.FrameRate = 30; % not sure. just set 30
-        listing = dir([videoPath fileName]);
-        files = cell(size(listing,1)-2,1);
-        for i = 1:(size(listing,1)-2) % not include '.' and '..'
-            files{i} = listing(i+2).name;
-        end
-        files = sort(files);
-        videoStructs.files = files;
-        videoStructs.videoPath = videoPath;
-        videoStructs.NumberOfFrames = size(files,1);
-    else
-        videoStructs = VideoReader([videoPath fileName]);
-    end
-end
-
-%%
-function img = TProRead(videoStructs, frameNum)
-    if isfield(videoStructs, 'files')
-        try
-            filename = [videoStructs.videoPath videoStructs.Name '/' char(videoStructs.files(frameNum))];
-            img = imread(filename);
-        catch e
-            errordlg(['failed to read image file : ' videoStructs.files(frameNum)], 'Error');
-        end
-    else
-        img = read(videoStructs,frameNum);
-    end
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% behavior classifiers

@@ -52,6 +52,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to trackingResultDialog (see VARARGIN)
+    addpath('./io');
 
     % Choose default command line output for trackingResultDialog
     handles.output = hObject;
@@ -810,40 +811,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     % show detected count
     set(handles.text8, 'String', active_num);
     guidata(hObject, handles);    % Update handles structure
-end
-
-
-%% TPro Video file (or image folder) reader
-function videoStructs = TProVideoReader(videoPath, fileName)
-    if isdir([videoPath fileName])
-        videoStructs = struct;
-        videoStructs.Name = fileName;
-        videoStructs.name = fileName;
-        videoStructs.FrameRate = 30; % not sure. just set 30
-        listing = dir([videoPath fileName]);
-        files = cell(size(listing,1)-2,1);
-        for i = 1:(size(listing,1)-2) % not include '.' and '..'
-            files{i} = listing(i+2).name;
-        end
-        files = sort(files);
-        videoStructs.files = files;
-        videoStructs.videoPath = videoPath;
-        videoStructs.NumberOfFrames = size(files,1);
-    else
-        videoStructs = VideoReader([videoPath fileName]);
-    end
-end
-
-%%
-function img = TProRead(videoStructs, frameNum)
-    if isfield(videoStructs, 'files')
-        try
-            filename = [videoStructs.videoPath videoStructs.Name '/' char(videoStructs.files(frameNum))];
-            img = imread(filename);
-        catch e
-            errordlg(['failed to read image file : ' videoStructs.files(frameNum)], 'Error');
-        end
-    else
-        img = read(videoStructs,frameNum);
-    end
 end

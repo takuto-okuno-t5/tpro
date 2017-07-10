@@ -52,6 +52,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to detectoptimizer (see VARARGIN)
+    addpath('./io');
 
     % Choose default command line output for detectoptimizer
     handles.output = hObject;
@@ -590,7 +591,10 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     % save excel setting data
-    saveConfigurationFile(handles);
+    status = saveConfigurationFile(handles);
+    if status 
+        set(handles.pushbutton4, 'Enable', 'off');
+    end
 end
 
 %% --- Executes on button press in pushbutton5.
@@ -1028,45 +1032,6 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     guidata(hObject, handles);  % Update handles structure
 end
 
-%%
-function saveConfigurationFile(handles)
-    % save configuration file
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    name = sharedInst.shuttleVideo.Name;
-    frameNum = sharedInst.shuttleVideo.NumberOfFrames;
-    frameRate = sharedInst.shuttleVideo.FrameRate;
-    frameSteps = sharedInst.frameSteps;
-    gaussH = sharedInst.gaussH;
-    gaussSigma = sharedInst.gaussSigma;
-    binaryTh = sharedInst.binaryTh;
-    binaryAreaPixel = sharedInst.binaryAreaPixel;
-    blobSeparateRate = sharedInst.blobSeparateRate;
-    mmPerPixel = sharedInst.mmPerPixel;
-
-    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (binaryTh / 100), mmPerPixel, sharedInst.roiNum, 200, 0, ...
-        gaussH, gaussSigma, binaryAreaPixel, frameSteps, blobSeparateRate};
-
-    try
-        T = cell2table(B);
-        confTable = readtable(sharedInst.confFileName);
-        T.Properties.VariableNames = confTable.Properties.VariableNames;
-        writetable(T,sharedInst.confFileName);
-
-        % save last detection setting
-        save('./last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate','mmPerPixel');
-        status = true;
-    catch e
-        status = false;
-        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
-    end
-    if status 
-        sharedInst.isModified = false;
-        set(handles.pushbutton4, 'Enable', 'off');
-    end
-    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-end
-
 %
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate)
     H = vision.BlobAnalysis;
@@ -1424,41 +1389,5 @@ function [ keep_direction ] = PD_direction(handles, blobAreas, blobCenterPoints,
             vec = vec * 0;
         end
         keep_direction(:,i) = vec;
-    end
-end
-
-
-%% TPro Video file (or image folder) reader
-function videoStructs = TProVideoReader(videoPath, fileName)
-    if isdir([videoPath fileName])
-        videoStructs = struct;
-        videoStructs.Name = fileName;
-        videoStructs.name = fileName;
-        videoStructs.FrameRate = 30; % not sure. just set 30
-        listing = dir([videoPath fileName]);
-        files = cell(size(listing,1)-2,1);
-        for i = 1:(size(listing,1)-2) % not include '.' and '..'
-            files{i} = listing(i+2).name;
-        end
-        files = sort(files);
-        videoStructs.files = files;
-        videoStructs.videoPath = videoPath;
-        videoStructs.NumberOfFrames = size(files,1);
-    else
-        videoStructs = VideoReader([videoPath fileName]);
-    end
-end
-
-%%
-function img = TProRead(videoStructs, frameNum)
-    if isfield(videoStructs, 'files')
-        try
-            filename = [videoStructs.videoPath videoStructs.Name '/' char(videoStructs.files(frameNum))];
-            img = imread(filename);
-        catch e
-            errordlg(['failed to read image file : ' videoStructs.files(frameNum)], 'Error');
-        end
-    else
-        img = read(videoStructs,frameNum);
     end
 end
