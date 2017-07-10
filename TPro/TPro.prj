@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="3314455138" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="1979533815" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -79,6 +79,10 @@
       <file>${PROJECT_ROOT}\labelConfigDialog.m</file>
       <file>${PROJECT_ROOT}\MLDropTarget.class</file>
       <file>${PROJECT_ROOT}\MLDropTarget.java</file>
+      <file>${PROJECT_ROOT}\nnClusteringContinueDialog.fig</file>
+      <file>${PROJECT_ROOT}\nnClusteringContinueDialog.m</file>
+      <file>${PROJECT_ROOT}\nnClusteringStartDialog.fig</file>
+      <file>${PROJECT_ROOT}\nnClusteringStartDialog.m</file>
       <file>${PROJECT_ROOT}\selectRoiWayDialog.fig</file>
       <file>${PROJECT_ROOT}\selectRoiWayDialog.m</file>
       <file>${PROJECT_ROOT}\startEndDialog.fig</file>
