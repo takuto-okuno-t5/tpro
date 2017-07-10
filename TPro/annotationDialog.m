@@ -1298,6 +1298,7 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
         yv = [ymin ymax ymax ymin];
         p = patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
     end
+    type = strrep(type, '_', ' ');
     text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
     hold off;
 end
@@ -1473,6 +1474,7 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     end
     % plot center line
     plot([t t], [ymin ymax], ':', 'markersize', 1.5, 'color', 'r', 'linewidth', 1.5)  % rodent 1 instead of Cz
+    type = strrep(type, '_', ' ');
     text(double(t-st+1), double(ymax*0.9+ymin*0.1), type, 'Color', [.6 .6 1], 'FontWeight','bold')
     hold off;
 end
