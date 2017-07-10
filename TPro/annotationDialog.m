@@ -1649,6 +1649,7 @@ function result = trapezoidNNCluster(handles)
     if numClusters < 0
         return;
     end
+    type3 = 'none'; % TODO: currently dummy
     
     % ----- clustering loop -----
     i = 0;
@@ -1676,16 +1677,16 @@ function result = trapezoidNNCluster(handles)
         hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
         if i==1
             % get cells of TrapezoidList {flynum, beginframe, endframe, 0, maxvalue, slope}
-            t = getTrapezoidList(handles, type1, type2, flyIDs);
+            t = getTrapezoidList(handles, type1, type2, type3, flyIDs);
         else
-            t = getTrapezoidListInCluster(handles, t, clustered, type1, type2, clusterIDs);
+            t = getTrapezoidListInCluster(handles, t, clustered, type1, type2, type3, clusterIDs);
         end
         updateWaitbar(0.2, hWaitBar);
         
-        clustered = calcClasteringAndPlot(handles, t, numClusters, type1, type2, cname);
+        clustered = calcClasteringAndPlot(handles, t, numClusters, type1, type2, type3, cname);
         updateWaitbar(0.5, hWaitBar);
 
-        result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, [cname '.txt']);
+        result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, type3, [cname '.txt']);
         updateWaitbar(0.8, hWaitBar);
 
         % add clustering result to axes
@@ -1707,7 +1708,7 @@ function updateWaitbar(rate, handle)
     waitbar(rate, handle, [num2str(int64(100*rate)) ' %']);
 end
 
-function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, indexes)
+function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, type3, indexes)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     spikeNum = 0;
     for j = 1:size(indexes,2)
@@ -1744,22 +1745,27 @@ function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, ind
             case 'sideways_velocity'
                 v2 = max(sharedInst.sidewaysVelocity(fstart:fend, fn));
             end
-            t2{k} = [fn fstart fend t5(4) v1 v2];
+            % clustering value 3
+            v3 = 0;
+
+            t2{k} = [fn fstart fend t5(4) v1 v2 v3];
             k = k + 1;
         end
     end    
 end
 
-function clustered = calcClasteringAndPlot(handles, t, numCluster, type1, type2, cname)
+function clustered = calcClasteringAndPlot(handles, t, numCluster, type1, type2, type3, cname)
     % clastering
     tsize = size(t,1);
-    points = zeros(tsize,2);
+    points = zeros(tsize,3);
     x = zeros(tsize,1);
     y = zeros(tsize,1);
+    z = zeros(tsize,1);
     for j = 1:tsize
-        points(j,:) = [t{j}(1,5) t{j}(1,6)];
+        points(j,:) = [t{j}(1,5) t{j}(1,6) t{j}(1,7)];
         x(j) = t{j}(1,5);
         y(j) = t{j}(1,6);
+        z(j) = t{j}(1,7);
     end
     try
         dist = pdist(points);
@@ -1785,21 +1791,21 @@ function clustered = calcClasteringAndPlot(handles, t, numCluster, type1, type2,
     ax.FontSize = 6;
 end
 
-function result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, filename)
+function result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, type3, filename)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frame_num = size(sharedInst.vxy, 1);
     fly_num = size(sharedInst.vxy, 2);
     tsize = size(t,1);
 
     result = zeros(frame_num,fly_num);
-    t2 = cell(tsize,7);
+    t2 = cell(tsize,8);
     for j = 1:tsize
         t3 = t{j}(1,:);
-        t2(j,:) = {t3(1) t3(2) t3(3) t3(4) t3(5) t3(6) clustered(j)};
+        t2(j,:) = {t3(1) t3(2) t3(3) t3(4) t3(5) t3(6) t3(7) clustered(j)};
         result(t3(2):t3(3), t3(1)) = clustered(j);
     end
     T = cell2table(t2);
-    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', type1, type2, 'Cluster'};
+    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', type1, type2, type3, 'Cluster'};
     T.Properties.VariableNames = header;
 
     clusterFileName = [sharedInst.confPath 'output/' filename];
@@ -1830,7 +1836,7 @@ function addClusteringResult2Axes(handles, result, itemName)
     end
 end
 
-function list = getTrapezoidList(handles, type1, type2, flyIDs)
+function list = getTrapezoidList(handles, type1, type2, type3, flyIDs)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frame_num = size(sharedInst.vxy, 1);
     fly_num = size(sharedInst.vxy, 2);
@@ -1867,9 +1873,11 @@ function list = getTrapezoidList(handles, type1, type2, flyIDs)
             case 'sideways_velocity'
                 v2 = max(sharedInst.sidewaysVelocity(spikes(i):spikes(i+1), fn));
             end
+            % clustering value 3
+            v3 = 0;
             
             if ~isnan(v2)
-                list{j} = [fn, spikes(i), spikes(i+1), 0, v1, v2];
+                list{j} = [fn, spikes(i), spikes(i+1), 0, v1, v2, v3];
                 j = j + 1;
             end
         end
