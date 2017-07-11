@@ -52,7 +52,6 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to trackingResultDialog (see VARARGIN)
-    addpath('./io');
 
     % Choose default command line output for trackingResultDialog
     handles.output = hObject;

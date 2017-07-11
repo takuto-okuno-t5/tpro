@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="1979533815" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2254482209" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -69,30 +69,14 @@
       <file>${PROJECT_ROOT}\gui.m</file>
     </fileset.main>
     <fileset.resources>
-      <file>${PROJECT_ROOT}\annotationDialog.fig</file>
-      <file>${PROJECT_ROOT}\annotationDialog.m</file>
-      <file>${PROJECT_ROOT}\detectoptimizer.fig</file>
-      <file>${PROJECT_ROOT}\detectoptimizer.m</file>
-      <file>${PROJECT_ROOT}\dndcontrol.m</file>
+      <file>${PROJECT_ROOT}\dialogs</file>
+      <file>${PROJECT_ROOT}\gui</file>
       <file>${PROJECT_ROOT}\gui.fig</file>
-      <file>${PROJECT_ROOT}\labelConfigDialog.fig</file>
-      <file>${PROJECT_ROOT}\labelConfigDialog.m</file>
-      <file>${PROJECT_ROOT}\MLDropTarget.class</file>
-      <file>${PROJECT_ROOT}\MLDropTarget.java</file>
-      <file>${PROJECT_ROOT}\nnClusteringContinueDialog.fig</file>
-      <file>${PROJECT_ROOT}\nnClusteringContinueDialog.m</file>
-      <file>${PROJECT_ROOT}\nnClusteringStartDialog.fig</file>
-      <file>${PROJECT_ROOT}\nnClusteringStartDialog.m</file>
-      <file>${PROJECT_ROOT}\selectRoiWayDialog.fig</file>
-      <file>${PROJECT_ROOT}\selectRoiWayDialog.m</file>
-      <file>${PROJECT_ROOT}\startEndDialog.fig</file>
-      <file>${PROJECT_ROOT}\startEndDialog.m</file>
-      <file>${PROJECT_ROOT}\trackingResultDialog.fig</file>
-      <file>${PROJECT_ROOT}\trackingResultDialog.m</file>
+      <file>${PROJECT_ROOT}\io</file>
     </fileset.resources>
     <fileset.package>
       <file>${PROJECT_ROOT}\annotation_label.csv</file>
-      <file>${PROJECT_ROOT}\dndcontrol_license.txt</file>
+      <file>${PROJECT_ROOT}\etc</file>
       <file>${PROJECT_ROOT}\ui</file>
     </fileset.package>
     <build-deliverables>

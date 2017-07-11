@@ -56,9 +56,11 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to gui (see VARARGIN)
-addpath('./io');
-addpath('./gui');
-addpath('./dialogs');
+if exist('./io','dir')
+    addpath('./io');
+    addpath('./gui');
+    addpath('./dialogs');
+end
 
 % init command line input
 handles.movies = {};
