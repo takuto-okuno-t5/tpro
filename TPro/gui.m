@@ -57,6 +57,8 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to gui (see VARARGIN)
 addpath('./io');
+addpath('./gui');
+addpath('./dialogs');
 
 % Choose default command line output for gui
 handles.output = hObject;

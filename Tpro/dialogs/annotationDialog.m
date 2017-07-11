@@ -1074,12 +1074,12 @@ function showFrameInAxes(hObject, handles, frameNum)
     flyNum = size(Q_loc_estimateX, 2);
     flameMax = size(Q_loc_estimateX, 1);
     listFly = sharedInst.listFly;
-    fy = Q_loc_estimateY(t,listFly);
-    fx = Q_loc_estimateX(t,listFly);
     
-    if t > size(sharedInst.X,2) || t < 1
+    if t > size(sharedInst.X,2) || t < 1 || t > size(Q_loc_estimateY,1)
         return;
     end
+    fy = Q_loc_estimateY(t,listFly);
+    fx = Q_loc_estimateX(t,listFly);
 
     % show detection result
     hold on;
