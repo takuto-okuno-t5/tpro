@@ -60,8 +60,51 @@ addpath('./io');
 addpath('./gui');
 addpath('./dialogs');
 
-% Choose default command line output for gui
-handles.output = hObject;
+% init command line input
+handles.movies = {};
+handles.template = [];
+handles.rois = {};
+handles.autobackground = 0;
+handles.autodetect = 0;
+handles.autotracking = 0;
+handles.autofinish = 0;
+
+% load command line input
+i = 1;
+while true
+	if i > size(varargin, 2)
+        break;
+    end
+    switch varargin{i}
+        case {'-c','--conf'}
+            handles.template = varargin{i+1};
+            i = i + 1;
+        case {'-r','--roi'}
+            handles.rois = [handles.rois varargin{i+1}];
+            i = i + 1;
+        case {'-b','--background'}
+            handles.autobackground = 1;
+        case {'-d','--detect'}
+            handles.autodetect = 1;
+        case {'-t','--tracking'}
+            handles.autotracking = 1;
+        case {'-f','--finish'}
+            handles.autofinish = 1;
+        case {'-h','--help'}
+            disp('usage: gui [options] movies ...');
+            disp('  -c, --conf file     detection and tracking configuration template [file]');
+            disp('  -r, --roi file      ROI image [file]');
+            disp('  -b, --background    force to start background detection');
+            disp('  -d, --detect        force to start detection');
+            disp('  -t, --tracking      force to start tracking');
+            disp('  -f, --finish        force to finish tpro after processing');
+            disp('  -h, --help          show tpro command line help');
+            handles.autofinish = 1;
+        otherwise
+            handles.movies = [handles.movies varargin{i}];
+    end
+    i = i + 1;
+end
 guidata(hObject, handles);
 
 % set window title
@@ -113,8 +156,8 @@ dndobj = dndcontrol(jPanel, hContainer);
 dndobj.DropFileFcn = @onDropFile;
 dndobj.DropStringFcn = @onDropFile;
 
-% UIWAIT makes gui wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+% working with command line mode
+runCommandLineMode(hObject, eventdata, handles);
 
 
 %% 
@@ -168,7 +211,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-status = createConfigFiles([videoPath '/'], videoFiles);
+status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
 
 time = toc;
 
@@ -186,6 +229,75 @@ checkAllButtons(handles);
 handles.uitable2.Data = tebleItems;
 
 
+%% TPro command line mode
+function runCommandLineMode(hObject, eventdata, handles)
+if length(handles.movies) > 0
+    videoFiles = {};
+    tebleItems = {};
+    for i=1:length(handles.movies)
+        [videoPath, name, ext] = fileparts(handles.movies{i});
+        videoFiles = [videoFiles; [name ext]];
+    end
+    % sort input files
+    videoFiles = sort(videoFiles);
+    for n = 1:length(videoFiles)
+        row = {videoFiles{n}, videoPath};
+        tebleItems = [tebleItems; row];
+    end
+    % create config files if possible
+    status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+    
+    % create roi files
+    if length(handles.rois) > 0
+        roiFiles = {};
+        for i=1:length(handles.rois)
+            roiFileName = handles.rois{i};
+            if exist(roiFileName, 'file')
+                roiImage = imread(roiFileName);
+                clear roiImage;
+            end
+            roiFiles = [roiFiles; roiFileName];
+        end
+
+        for i=1:length(handles.movies)
+            confPath = [videoPath '/' videoFiles{i} '_tpro/'];
+            csvFileName = [confPath 'roi.csv'];
+            confFileName = [confPath 'input_video_control.csv'];
+
+            % save roi.csv
+            T = array2table(roiFiles);
+            writetable(T,csvFileName,'WriteVariableNames',false);
+
+            % update ROI param in configuration
+            confTable = readtable(confFileName);
+            record = table2cell(confTable);
+            record{10} = length(roiFiles);
+            status = saveInputControlFile(confFileName, record);
+            if ~status
+                errordlg(['failed to save a configuration file : ' confFileName], 'Error');
+            end
+        end
+    end
+
+    % update uitable
+    handles.uitable2.Data = tebleItems;
+    checkAllButtons(handles);
+    pause(0.01);
+end
+if handles.autobackground
+    pushbutton2_Callback(handles.pushbutton2, eventdata, handles)
+end
+if handles.autodetect
+    pushbutton4_Callback(handles.pushbutton4, eventdata, handles)
+end
+if handles.autotracking
+    pushbutton5_Callback(handles.pushbutton5, eventdata, handles)
+end
+if handles.autofinish
+    delete(hObject);
+end
+
+
 %% --- Outputs from this function are returned to the command line.
 function varargout = gui_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -194,7 +306,7 @@ function varargout = gui_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
-varargout{1} = handles.output;
+varargout{1} = [];
 
 
 %% prepare--- Executes on button press in pushbutton1.
@@ -251,7 +363,7 @@ for n = 1:length(videoFiles)
 end
 
 % create config files if possible
-status = createConfigFiles(videoPath, videoFiles);
+status = createConfigFiles(videoPath, videoFiles, handles.template);
 
 time = toc;
 
@@ -269,8 +381,15 @@ handles.uitable2.Data = tebleItems;
 
 
 %%
-function status = createConfigFiles(videoPath, videoFiles)
+function status = createConfigFiles(videoPath, videoFiles, templateFile)
 status = true;
+tmpl = {};
+if ~isempty(templateFile)
+    if exist(templateFile, 'file')
+        confTable = readtable(templateFile);
+        tmpl = table2cell(confTable);
+    end
+end
 
 % write config files if it is empty
 for i = 1:size(videoFiles, 1)
@@ -302,6 +421,15 @@ for i = 1:size(videoFiles, 1)
     end
     
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0.1, 1, 200, 0, 12, 4, 50, 1, 0.4};
+    if ~isempty(tmpl)
+        B{4} = tmpl{4};
+        if tmpl{5} ~= tmpl{6} % when end != all_frame, then set end_frame
+            B{5} = tmpl{5};
+        end
+        for j=8:length(B)
+            B{j} = tmpl{j};
+        end
+    end
     status = saveInputControlFile(outputFileName, B);
     if ~status
         break;
@@ -309,20 +437,6 @@ for i = 1:size(videoFiles, 1)
 end
 
 save('./input_videos.mat', 'videoPath', 'videoFiles');
-
-%% save a input_video_control.csv
-function status = saveInputControlFile(outputFileName, B)
-% config header
-header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
-try
-    T = cell2table(B);
-    T.Properties.VariableNames = header;
-    writetable(T,outputFileName);
-    status = true;
-catch e
-    errordlg(['failed to save configuration file : ' outputFileName], 'Error');
-    status = false;
-end
 
 
 % bg--- Executes on button press in pushbutton2.
@@ -381,9 +495,15 @@ for data_th = 1:size(records,1)
     pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
     backgroundFileName = strcat(pathName,'/background.png');
 
-    % show startEndDialog
-    [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
-    delete(dlg);
+    % show startEndDialog or command line auto start
+    if handles.autobackground
+        startFrame = records{data_th, 4};
+        endFrame = records{data_th, 6};
+        checkNums = 50;
+    else
+        [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
+        delete(dlg);
+    end
 
     if startFrame < 0
         continue;
