@@ -22,10 +22,10 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 11-Jul-2017 00:43:21
+% Last Modified by GUIDE v2.5 12-Jul-2017 01:17:58
 
 % Begin initialization code - DO NOT EDIT
-    gui_Singleton = 1;
+gui_Singleton = 0;
     gui_State = struct('gui_Name',       mfilename, ...
                        'gui_Singleton',  gui_Singleton, ...
                        'gui_OpeningFcn', @detectionResultDialog_OpeningFcn, ...
@@ -111,6 +111,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.backMode = 1; % movie
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
+    sharedInst.axesType1 = 'count';
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -181,9 +182,37 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     set(handles.popupmenu3,'String',listItem);
 
+    % count each ROI fly number
+    xsize = size(X, 2);
+    flyCounts = zeros(xsize,1);
+    roiCounts = cell(sharedInst.roiNum,1);
+    for i=1:sharedInst.roiNum
+        roiCount = zeros(xsize,1);
+        % cook raw data before saving
+        for row_count = 1:xsize
+            fy = X{row_count}(:);
+            fx = Y{row_count}(:);
+            flyNum = length(fx);
+            count = 0;
+            for j = 1:flyNum
+                if roiMasks{i}(round(fy(j)),round(fx(j))) > 0
+                    count = count + 1;
+                end
+            end
+            flyCounts(row_count) = flyNum;
+            roiCount(row_count) = count;
+        end
+        roiCounts{i} = roiCount;
+    end
+    sharedInst.flyCounts = flyCounts;
+    sharedInst.roiCounts = roiCounts;    
+    
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
-
+    
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.axesType1);
+    
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
 end
@@ -223,6 +252,20 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
         pushbutton2_Callback(hObject, eventdata, handles);
     elseif strcmp(eventdata.Key, 'downarrow')
         pushbutton3_Callback(hObject, eventdata, handles);
+    end
+end
+
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    if gca == handles.axes2 || gca == handles.axes3
+        cp = get(gca,'CurrentPoint');
+        pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+        set(handles.slider1, 'value', cp(1));
+        slider1_Callback(handles.slider1, eventdata, handles)
     end
 end
 
@@ -359,6 +402,8 @@ function popupmenu3_Callback(hObject, eventdata, handles)
     end
     sharedInst.currentROI = currentROI;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.frameNum, sharedInst.axesType1);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -495,7 +540,92 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     hold off;
 
+    % show long params
+    showLongAxesTimeLine(handles, t);
+
+    % reset current axes (prevent miss click)
+    axes(handles.axes1); % set drawing area
+
     % show detected count
     set(handles.text9, 'String', fly_num);
     guidata(hObject, handles);    % Update handles structure
 end
+
+%% show long axis data function
+function showLongAxes(hObject, handles, t, type)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    
+    % get data
+    switch type
+        case 'count'
+            if sharedInst.currentROI > 0
+                yval = sharedInst.roiCounts{sharedInst.currentROI}(:);
+            else
+                yval = sharedInst.flyCounts(:);
+            end
+            ymin = 0;
+            ymax = floor(max(yval) * 1.2);
+            if ymax < 5
+                ymax = 5;
+            end
+        otherwise
+            data = getappdata(handles.figure1, type); % get data
+            if isnan(data)
+                yval = [];
+                ymin = 0;
+                ymax = 0;
+            else
+                yval = data(:);
+                ymin = min(yval);
+                ymax = max(yval);
+            end
+    end
+    if ymin==ymax
+        ymax = ymin + 1;
+    end
+    
+    axes(hObject); % set drawing area
+    cla;
+    if isempty(yval)
+        return; % noting to show
+    end
+    hold on;
+    plot(1:size(yval,1), yval, 'Color', [.6 .6 1]);
+    xlim([1 size(yval,1)]);
+    ylim([ymin ymax]);
+    hObject.Box = 'off';
+    hObject.Color = [0 .05 .1];
+    hObject.FontSize = 8;
+    hObject.XMinorTick = 'off';
+%    hObject.TightInset = hObject.TightInset / 2;
+    % xtickOff
+    % xticks(0); % from 2016b
+    type = strrep(type, '_', ' ');
+    text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
+    hold off;
+end
+
+function showLongAxesTimeLine(handles, t)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    yval = sharedInst.flyCounts(:);
+    ymin = 0;
+    ymax = 1;
+
+    % plot current time line
+    handles.axes3.Box = 'off';
+    handles.axes3.Color = 'None';
+    handles.axes3.FontSize = 1;
+    handles.axes3.XMinorTick = 'off';
+    handles.axes3.YMinorTick = 'off';
+    handles.axes3.XTick = [0];
+    handles.axes3.YTick = [0];
+    axes(handles.axes3); % set drawing area
+    cla;    
+    hold on;
+    plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
+    xlim([1 size(yval,1)]);
+    ylim([ymin ymax]);
+    hold off;
+end
+
+

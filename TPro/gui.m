@@ -59,6 +59,8 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
 if exist('./io','dir')
     addpath('./io');
     addpath('./gui');
+    addpath('./calc');
+    addpath('./util');
     addpath('./dialogs');
 end
 
@@ -1205,15 +1207,6 @@ set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
 
-%% generate format string
-function save_string = generatePrintFormatString(flyNum)
-save_string = [];
-for s_count = 1:flyNum
-    save_string = [save_string '%.4f\t'];
-end
-save_string = [save_string '\n'];
-
-
 % tracker--- Executes on button press in pushbutton5.
 function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % hObject    handle to pushbutton5 (see GCBO)
@@ -2101,17 +2094,6 @@ for i = 1 : blob_num
     end
 end
 
-
-function [ output_image ] = PD_blobfilter( image, h, sigma )
-%UNTITLED ?±?Ì?Ö??Ì?T—v??±?±?É?L?q
-%   h & sigma : the bigger, the larger the blob can be found
-%   example : >>subplot(121); imagesc(h) >>subplot(122); mesh(h)
-%   >>colormap(jet)
-
-%   laplacian of a gaussian (LOG) template
-log_kernel = fspecial('log', h, sigma);
-%   2d convolution
-output_image = conv2(double(image), log_kernel, 'same');
 
 %%
 function [ keep_direction, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
