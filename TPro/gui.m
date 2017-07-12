@@ -67,6 +67,8 @@ end
 % init command line input
 handles.movies = {};
 handles.template = [];
+handles.batch = [];
+handles.path = [];
 handles.rois = {};
 handles.autobackground = 0;
 handles.autodetect = 0;
@@ -80,13 +82,19 @@ while true
         break;
     end
     switch varargin{i}
+        case {'-b','--batch'}
+            handles.batch = varargin{i+1};
+            i = i + 1;
+        case {'-p','--path'}
+            handles.path = varargin{i+1};
+            i = i + 1;
         case {'-c','--conf'}
             handles.template = varargin{i+1};
             i = i + 1;
         case {'-r','--roi'}
             handles.rois = [handles.rois varargin{i+1}];
             i = i + 1;
-        case {'-b','--background'}
+        case {'-g','--background'}
             handles.autobackground = 1;
         case {'-d','--detect'}
             handles.autodetect = 1;
@@ -96,9 +104,11 @@ while true
             handles.autofinish = 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
+            disp('  -b, --batch file    batch csv [file]');
+            disp('  -p, --path path     movie [path] for batch process');
             disp('  -c, --conf file     detection and tracking configuration template [file]');
             disp('  -r, --roi file      ROI image [file]');
-            disp('  -b, --background    force to start background detection');
+            disp('  -g, --background    force to start background detection');
             disp('  -d, --detect        force to start detection');
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
@@ -235,6 +245,37 @@ handles.uitable2.Data = tebleItems;
 
 %% TPro command line mode
 function runCommandLineMode(hObject, eventdata, handles)
+% start batch process
+if length(handles.batch) > 0
+    % load batch file
+    if ~exist(handles.batch, 'file')
+        disp(['can not read batch file : ' handles.batch]);
+        delete(hObject);
+        return;
+    end
+
+    confTable = readtable(handles.batch);
+    batches = table2cell(confTable);
+    
+    videoPath = handles.path;
+    videoFiles = {};
+    tebleItems = {};
+    for i=1:size(batches,1)
+        videoFiles = [videoFiles; batches{i,2}];
+        row = {batches{i,2}, handles.path};
+        tebleItems = [tebleItems; row];
+    end
+    handles.uitable2.Data = tebleItems;
+
+    % create config files if possible
+    status = createConfigFiles([videoPath '/'], videoFiles, handles.batch);
+    if ~status
+        disp('failed to create a configuration file');
+        delete(hObject);
+        return;
+    end
+end
+% start to load movie files
 if length(handles.movies) > 0
     videoFiles = {};
     tebleItems = {};
@@ -248,46 +289,53 @@ if length(handles.movies) > 0
         row = {videoFiles{n}, videoPath};
         tebleItems = [tebleItems; row];
     end
+    handles.uitable2.Data = tebleItems;
+
     % create config files if possible
     status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
-    
-    % create roi files
-    if length(handles.rois) > 0
-        roiFiles = {};
-        for i=1:length(handles.rois)
-            roiFileName = handles.rois{i};
-            if exist(roiFileName, 'file')
-                roiImage = imread(roiFileName);
-                clear roiImage;
-            end
-            roiFiles = [roiFiles; roiFileName];
+    if ~status
+        disp('failed to create a configuration file');
+        delete(hObject);
+        return;
+    end
+end
+% create roi files
+if length(handles.rois) > 0
+    roiFiles = {};
+    for i=1:length(handles.rois)
+        roiFileName = handles.rois{i};
+        if exist(roiFileName, 'file')
+            roiImage = imread(roiFileName);
+            clear roiImage;
         end
-
-        for i=1:length(handles.movies)
-            confPath = [videoPath '/' videoFiles{i} '_tpro/'];
-            csvFileName = [confPath 'roi.csv'];
-            confFileName = [confPath 'input_video_control.csv'];
-
-            % save roi.csv
-            T = array2table(roiFiles);
-            writetable(T,csvFileName,'WriteVariableNames',false);
-
-            % update ROI param in configuration
-            confTable = readtable(confFileName);
-            record = table2cell(confTable);
-            record{10} = length(roiFiles);
-            status = saveInputControlFile(confFileName, record);
-            if ~status
-                errordlg(['failed to save a configuration file : ' confFileName], 'Error');
-            end
-        end
+        roiFiles = [roiFiles; roiFileName];
     end
 
-    % update uitable
-    handles.uitable2.Data = tebleItems;
-    checkAllButtons(handles);
-    pause(0.01);
+    for i=1:length(videoFiles)
+        confPath = [videoPath '/' videoFiles{i} '_tpro/'];
+        csvFileName = [confPath 'roi.csv'];
+        confFileName = [confPath 'input_video_control.csv'];
+
+        % save roi.csv
+        T = array2table(roiFiles);
+        writetable(T,csvFileName,'WriteVariableNames',false);
+
+        % update ROI param in configuration
+        confTable = readtable(confFileName);
+        record = table2cell(confTable);
+        record{10} = length(roiFiles);
+        status = saveInputControlFile(confFileName, record);
+        if ~status
+            disp(['failed to save a configuration file : ' confFileName]);
+            delete(hObject);
+            return;
+        end
+    end
 end
+% update uitable
+checkAllButtons(handles);
+pause(0.01);
+
 if handles.autobackground
     pushbutton2_Callback(handles.pushbutton2, eventdata, handles)
 end
@@ -382,65 +430,6 @@ end
 checkAllButtons(handles);
 % update uitable
 handles.uitable2.Data = tebleItems;
-
-
-%%
-function status = createConfigFiles(videoPath, videoFiles, templateFile)
-status = true;
-tmpl = {};
-if ~isempty(templateFile)
-    if exist(templateFile, 'file')
-        confTable = readtable(templateFile);
-        tmpl = table2cell(confTable);
-    end
-end
-
-% write config files if it is empty
-for i = 1:size(videoFiles, 1)
-    fileName = videoFiles{i};
-    
-    outPathName = [videoPath fileName '_tpro'];
-    outputFileName = [outPathName '/input_video_control.csv'];
-
-    % make control file if not exist
-    if exist(outputFileName, 'file')
-        continue;
-    end
-
-    % open video file
-    try
-        shuttleVideo = TProVideoReader(videoPath, fileName);
-    catch e
-        errordlg('please select movie files or image folders.', 'Error');
-        status = false;
-        return;
-    end
-    name = shuttleVideo.Name;
-    frameNum = shuttleVideo.NumberOfFrames;
-    frameRate = shuttleVideo.FrameRate;
-
-    % make directory
-    if ~exist(outPathName, 'dir')
-        mkdir(outPathName);
-    end
-    
-    B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0.1, 1, 200, 0, 12, 4, 50, 1, 0.4};
-    if ~isempty(tmpl)
-        B{4} = tmpl{4};
-        if tmpl{5} ~= tmpl{6} % when end != all_frame, then set end_frame
-            B{5} = tmpl{5};
-        end
-        for j=8:length(B)
-            B{j} = tmpl{j};
-        end
-    end
-    status = saveInputControlFile(outputFileName, B);
-    if ~status
-        break;
-    end
-end
-
-save('./input_videos.mat', 'videoPath', 'videoFiles');
 
 
 % bg--- Executes on button press in pushbutton2.
