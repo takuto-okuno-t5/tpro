@@ -1308,6 +1308,15 @@ dt = 1;  % sampling rate
 frame_start = 1; % starting frame
 MAX_FLIES = 800; % maxmum number of flies
 
+tproConfig = 'tproconfig.csv'
+if exist(tproConfig, 'file')
+    tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+    values = tproConfTable{'trackingFlyMax',1};
+    if size(values,1) > 0
+        MAX_FLIES = values(1);
+    end
+end
+
 u = 0; % no acceleration
 noise_process = 1; % process noise
 noise_meas_x = .1;  % measurement noise in x direction
@@ -1622,7 +1631,7 @@ end
                     if assign_for_noassign
                         y = round(Q_estimate(1,k));
                         x = round(Q_estimate(2,k));
-                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                        if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
                             % if the predict is out of bound then delete
                             Q_estimate(:,k) = NaN;
                         else
@@ -1707,7 +1716,7 @@ end
                         end
                         y = round(Q_estimate(1,k));
                         x = round(Q_estimate(2,k));
-                        if (y > img_h) || (x > img_w) || (y < 0) || (x < 0) || isnan(y) || isnan(x)
+                        if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
                             % if the predict is out of bound then delete
                             Q_estimate(:,k) = NaN;
                         elseif ~isempty(roiImage) && roiImage(y,x) == 0

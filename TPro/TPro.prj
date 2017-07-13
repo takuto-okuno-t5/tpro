@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="2254482209" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="1140024424" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -69,14 +69,25 @@
       <file>${PROJECT_ROOT}\gui.m</file>
     </fileset.main>
     <fileset.resources>
+      <file>${PROJECT_ROOT}\calc\calcAngularVelocity.m</file>
+      <file>${PROJECT_ROOT}\calc\calcBinarize.m</file>
+      <file>${PROJECT_ROOT}\calc\calcDifferential.m</file>
+      <file>${PROJECT_ROOT}\calc\calcDifferential2.m</file>
+      <file>${PROJECT_ROOT}\calc\calcDir.m</file>
+      <file>${PROJECT_ROOT}\calc\calcSideways.m</file>
+      <file>${PROJECT_ROOT}\calc\calcSidewaysVelocity.m</file>
+      <file>${PROJECT_ROOT}\calc\calcVxy.m</file>
+      <file>${PROJECT_ROOT}\calc\PD_blobfilter.m</file>
       <file>${PROJECT_ROOT}\dialogs</file>
       <file>${PROJECT_ROOT}\gui</file>
       <file>${PROJECT_ROOT}\gui.fig</file>
       <file>${PROJECT_ROOT}\io</file>
+      <file>${PROJECT_ROOT}\util\generatePrintFormatString.m</file>
     </fileset.resources>
     <fileset.package>
       <file>${PROJECT_ROOT}\annotation_label.csv</file>
       <file>${PROJECT_ROOT}\etc</file>
+      <file>${PROJECT_ROOT}\tproconfig.csv</file>
       <file>${PROJECT_ROOT}\ui</file>
     </fileset.package>
     <build-deliverables>
