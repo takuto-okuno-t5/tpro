@@ -59,5 +59,5 @@ function status = createConfigFiles(videoPath, videoFiles, templateFile)
         end
     end
 
-    save('./input_videos.mat', 'videoPath', 'videoFiles');
+    save('etc/input_videos.mat', 'videoPath', 'videoFiles');
 end

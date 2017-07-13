@@ -67,7 +67,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if isempty(rowNum), rowNum = 1; end
 
     % load video list
-    inputListFile = './input_videos.mat';
+    inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
         return;

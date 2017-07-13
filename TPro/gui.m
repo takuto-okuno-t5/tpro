@@ -176,7 +176,7 @@ runCommandLineMode(hObject, eventdata, handles);
 
 %% 
 function initFileUITable(handles)
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     return;
 end
@@ -438,7 +438,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -600,7 +600,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -657,7 +657,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -1202,7 +1202,7 @@ function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -1308,7 +1308,7 @@ dt = 1;  % sampling rate
 frame_start = 1; % starting frame
 MAX_FLIES = 800; % maxmum number of flies
 
-tproConfig = 'tproconfig.csv'
+tproConfig = 'etc/tproconfig.csv'
 if exist(tproConfig, 'file')
     tproConfTable = readtable(tproConfig,'ReadRowNames',true);
     values = tproConfTable{'trackingFlyMax',1};
@@ -2398,7 +2398,7 @@ disableAllButtons(handles)
 % button1 is always on
 set(handles.pushbutton1, 'Enable', 'on');
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     return; % no input files
 end
@@ -2717,7 +2717,7 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -3660,7 +3660,7 @@ function pushbutton10_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -3698,7 +3698,7 @@ function pushbutton11_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = './input_videos.mat';
+inputListFile = 'etc/input_videos.mat';
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;

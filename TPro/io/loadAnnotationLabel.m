@@ -1,6 +1,6 @@
 %% load annotation_label.csv file
 function loadAnnotationLabel(handles)
-    labelFileName = 'annotation_label.csv';
+    labelFileName = 'etc/annotation_label.csv';
     annoLabel = [];
     annoKeyMap = zeros(9,1);
     if exist(labelFileName, 'file')

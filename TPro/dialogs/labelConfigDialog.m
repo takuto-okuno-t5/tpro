@@ -57,7 +57,7 @@ function labelConfigDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     guidata(hObject, handles);
     
     % load annotation label
-    labelFileName = 'annotation_label.csv';
+    labelFileName = 'etc/annotation_label.csv';
     annoLabel = [];
     if exist(labelFileName, 'file')
         labelTable = readtable(labelFileName,'ReadVariableNames',false);
@@ -139,7 +139,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    labelFileName = 'annotation_label.csv';
+    labelFileName = 'etc/annotation_label.csv';
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.isModified = 0;
     sharedInst.isSaved = 1;
