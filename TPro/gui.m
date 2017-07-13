@@ -27,7 +27,7 @@ function varargout = gui(varargin)
 
 % Edit the above text to modify the response to help gui
 
-% Last Modified by GUIDE v2.5 22-Jun-2017 00:33:39
+% Last Modified by GUIDE v2.5 13-Jul-2017 13:54:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -2367,7 +2367,8 @@ end
 %%
 function enableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, handles.pushbutton11];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, ...
+    handles.pushbutton11, handles.pushbutton12];
 enableButtons(buttons);
 
 %%
@@ -2380,7 +2381,8 @@ end
 %%
 function disableAllButtons(handles)
 buttons = [handles.pushbutton1, handles.pushbutton2, handles.pushbutton3, handles.pushbutton4, ...
-    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, handles.pushbutton11];
+    handles.pushbutton5, handles.pushbutton6, handles.pushbutton8, handles.pushbutton10, ...
+    handles.pushbutton11, handles.pushbutton12];
 disableButtons(buttons);
 
 %%
@@ -2453,6 +2455,8 @@ end
 
 % track button
 set(handles.pushbutton5, 'Enable', 'on');
+% show detection result button
+set(handles.pushbutton12, 'Enable', 'on');
 
 trackFileName = [confPath 'multi/track_' filename '.mat'];
 if ~exist(trackFileName, 'file')
@@ -3729,3 +3733,40 @@ for i = 1 : size(records,1)
     pause(0.1);
 end
 
+
+% --- Executes on button press in pushbutton12.
+function pushbutton12_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton12 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+inputListFile = 'etc/input_videos.mat';
+if ~exist(inputListFile, 'file')
+    errordlg('please select movies before operation.', 'Error');
+    return;
+end
+vl = load(inputListFile);
+videoPath = vl.videoPath;
+videoFiles = vl.videoFiles;
+
+% load configuration files
+videoFileNum = size(videoFiles,1);
+records = {};
+for i = 1:videoFileNum
+    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    if ~exist(confFileName, 'file')
+        errordlg(['configuration file not found : ' confFileName], 'Error');
+        return;
+    end
+
+    confTable = readtable(confFileName);
+    C = table2cell(confTable);
+    records = [records; C];
+end
+
+% loop for every movies
+for i = 1 : size(records,1)
+    % show tracking result
+    dlg = detectionResultDialog({num2str(i)});
+    pause(0.1);
+end
