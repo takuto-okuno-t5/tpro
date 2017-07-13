@@ -129,7 +129,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     
     % load last detection setting
-    lastConfigFile = './last_detect_config.mat';
+    lastConfigFile = 'etc/last_detect_config.mat';
     if exist(lastConfigFile, 'file')
         cf = load(lastConfigFile);
         sharedInst.frameSteps = cf.frameSteps;

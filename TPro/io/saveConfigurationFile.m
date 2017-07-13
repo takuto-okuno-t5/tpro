@@ -24,7 +24,7 @@ function status = saveConfigurationFile(handles)
         writetable(T,sharedInst.confFileName);
 
         % save last detection setting
-        save('./last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate','mmPerPixel');
+        save('etc/last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate','mmPerPixel');
         status = true;
     catch e
         status = false;
