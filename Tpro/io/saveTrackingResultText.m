@@ -1,5 +1,5 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, roiMasks)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, img_w, roiMasks)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
@@ -26,8 +26,11 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img
         if row_count > 1
             distance_travel = sqrt((fx - keep_data{2}(row_count-1, :)).^2 + (fy - keep_data{1}(row_count-1, :)).^2);
         end
+        
         for j = flyNum:-1:1
-            if isnan(fy(j)) || isnan(fx(j)) || roiMasks{i}(round(fy(j)),round(fx(j))) <= 0
+            y = round(fy(j));
+            x = round(fx(j));
+            if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x) || roiMasks{i}(y,x) <= 0
                 fx(j) = NaN; fy(j) = NaN;
                 vx(j) = NaN; vy(j) = NaN;
                 ddx(j) = NaN; ddy(j) = NaN;

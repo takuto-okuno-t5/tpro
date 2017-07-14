@@ -195,7 +195,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
     end
     sharedInst.roiMaskImage = roiMaskImage;
-    sharedInst.roiMasks = roiMasks;    
+    sharedInst.roiMasks = roiMasks;
 
     % set ROI list box
     listItem = {'all'};

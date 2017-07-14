@@ -1253,7 +1253,7 @@ frame_num = 10;
 % reject_dist = 200;
 
 % for strike track
-strike_track_threshold = 6;
+STRIKE_TRACK_TH = 3;
 
 % assignment for no assignment
 assign_for_noassign = 1;
@@ -1301,6 +1301,8 @@ intensity_shift = -20;
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
 MAX_FLIES = 800; % maxmum number of flies
+IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
+DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
 tproConfig = 'etc/tproconfig.csv';
 if exist(tproConfig, 'file')
@@ -1405,6 +1407,7 @@ for data_th = 1:size(records,1)
     end
     Q_loc_estimateY = nan(MAX_FLIES); % position estimate
     Q_loc_estimateX = nan(MAX_FLIES); % position estimate
+    nancount = zeros(1,MAX_FLIES); % position estimate
     P_estimate = P;  % covariance estimator
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
     outbound_trks = zeros(1, MAX_FLIES);  % counter of out boundary track
@@ -1496,10 +1499,17 @@ for data_th = 1:size(records,1)
         %make the distance (cost) matrice between all pairs rows = tracks, coln =
         %detections
         if ~isempty(Q_loc_meas)
+            nanidx = find(isnan(Q_estimate(1,1:flyNum)));
+            nancount(nanidx) = nancount(nanidx) + 1;
+            idx = find(nancount(1,1:flyNum) < IGNORE_NAN_COUNT);
+            idxlen = length(idx);
 
-            est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
-            est_dist = squareform(est_dist); %make square
-            est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
+            est_dist1 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
+            est_dist1 = squareform(est_dist1); %make square
+            est_dist1 = est_dist1(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
+%est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
+%est_dist = squareform(est_dist); %make square
+%est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
 
             %                 for est_count = 1:nF    % added on 2016-07-28
             %                     if min(est_dist(est_count,:)) < 50
@@ -1507,10 +1517,23 @@ for data_th = 1:size(records,1)
             %                     end
             %                 end
 
-
-            [asgn, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
-            asgn = asgn';
-
+            [asgnT, cost] = assignmentoptimal(est_dist1); %do the assignment with hungarian algo
+            asgn = zeros(1,flyNum);
+            invIdx = zeros(1,flyNum);
+            if idxlen == 0
+                asgn = asgnT;
+            else
+                for i=1:idxlen
+                    fn = idx(i);
+                    asgn(fn) = asgnT(i);
+                    invIdx(fn) = i;
+                end
+            end
+%[asgnOrg, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
+%asgnOrg = asgnOrg';
+%if ~isequal(asgn, asgnOrg)
+%    a=0;
+%end
             %check for tough situations and if it's tough, just go with estimate and ignore the data
             %make asgn = 0 for that tracking element
 
@@ -1518,7 +1541,9 @@ for data_th = 1:size(records,1)
             rej = [];
             for F = 1:flyNum
                 if asgn(F) > 0  % if track F has pair asgn(F)
-                    rej(F) = est_dist(F,asgn(F)) < reject_dist ;
+                    estF = invIdx(F);
+                    rej(F) = est_dist1(estF,asgnT(estF)) < reject_dist;
+%rej(F) = est_dist(F,asgn(F)) < reject_dist ;
                     v1 = direction_track(:,F);
                     v2 = direction_meas(:,asgn(F));
                     if (norm(v1) ~= 0) && (norm(v2) ~= 0)
@@ -1535,52 +1560,81 @@ for data_th = 1:size(records,1)
                     rej(F) = 0;
                 end
             end
-
-
-            %
             if size(asgn,2) > 0
                 asgn = asgn.*rej;
             end
+
+
+            % check 2
             if ~kalman_only_enable
                 Q_estimate_before_update(1:2, (asgn ~= 0)) = NaN;
                 Q_loc_meas2 = Q_loc_meas;
-                Q_loc_meas2(ismember(1:size(Q_loc_meas,1),asgn),:) = NaN;
+                members = ismember(1:size(Q_loc_meas,1),asgn);
+                Q_loc_meas2(members,:) = NaN;
 
-                est_dist2 = pdist([Q_estimate_before_update(1:2,1:flyNum)'; Q_loc_meas2]);
-                est_dist2 = squareform(est_dist2); %make square
-                est_dist2 = est_dist2(1:flyNum,flyNum+1:end);  %limit to just the tracks to detection distances
+                idx2 = find(~isnan(Q_estimate_before_update(1,1:flyNum)));
+                idxlen2 = length(idx2);
+                est_dist3 = pdist([Q_estimate_before_update(1:2,idx2)'; Q_loc_meas2]);
+                est_dist3 = squareform(est_dist3); %make square
+                est_dist3 = est_dist3(1:idxlen2,idxlen2+1:end) ; %limit to just the tracks to detection distances
 
-                if cna_enable   % Closest Neighbour Approach
-                    asgn2 = asgn.*0;
-                    row_est_dist2 = max(sum(~isnan(est_dist2)));
-                    col_est_dist2 = max(sum(~isnan(est_dist2),2));
+%est_dist2 = pdist([Q_estimate_before_update(1:2,1:flyNum)'; Q_loc_meas2]);
+%est_dist2 = squareform(est_dist2); %make square
+%est_dist2 = est_dist2(1:flyNum,flyNum+1:end);  %limit to just the tracks to detection distances
 
-                    if ((row_est_dist2 - col_est_dist2) >= 0)
-                        count_target = col_est_dist2;
-                    else
-                        count_target = row_est_dist2;
-                    end
-
-                    for count2 = 1:count_target
-                        %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
-                        [m,n] = find(est_dist2==min(min(est_dist2)));
-                        if ~isempty(m) && ~isempty(n)
-                            asgn2(m(1)) = n(1);
-                            est_dist2(m(1),:) = NaN;
-                            est_dist2(:,n(1)) = NaN;
-                        end
-                        %                             end   % fixed bug 2016-12-30
-
-                    end
-
-                else    % hungarian assignment algorithm
-                    [asgn2, cost2] = assignmentoptimal(est_dist2); %do the assignment with hungarian algo
-                    asgn2 = asgn2';
+                % Closest Neighbour Approach
+                asgn2 = asgn.*0;
+%row_est_dist2 = max(sum(~isnan(est_dist2)));
+%col_est_dist2 = max(sum(~isnan(est_dist2),2));
+                row_est_dist3 = max(sum(~isnan(est_dist3)));
+                col_est_dist3 = max(sum(~isnan(est_dist3),2));
+%if row_est_dist2~=row_est_dist3 && col_est_dist2~=col_est_dist3
+%    a=0;
+%end
+                if ((row_est_dist3 - col_est_dist3) >= 0)
+                    count_target = col_est_dist3;
+                else
+                    count_target = row_est_dist3;
                 end
 
-
+                for count2 = 1:count_target
+                    %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
+%[mmin,m0] = min(est_dist2);
+%[nmin,n] = min(mmin);
+%if ~isempty(m0)
+%    m = m0(n);
+%    asgn2(m) = n;
+%    est_dist2(m,:) = NaN;
+%    est_dist2(:,n) = NaN;
+%end
+                    [mmin,m0] = min(est_dist3);
+                    [nmin,n] = min(mmin);
+                    if ~isempty(m0)
+                        if size(est_dist3,1) > 1
+                            m = m0(n);
+%if asgn2(idx2(m)) ~= n
+%    a=0;
+%end
+                            if nmin < reject_dist
+                                asgn2(idx2(m)) = n;
+                            end
+                            est_dist3(m,:) = NaN;
+                            est_dist3(:,n) = NaN;
+                        else
+%if asgn2(idx2(n)) ~= m0
+%    a=0;
+%end
+                            if mmin < reject_dist
+                                asgn2(idx2(n)) = m0;
+                            end
+                            est_dist3(1,:) = NaN;
+                        end
+                    end
+                    
+                    %                             end   % fixed bug 2016-12-30
+                end
+                    
                 asgn = asgn + asgn2;
-
             else
                 asgn2 = asgn.*0;
             end
@@ -1616,9 +1670,16 @@ for data_th = 1:size(records,1)
                                 Q_estimate(2,k) = x - Q_estimate(4,k);
                                 Q_estimate(3,k) = 0;
                                 Q_estimate(4,k) = 0;
-                            elseif min(est_dist(k,:)) < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
-                                [m,i] = min(est_dist(k,:));
-                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
+                            else
+                                estF = invIdx(k);
+                                [m,i] = min(est_dist1(estF,:));
+%[m0,i0] = min(est_dist(k,:));
+%if m0 ~= m && i0 ~= i
+%    a=0;
+%end
+                                if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op                                
+                                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
+                                end
                             end
                         end
 
@@ -1676,26 +1737,19 @@ for data_th = 1:size(records,1)
 
         end  % end of if ~isempty(Q_loc_meas)
 
-        %give a strike to any tracking that didn't get matched up to a
-        %detection
+        %give a strike to any tracking that didn't get matched up to a detection
         if exist('asgn', 'var')
-            if flyZeroCount >= 3 % zero fly is continuing. so reset assign
-                if sum(asgn>0) > 0
-                    for k = 1:length(asgn)
-                        if asgn(k) == 0
-                            continue;
-                        end
-                        y = round(Q_estimate(1,k));
-                        x = round(Q_estimate(2,k));
-                        if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
-                            % if the predict is out of bound then delete
-                            Q_estimate(:,k) = NaN;
-                        elseif ~isempty(roiImage) && roiImage(y,x) == 0
-                            % if the predict is out of ROI then delete
-                            Q_estimate(:,k) = NaN;
-                        end
-                        asgn(k) = 0;
-                    end
+            aIdx = find(asgn>0);
+            for j = 1:length(aIdx)
+                k = aIdx(j);
+                y = round(Q_estimate(1,k));
+                x = round(Q_estimate(2,k));
+                if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
+                    % if the predict is out of bound then delete
+                    asgn(k) = 0;
+                elseif ~isempty(roiImage) && roiImage(y,x) == 0
+                    % if the predict is out of ROI then delete
+                    asgn(k) = 0;
                 end
             end
             
@@ -1709,75 +1763,19 @@ for data_th = 1:size(records,1)
             % if the strike is not consecutive then reset
             strk_trks(strk_trks == prev_strk_trks) = 0;
 
-            %if a track has a strike greater than 6, delete the tracking. i.e.
+            %if a track has a strike greater than 3, delete the tracking. i.e.
             %make it nan first vid = 3
-            bad_trks = find(strk_trks > strike_track_threshold);
+            bad_trks = find(strk_trks > STRIKE_TRACK_TH);
             Q_estimate(:,bad_trks) = NaN;
-        end
 
-        % output figure
-        %{
-        if figure_enable
-            % create new roi window if it does not exist
-            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-                if visible_enable
-                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off')
-                else
-                    figureWindow = figure('name','tracker_savefig_op.m','NumberTitle','off','visible','off')
+            bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
+            if ~isempty(bad_trks)
+                % remove old 3 tracking frames
+                for j = 1:8
+                    keep_data{j}((t-2):t,bad_trks) = NaN;
                 end
             end
-
-            % change title message
-            set(figureWindow, 'name', ['tracking for ', shuttleVideo.name]);
-            figure(figureWindow);
-
-            img = TProRead(shuttleVideo,t_count);
-            %             img = imread(strcat('./input/',file_list(t).name));
-            clf;
-            imshow(img);
-            hold on;
-            plot(Y{t}(:),X{t}(:),'or'); % the actual tracking
-            T = size(Q_loc_estimateX,2);
-            Ms = [3 5]; %marker sizes
-            c_list = ['r' 'b' 'g' 'c' 'm' 'y'];
-            for Dc = 1:flyNum     %normal
-                %                     for Dc = 1:1        %rodent
-                if ~isnan(Q_loc_estimateX(t,Dc))
-                    Sz = mod(Dc,2)+1; %pick marker size
-                    Cz = mod(Dc,6)+1; %pick color
-                    if animal_type == 2
-                        Cz = 1;
-                    end
-                    if t < line_length+2
-                        st = t-1;
-                    else
-                        st = line_length;
-                    end
-                    while (isnan(Q_loc_estimateX(t-st,Dc)) || Q_loc_estimateX(t-st,Dc) == 0) && st > 0
-                        st = st - 1;
-                    end
-                    tmX = Q_loc_estimateX(t-st:t,Dc);
-                    tmY = Q_loc_estimateY(t-st:t,Dc);
-                    plot(tmY,tmX,'.-','markersize',Ms(Sz),'color',c_list(Cz),'linewidth',3)  % rodent 1 instead of Cz
-                    if num_text_enable
-                        num_txt = strcat(' = ', num2str(Dc));
-                        text(tmY(end),tmX(end),num_txt)
-                    end
-                    %hold on;
-                    %                 quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-                    axis off;
-                end
-            end
-            hold off;
-
-            % save figure
-            f=getframe;
-            filename2 = [sprintf('%05d',t_count) '.png'];
-            imwrite(f.cdata,strcat(confPath,'output/',filename,'_pic/',filename2));
-
-            pause(0.001)
         end
-        %}
         
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
         disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
@@ -1797,6 +1795,16 @@ for data_th = 1:size(records,1)
     % find end of row (some frames has zero flies. so finding NaN is bad)
     end_row = t - 1;
 
+    % delete useless data (mostly NaN tracking)
+    for i=flyNum:-1:1
+        if sum(~isnan(keep_data{1}(:,i))) <= DELETE_TRACK_TH
+            for j = 1:8
+                keep_data{j}(:,i) = [];
+            end
+            flyNum = flyNum - 1;
+        end
+    end
+    % organize keep_data
     for j = 1:8
         keep_data{j} = keep_data{j}(:,1:flyNum);
     end
@@ -1814,7 +1822,7 @@ for data_th = 1:size(records,1)
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
     
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, roiMasks);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, img_w, roiMasks);
 
         % save input data used for generating this result
         record = {records{data_th,:}};
