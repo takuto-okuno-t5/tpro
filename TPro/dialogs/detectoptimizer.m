@@ -877,43 +877,6 @@ function edit5_CreateFcn(hObject, eventdata, handles)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% filter and detect functions
-
-%% image calcuration 
-function outimage = applyBackgroundSub(handles, img)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    grayImg = rgb2gray(img);
-    if ~isempty(sharedInst.bgImageMean)
-        grayImg = grayImg + (sharedInst.bgImageMean - mean(mean(grayImg)));
-        grayImageDouble = double(grayImg);
-        img = sharedInst.bgImageDouble - grayImageDouble;
-        img = uint8(img);
-        img = imcomplement(img);
-    else
-        img = grayImg;
-    end
-    outimage = img;
-end
-
-%%
-function outimage = applyFilterAndRoi(handles, img)
-    % apply gaussian filter
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img = PD_blobfilter(img, sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.filterType);
-
-    % apply ROI
-    if ~isempty(sharedInst.roiMaskImage)
-        img = img .* sharedInst.roiMaskImage;
-    end
-    outimage = img;
-end
-
-%%
-function outimage = applyBinarizeAndAreaMin(handles, img)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img = im2bw(img, sharedInst.binaryTh / 100);
-    outimage = bwareaopen(img, sharedInst.binaryAreaPixel);   % delete blob that has area less than 50
-end
 
 %% show frame function
 function showFrameInAxes(hObject, handles, imageMode, frameNum)
@@ -1073,9 +1036,10 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     % calc and draw direction
     if sharedInst.showDirection
         if sharedInst.useDeepLearning
-            keep_direction = PD_direction_deepLearning(handles, sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, ...
+                sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
         else
-            keep_direction = PD_direction2(handles, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
@@ -1129,60 +1093,4 @@ function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
     end
 end
 
-%%
-function [ keep_direction ] = PD_direction_deepLearning(handles, glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
-    % init
-    areaNumber = size(blobAreas, 1);
-    keep_direction = zeros(2, areaNumber); % allocate memory
-    
-    % find direction for every blobs
-    for i = 1:areaNumber
-        % pre calculation
-        cx = blobCenterPoints(i,1);
-        cy = blobCenterPoints(i,2);
-        ph = -blobOrient(i);
-        cosph =  cos(ph);
-        sinph =  sin(ph);
-        len = blobMajorAxis(i) * 0.35;
-        vec = [len*cosph; len*sinph];
-
-        boxSize = int64((blobMajorAxis(i) * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
-
-        trimmedImage = getOneFlyBoxImage_(glayImage, cx, cy, vec, boxSize);
-        img = readAndPreprocessImage(trimmedImage);
-
-        % Extract image features using the CNN
-        imageFeatures = activations(sharedInst.netForFrontBack, img, 11);
-
-        % Make a prediction using the classifier
-        label = predict(sharedInst.classifierFrontBack, imageFeatures);
-        if label == 'fly_back'
-            vec = -vec;
-        end
-        
-        keep_direction(:,i) = vec;
-    end
-end
-
-function Iout = readAndPreprocessImage(I)
-    % Some images may be grayscale. Replicate the image 3 times to
-    % create an RGB image. 
-%    if ismatrix(I)
-%        I = cat(3,I,I,I);
-%    end
-
-    % Resize the image as required for the CNN. 
-    if size(I,1) ~= 64 || size(I,2) ~= 64
-        Iout = imresize(I, [64 64]);  
-    else
-        Iout = I;
-    end
-    % Note that the aspect ratio is not preserved. In Caltech 101, the
-    % object of interest is centered in the image and occupies a
-    % majority of the image scene. Therefore, preserving the aspect
-    % ratio is not critical. However, for other data sets, it may prove
-    % beneficial to preserve the aspect ratio of the original image
-    % when resizing.
-end

@@ -16,7 +16,7 @@ function outputFlyImageFiles(handles, startFrame, endFrame, boxSize)
           blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
               step3Image, step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
               1, 0, sharedInst.maxSeparate, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs);
-        flyDirection = PD_direction2(handles, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        [flyDirection, flyAngle] = PD_direction2(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
 
         blobNumber = size(blobPointY,1);
         for i = 1:blobNumber
