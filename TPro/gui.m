@@ -650,7 +650,7 @@ set(handles.text14, 'String',strcat('checking detection threashold ... done!'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
 
-
+%%
 % detection--- Executes on button press in pushbutton4.
 function pushbutton4_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton4 (see GCBO)
@@ -689,42 +689,8 @@ pause(0.01);
 
 addpath(videoPath);
 
-%% parameters setting
+% parameters setting
 tic % start timer
-
-% near point average
-npa_radius = 12; % set 0 to skip
-
-% for checking in check_blob_threshold.m
-frame_num = 10;
-
-% reject distance
-reject_dist = 200;
-% reject_dist = 200;
-
-% for strike track
-strike_track_threshold = 6;
-
-% assignment for no assignment
-assign_for_noassign = 1;
-
-% velocity threshold enable
-velocity_thres_enable = 0;
-
-% velocity threshold
-velocity_thres = 50;
-
-% velocity graph enable (0)
-velocity_graph_enable = 0;
-
-% blob analysis enable (detection) (1)
-ba_enable = 1;  % inside extrema
-
-% minimum distance threshold
-min_dist_threshold = 50;
-
-% output number eneable
-num_text_enable = 1;
 
 % blob center detection (1)
 blob_center_enable = 1;
@@ -732,19 +698,6 @@ blob_center_enable = 1;
 % extrema detection (0)
 extrema_enable = 0;
 
-% the closest neighbour approach
-cna_enable = 1;
-
-% check direction
-check_direction_enable = 1;
-
-% Kalman only
-kalman_only_enable = 0;
-
-% shift the intensity
-intensity_shift = 0;
-
-%%
 
 % added on 2016-07-28
 for data_th = 1:size(records,1)
@@ -762,6 +715,20 @@ for data_th = 1:size(records,1)
     area_pixel = records{data_th, 15};
     blobSeparateRate = records{data_th, 17};
     roiNum = records{data_th, 10};
+    % check compatibility
+    if size(records,2) < 18
+        filterType = 'log';
+        maxSeparate = 4;
+        isSeparate = 1;
+        maxBlobs = 0;
+        delRectOverlap = 0;
+    else
+        filterType = records{data_th, 18};
+        maxSeparate = records{19};
+        isSeparate = records{20};
+        maxBlobs = records{21};
+        delRectOverlap = records{22};
+    end
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'multi'], 'dir')
@@ -867,7 +834,7 @@ for data_th = 1:size(records,1)
         end
 
         %do the blob filter
-        blob_img = PD_blobfilter(img, h, sigma);
+        blob_img = PD_blobfilter(img, h, sigma, filterType);
 
         % ROI
         if ~isempty(roi_mask)
@@ -954,7 +921,10 @@ for data_th = 1:size(records,1)
 
         % get blobs from step function
         if blob_center_enable
-            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize);
+            [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
+              blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
+                blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize, ...
+                maxSeparate, isSeparate, delRectOverlap, maxBlobs);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -1017,18 +987,6 @@ for data_th = 1:size(records,1)
         keep_angle_sorted{i} = keep_angle;
         keep_areas{i} = blobAreas';
 
-        %     clf
-        %     imshow(img_real);
-        %     hold on;
-        %     plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-        %     title('updated2 detection')
-        %     quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
-        %     % save figure
-        %     f=getframe;
-        %     imwrite(f.cdata,strcat('./output/direct_img',file_list(i).name));
-
-        %     disp(strcat(num2str(100*i/length(file_list)),'%','   detection : ', num2str(size(imax,1))));
-
         if extrema_enable
             if size(imax,1) == size(X_update{i},1)
                 disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
@@ -1044,39 +1002,6 @@ for data_th = 1:size(records,1)
             disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', ' i:',num2str(i),' frame:',num2str(i_count), '   detect_blob_center : ', num2str(size(X_update2{i},1))));
         end
 
-        % graph
-        %{
-        if detect_fig_enable
-            % create new roi window if it does not exist
-            if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
-                figureWindow = figure('name','selecting roi','NumberTitle','off');
-            end
-
-            % change title message
-            set(figureWindow, 'name', ['detection for ', shuttleVideo.name]);
-            figure(figureWindow);
-            clf
-
-            if intensity_shift ~= 0
-                imshow(uint8(img_gray_double));
-            else
-                imshow(img_real);
-            end
-            hold on;
-
-            if size(X_update2{i},1) ~= 0
-                plot(Y_update2{i}(:),X_update2{i}(:),'or'); % the updated actual tracking
-                quiver(Y_update2{i}(:),X_update2{i}(:),keep_direction_sorted{i}(1,:)',keep_direction_sorted{i}(2,:)',  0.3, 'r', 'MaxHeadSize', 0.2, 'LineWidth', 0.2)  %arrow
-            end
-            hold off;
-            
-            % save figure
-            f=getframe;
-            filename2 = [sprintf('%05d',i_count) '.png'];
-            imwrite(f.cdata, strcat(confPath,'detect_output/',filename,'/',filename2));
-            pause(0.001)
-        end
-        %}
         % graph for detection analysis
         keep_i = [keep_i i];
         keep_count = [keep_count size(X_update2{i},1)];
@@ -1123,7 +1048,9 @@ for data_th = 1:size(records,1)
                 flyCount = size(errorFrameX, 1);
                 for j = 1 : flyCount - 1
                     for k = j+1 : flyCount
-                        dist = abs(errorFrameX(j) - errorFrameX(k)) + abs(errorFrameY(j) - errorFrameY(k));
+                        dx = errorFrameX(j) - errorFrameX(k);
+                        dy = errorFrameY(j) - errorFrameY(k);
+                        dist = sqrt(dx*dx + dy*dy);
                         if minDist > dist
                             min1 = j; min2 = k;
                             minDist = dist;
@@ -1150,39 +1077,13 @@ for data_th = 1:size(records,1)
     % save data as text
     for i=1:roiNum
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
-        countFileName = [outputPath shuttleVideo.name '_' filename '_count.txt'];
-        write_file_cnt = fopen(countFileName, 'wt');
-        write_file_x = fopen([outputPath shuttleVideo.name '_' filename '_x.txt'], 'wt');
-        write_file_y = fopen([outputPath shuttleVideo.name '_' filename '_y.txt'], 'wt');
-
-        % cook raw data before saving
-        end_row = size(X, 2);
-        for row_count = 1:end_row
-            fy = X{row_count}(:);
-            fx = Y{row_count}(:);
-            flyNum = length(fx);
-            for j = flyNum:-1:1
-                if roiMasks{i}(round(fy(j)),round(fx(j))) <= 0
-                    fx(j) = [];
-                    fy(j) = [];
-                end
-            end
-            % make save string
-            flyNum = length(fx);
-            fmtString = generatePrintFormatString(flyNum);
-
-            fprintf(write_file_cnt, '%d\n', flyNum);
-            fprintf(write_file_x, fmtString, fx);
-            fprintf(write_file_y, fmtString, img_h - fy);
-        end
-
-        fclose(write_file_cnt);
-        fclose(write_file_x);
-        fclose(write_file_y);
-
+        dataFileName = [outputPath shuttleVideo.name '_' filename];
+        
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks)
+        
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);
-        winopen(countFileName);
+        winopen([dataFileName '_count.txt']);
     end
 
     set(handles.text9, 'String','100 %'); % done!
@@ -1237,62 +1138,17 @@ pause(0.01);
 %% parameters setting
 tic % start timer
 
-% blobfilter parameters
-h = 30;
-sigma = 6;
-blob_threshold = 0.8;
-
-% near point average
-npa_radius = 12; % set 0 to skip
-
-% for checking in check_blob_threshold.m
-frame_num = 10;
-
-% reject distance
-% reject_dist = 40;
-% reject_dist = 200;
-
 % for strike track
 STRIKE_TRACK_TH = 3;
 
 % assignment for no assignment
 assign_for_noassign = 1;
 
-% velocity threshold enable
-velocity_thres_enable = 1;
-
-% velocity threshold
-velocity_thres = 160;
-
-% velocity graph enable (0)
-velocity_graph_enable = 0;
-
-% blob analysis enable (detection) (1)
-ba_enable = 1;  % inside extrema
-
 % minimum distance threshold
 min_dist_threshold = 50;
 
-% output number eneable
-num_text_enable = 1;
-
-% blob center detection (1)
-blob_center_enable = 1;
-
-% extrema detection (0)
-extrema_enable = 0;
-
-% background subtraction
-bg_subtract_enable = 1;
-
-% the closest neighbour approach
-cna_enable = 1;
-
 % Kalman only
 kalman_only_enable = 0;
-
-% shift the intensity
-intensity_shift = -20;
 
 % kalman filter multiple object tracking
 
@@ -1428,9 +1284,6 @@ for data_th = 1:size(records,1)
     img_w = size(img_initial,2);
     clear img_initial;
     
-    % adjust velocity threshold 
-    velocity_thres = velocity_thres * (img_h / 1000) * frame_steps; % TODO: how about fps
-
     disp(['start tracking : ' shuttleVideo.name]);
 
     % show wait dialog
@@ -1486,7 +1339,6 @@ for data_th = 1:size(records,1)
             %             Q_estimate(:,F) = NaN;
             %         end
         end
-
 
 
         %predict next covariance
@@ -1548,13 +1400,12 @@ for data_th = 1:size(records,1)
                     v2 = direction_meas(:,asgn(F));
                     if (norm(v1) ~= 0) && (norm(v2) ~= 0)
                         angle_v1_v2 = abs(acosd(dot(v1,v2)/norm(v1)/norm(v2)));  % calculate the angle between two vectors
-                        rej(F) = (angle_v1_v2 < 45); % reject if direction is too different
-                    end
-                    if rej(F) == 1
+                        
                         e1 = ecc_track(F);
                         e2 = ecc_meas(asgn(F));
                         ecc_e1_e2 = abs(e1 - e2);
-                        rej(F) = (ecc_e1_e2 < 0.3);
+
+                        rej(F) = (ecc_e1_e2 < 0.3 || angle_v1_v2 < 45); % reject if direction and ecc are too different
                     end
                 else
                     rej(F) = 0;
@@ -1682,24 +1533,17 @@ for data_th = 1:size(records,1)
                                 end
                             end
                         end
-
                     end
-
                 end
 
-                % velocity thresholding
+                % velocity thresholding, actually this is redundant. maybe I can ommit.
                 if ~isnan(Q_estimate(1,k))  % if the value is not NaN
-                    if velocity_thres_enable
-                        % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
-                        if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > velocity_thres
-                            Q_estimate(:,k) = NaN;    % delete
-                            %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
-                        end
+                    % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
+                    if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > reject_dist
+                       Q_estimate(:,k) = NaN;    % delete
+                        %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
                     end
-
                 end
-
-
 
                 k = k + 1;
             end
@@ -1841,118 +1685,6 @@ time = toc;
 set(handles.text14, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
-
-
-function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn)
-
-H = vision.BlobAnalysis;
-H.MaximumCount = 100;
-H.MajorAxisLengthOutputPort = 1;
-H.MinorAxisLengthOutputPort = 1;
-H.OrientationOutputPort = 1;
-H.EccentricityOutputPort = 1;
-H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
-
-[AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical);
-origAreas = AREA;
-origCenterPoints = CENTROID;
-origBoxes = BBOX;
-origMajorAxis = MAJORAXIS;
-origMinorAxis = MINORAXIS;
-origOrient = ORIENTATION;
-origEcc = ECCENTRICITY;
-
-labeledImage = bwlabel(blob_img_logical);   % label the image
-
-area_mean = mean(origAreas);
-blobAvgSize = (area_mean + blobAvgSizeIn * (frameCount - 1)) / frameCount;
-blob_num = size(origAreas,1);
-blobPointX = [];
-blobPointY = [];
-blobAreas = [];
-blobCenterPoints = [];
-blobBoxes = [];
-blobMajorAxis = [];
-blobMinorAxis = [];
-blobOrient = [];
-blobEcc = [];
-
-% loop for checking all blobs
-for i = 1 : blob_num
-    % check blobAreas dimension of current blob and how bigger than avarage.
-    area_ratio = double(origAreas(i))/blobAvgSize;
-    if (mod(area_ratio,1) > blobSeparateRate)
-        expect_num = area_ratio + (1-mod(area_ratio,1));
-    else
-        expect_num = floor(area_ratio); % floor to the nearest integer
-    end
-
-    % check expected number of targets (animals)
-    chooseOne = true;
-    if expect_num <= 1  % expect one
-        % set output later
-    elseif expect_num > 4 % too big! isn't it?
-        chooseOne = false;
-    elseif expect_num > 1
-        % find separated area
-        blob_threshold2 = blob_threshold - 0.2;
-        if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
-
-        label_mask = labeledImage==i;
-        blob_img_masked = blob_img .* label_mask;
-
-        % trimmed from original gray scale image
-        rect = origBoxes(i,:);
-        blob_img_trimmed = imcrop(blob_img_masked, rect);
-
-        % stronger gaussian again
-        blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
-        blob_th_max = max(max(blob_img_trimmed));
-        blob_img_trimmed = blob_img_trimmed / blob_th_max;
-
-        for th_i = 1 : 40
-            blob_threshold2 = blob_threshold2 + 0.05;
-            if blob_threshold2 > 1
-                break;
-            end
-
-            blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-            [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
-
-            if expect_num <= size(AREA, 1) % change from <= to == 20161015
-                x_choose = CENTROID(1:expect_num,2);
-                y_choose = CENTROID(1:expect_num,1);    % choose expect_num according to area (large)
-                blobPointX = [blobPointX ; x_choose + double(rect(2))];
-                blobPointY = [blobPointY ; y_choose + double(rect(1))];
-                blobAreas = [blobAreas ; AREA(1:expect_num)];
-                blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
-                blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
-                blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
-                blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
-                for j=1 : expect_num
-                    pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
-                    box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
-                    blobCenterPoints = [blobCenterPoints ; pt];
-                    blobBoxes = [blobBoxes ; box];
-                end
-                chooseOne = false;
-                break
-            end
-        end
-    end
-    if chooseOne
-        % choose one
-        blobPointX = [blobPointX ; origCenterPoints(i,2)];
-        blobPointY = [blobPointY ; origCenterPoints(i,1)];
-        blobAreas = [blobAreas ; origAreas(i)];
-        blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
-        blobBoxes = [blobBoxes ; origBoxes(i,:)];
-        blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
-        blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
-        blobOrient = [blobOrient ; origOrient(i)];
-        blobEcc = [blobEcc ; origEcc(i)];
-    end
-end
 
 
 %%

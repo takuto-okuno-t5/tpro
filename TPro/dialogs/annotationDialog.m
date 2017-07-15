@@ -346,9 +346,10 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     if gca == handles.axes2 || gca == handles.axes4 || gca == handles.axes5 || gca == handles.axes6 || gca == handles.axes7
+        sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
         cp = get(gca,'CurrentPoint');
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
-        set(handles.slider1, 'value', cp(1));
+        set(handles.slider1, 'value', sharedInst.startFrame + cp(1));
         slider1_Callback(handles.slider1, eventdata, handles)
     end
 end

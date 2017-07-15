@@ -183,6 +183,8 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.popupmenu3,'String',listItem);
 
     % count each ROI fly number
+    img_h = size(roiMaskImage,1);
+    img_w = size(roiMaskImage,2);
     xsize = size(X, 2);
     flyCounts = zeros(xsize,1);
     roiCounts = cell(sharedInst.roiNum,1);
@@ -195,7 +197,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
             flyNum = length(fx);
             count = 0;
             for j = 1:flyNum
-                if roiMasks{i}(round(fy(j)),round(fx(j))) > 0
+                y = round(fy(j));
+                x = round(fx(j));
+                if (y <= img_h) && (x <= img_w) && ~isnan(y) && ~isnan(x) && x >= 1 && y >= 1 && roiMasks{i}(y,x) > 0
                     count = count + 1;
                 end
             end
@@ -262,9 +266,10 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     if gca == handles.axes2 || gca == handles.axes3
+        sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
         cp = get(gca,'CurrentPoint');
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
-        set(handles.slider1, 'value', cp(1));
+        set(handles.slider1, 'value', sharedInst.startFrame + cp(1));
         slider1_Callback(handles.slider1, eventdata, handles)
     end
 end
@@ -563,7 +568,7 @@ function showLongAxes(hObject, handles, t, type)
             else
                 yval = sharedInst.flyCounts(:);
             end
-            ymin = 0;
+            ymin = floor(min(yval) * 0.5);
             ymax = floor(max(yval) * 1.2);
             if ymax < 5
                 ymax = 5;

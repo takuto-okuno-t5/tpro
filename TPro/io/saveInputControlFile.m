@@ -1,7 +1,12 @@
 %% save a input_video_control.csv
 function status = saveInputControlFile(outputFileName, B)
     % config header
-    header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'Dmy3', 'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate'};
+    header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'Dmy3', ...
+        'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate', 'FilterType', 'MaxSeparate', 'isSeparate', 'MaxBlobs', 'DelRectOverlap'};
+    % check old compatibility
+    if length(B) < 18
+        B = [B, 'log', 4, 1, 0, 0];
+    end
     try
         T = cell2table(B);
         T.Properties.VariableNames = header;
