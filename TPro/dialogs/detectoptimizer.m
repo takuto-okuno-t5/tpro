@@ -1,4 +1,3 @@
-
 function varargout = detectoptimizer(varargin)
     % DETECTOPTIMIZER MATLAB code for detectoptimizer.fig
     %      DETECTOPTIMIZER, by itself, creates a new DETECTOPTIMIZER or raises the existing
@@ -23,7 +22,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 20-Jun-2017 00:51:19
+    % Last Modified by GUIDE v2.5 15-Jul-2017 15:07:54
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -71,7 +70,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     if isempty(rowNum), rowNum = 1; end
 
     % load video list
-    inputListFile = './input_videos.mat';
+    inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
         return;
@@ -95,12 +94,13 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = VideoReader(strcat(videoPath, records{2}));
+    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2});
     sharedInst.rowNum = rowNum;
     sharedInst.imageMode = 1;
     sharedInst.showDetectResult = 1;
     sharedInst.showDirection = 1;
     sharedInst.showIndexNumber = 0;
+    sharedInst.showSurrowndBox = 0;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
@@ -112,6 +112,9 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.binaryAreaPixel = records{15};
     sharedInst.blobSeparateRate = records{17};
     sharedInst.isModified = false;
+    sharedInst.roiNum = records{10};
+    sharedInst.currentROI = 0;
+    sharedInst.mmPerPixel = records{9};
     sharedInst.useDeepLearning = false;
 
     sharedInst.originalImage = [];
@@ -120,6 +123,43 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.step4Image = [];
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
+    sharedInst.detectedBoxes = [];
+
+    % fix old parameters
+    if sharedInst.mmPerPixel <= 0
+        sharedInst.mmPerPixel = 0.1;
+    end
+    if length(records) < 18
+        sharedInst.filterType = 'log';
+        sharedInst.maxSeparate = 4;
+        sharedInst.isSeparate = 1;
+        sharedInst.maxBlobs = 0;
+        sharedInst.delRectOverlap = 0;
+    else
+        sharedInst.filterType = records{18};
+        sharedInst.maxSeparate = records{19};
+        sharedInst.isSeparate = records{20};
+        sharedInst.maxBlobs = records{21};
+        sharedInst.delRectOverlap = records{22};
+    end
+    % load last detection setting (do not read when local debug)
+    lastConfigFile = 'etc/last_detect_config.mat';
+    if exist(lastConfigFile, 'file') && handles.isArgin
+        cf = load(lastConfigFile);
+        sharedInst.frameSteps = cf.frameSteps;
+        sharedInst.gaussH = cf.gaussH;
+        sharedInst.gaussSigma = cf.gaussSigma;
+        sharedInst.filterType = cf.filterType;
+        sharedInst.maxSeparate = cf.maxSeparate;
+        sharedInst.isSeparate = cf.isSeparate;
+        sharedInst.delRectOverlap = cf.delRectOverlap;
+        sharedInst.maxBlobs = cf.maxBlobs;
+        sharedInst.binaryTh = cf.binaryTh;
+        sharedInst.binaryAreaPixel = cf.binaryAreaPixel;
+        sharedInst.blobSeparateRate = cf.blobSeparateRate;
+        sharedInst.mmPerPixel = cf.mmPerPixel;
+        sharedInst.isModified = true;
+    end
 
     % deep learning data
     if exist('./deeplearningFrontBack2.mat', 'file')
@@ -136,11 +176,16 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
     set(handles.checkbox1, 'Value', sharedInst.showDetectResult);
-    set(handles.pushbutton4, 'Enable', 'off');
+    if sharedInst.isModified
+        set(handles.pushbutton4, 'Enable', 'on')
+    else
+        set(handles.pushbutton4, 'Enable', 'off')
+    end
     set(handles.edit1, 'String', sharedInst.startFrame);
     set(handles.edit2, 'String', sharedInst.endFrame);
     set(handles.edit3, 'String', sharedInst.frameSteps);
     set(handles.edit4, 'String', sharedInst.frameNum);
+    set(handles.edit5, 'String', sharedInst.mmPerPixel);
 
     set(hObject, 'name', ['Detection Optimizer for ', sharedInst.shuttleVideo.name]); % set window title
 
@@ -160,6 +205,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     pos = getpixelposition(handles.text5, true);
     spinnerModel = javax.swing.SpinnerNumberModel(sharedInst.binaryAreaPixel, 0, 500, 1);
     handles.jhSpinner4 = addLabeledSpinner(spinnerModel, [pos(1)+70,pos(2)-4,60,20], @spinner_Callback4);
+
+    pos = getpixelposition(handles.text21, true);
+    spinnerModel = javax.swing.SpinnerNumberModel(sharedInst.blobSeparateRate * 100, 0, 100, 5);
+    handles.jhSpinner5 = addLabeledSpinner(spinnerModel, [pos(1)+70,pos(2)-4,60,20], @spinner_Callback5);
 
     % load background image
     videoName = sharedInst.shuttleVideo.name;
@@ -181,12 +230,27 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load roi image file
-    roiFileName = strcat(sharedInst.confPath,'roi.png');
-    if exist(roiFileName, 'file')
-        img = imread(roiFileName);
-        sharedInst.roiMaskImage = im2double(img);
-    else
-        sharedInst.roiMaskImage = [];
+    sharedInst.roiMaskImage = [];
+    csvFileName = [sharedInst.confPath 'roi.csv'];
+    if exist(csvFileName, 'file')
+        roiTable = readtable(csvFileName,'ReadVariableNames',false);
+        roiFiles = table2cell(roiTable);
+    end
+    for i=1:sharedInst.roiNum
+        if exist(csvFileName, 'file')
+            roiFileName = roiFiles{i};
+        else
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [sharedInst.confPath 'roi' idx '.png'];
+        end
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            if i==1
+                sharedInst.roiMaskImage = im2double(img);
+            else
+                sharedInst.roiMaskImage = sharedInst.roiMaskImage | im2double(img);
+            end
+        end
     end
     
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -225,6 +289,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step4Image = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
+            sharedInst.detectedBoxes = [];
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
@@ -254,6 +319,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step4Image = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
+            sharedInst.detectedBoxes = [];
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
@@ -283,6 +349,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step4Image = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
+            sharedInst.detectedBoxes = [];
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
@@ -312,6 +379,37 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step4Image = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
+            sharedInst.detectedBoxes = [];
+            sharedInst.isModified = true;
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            set(hdl.pushbutton4, 'Enable', 'on');
+            showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
+        catch
+            % nothing to do
+        end
+        pLock = [];
+    end
+
+    function spinner_Callback5(jSpinner, jEventData)
+        persistent pLock
+        try
+            % check lock
+            if ~isempty(pLock),  return;  end
+            pLock = 1;
+
+            % get handles structure
+            hFig = ancestor(hObject, 'figure');
+            hdl = guidata(hFig);
+
+            % get spinner data for the spinners
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared instance
+            sharedInst.blobSeparateRate = jSpinner.getValue / 100;
+            sharedInst.step2Image = [];      % filter param is changed, so clear cache
+            sharedInst.step3Image = [];
+            sharedInst.step4Image = [];
+            sharedInst.detectedPointX = [];
+            sharedInst.detectedPointY = [];
+            sharedInst.detectedBoxes = [];
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
@@ -324,47 +422,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     uiwait(handles.figure1); % wait for finishing dialog
-end
-
-%% --- Executes when user attempts to close figure1.
-function figure1_SizeChangedFcn(hObject, eventdata, handles)
-    % initialize spinner
-    if isfield(handles, 'jhSpinner1')
-        pos = getpixelposition(handles.text2, true);
-        setpixelposition(handles.jhSpinner1, [pos(1)+46,pos(2)-4,60,20]);
-
-        pos = getpixelposition(handles.text3, true);
-        setpixelposition(handles.jhSpinner2, [pos(1)+46,pos(2)-4,60,20]);
-
-        pos = getpixelposition(handles.text4, true);
-        setpixelposition(handles.jhSpinner3, [pos(1)+90,pos(2)-4,60,20]);
-
-        pos = getpixelposition(handles.text5, true);
-        setpixelposition(handles.jhSpinner4, [pos(1)+70,pos(2)-4,60,20]);
-    end
-end
-
-%% --- Executes when user attempts to close figure1.
-function figure1_CloseRequestFcn(hObject, eventdata, handles)
-    % hObject    handle to figure1 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    if sharedInst.isModified
-        selection = questdlg('Do you save configuration before closing Detection Optimizer before?',...
-                             'Confirmation',...
-                             'Yes','No','Cancel','Yes');
-        switch selection
-        case 'Cancel'
-            return;
-        case 'Yes'
-            saveConfigurationFile(handles);
-        case 'No'
-            % nothing todo
-        end
-    end
-    uiresume(handles.figure1);
 end
 
 %% --- Outputs from this function are returned to the command line.
@@ -382,6 +439,79 @@ function varargout = detectoptimizer_OutputFcn(hObject, eventdata, handles)
     end
 end
 
+%% --- Executes when user attempts to close figure1.
+function figure1_SizeChangedFcn(hObject, eventdata, handles)
+    % initialize spinner
+    if isfield(handles, 'jhSpinner1')
+        pos = getpixelposition(handles.text2, true);
+        setpixelposition(handles.jhSpinner1, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text3, true);
+        setpixelposition(handles.jhSpinner2, [pos(1)+46,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text4, true);
+        setpixelposition(handles.jhSpinner3, [pos(1)+90,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text5, true);
+        setpixelposition(handles.jhSpinner4, [pos(1)+70,pos(2)-4,60,20]);
+
+        pos = getpixelposition(handles.text21, true);
+        setpixelposition(handles.jhSpinner5, [pos(1)+70,pos(2)-4,60,20]);
+    end
+end
+
+%% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.isModified
+        selection = questdlg('Do you save configuration before closing Detection Optimizer?',...
+                             'Confirmation',...
+                             'Yes','No','Cancel','Yes');
+        switch selection
+        case 'Cancel'
+            return;
+        case 'Yes'
+            saveConfigurationFile(handles);
+        case 'No'
+            % nothing todo
+        end
+    end
+    uiresume(handles.figure1);
+end
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if strcmp(eventdata.Key, 'rightarrow')
+        if sharedInst.frameNum < sharedInst.maxFrame
+            set(handles.slider1, 'value', sharedInst.frameNum+1);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        end
+    elseif strcmp(eventdata.Key, 'leftarrow')
+        if sharedInst.frameNum > 1
+            set(handles.slider1, 'value', sharedInst.frameNum-1);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        end
+    end
+end
+
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+end
+
+% --- Executes on key release with focus on figure1 and none of its controls.
+function figure1_KeyReleaseFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+    %	Key: name of the key that was released, in lower case
+    %	Character: character interpretation of the key(s) that was released
+    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
 %% --- Executes on slider movement.
 function slider1_Callback(hObject, eventdata, handles)
     % hObject    handle to slider1 (see GCBO)
@@ -396,6 +526,7 @@ function slider1_Callback(hObject, eventdata, handles)
     sharedInst.step4Image = [];
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
+    sharedInst.detectedBoxes = [];
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
     set(handles.edit4, 'String', sharedInst.frameNum);
@@ -490,6 +621,17 @@ function checkbox2_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
+% --- Executes on button press in checkbox3.
+function checkbox3_Callback(hObject, eventdata, handles)
+    % hObject    handle to checkbox3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.showSurrowndBox = get(hObject,'Value');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+end
+
 %% --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
@@ -509,8 +651,11 @@ function pushbutton3_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.roiMaskImage)
+        grayImage = rgb2gray(sharedInst.originalImage);
+        img = double(grayImage).*(imcomplement(sharedInst.roiMaskImage*0.5));
+        img = uint8(img);
         cla;
-        imshow(sharedInst.roiMaskImage);
+        imshow(img);
     end
 end
 
@@ -521,7 +666,10 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 
     % save excel setting data
-    saveConfigurationFile(handles);
+    status = saveConfigurationFile(handles);
+    if status 
+        set(handles.pushbutton4, 'Enable', 'off');
+    end
 end
 
 %% --- Executes on button press in pushbutton5.
@@ -662,34 +810,6 @@ function edit4_CreateFcn(hObject, eventdata, handles)
     end
 end
 
-% --- Executes on key press with focus on figure1 and none of its controls.
-function figure1_KeyPressFcn(hObject, eventdata, handles)
-end
-
-function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
-end
-
-% --- Executes on key release with focus on figure1 and none of its controls.
-function figure1_KeyReleaseFcn(hObject, eventdata, handles)
-    % hObject    handle to figure1 (see GCBO)
-    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
-    %	Key: name of the key that was released, in lower case
-    %	Character: character interpretation of the key(s) that was released
-    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    if strcmp(eventdata.Key, 'rightarrow')
-        if sharedInst.frameNum < sharedInst.maxFrame
-            set(handles.slider1, 'value', sharedInst.frameNum+1);
-            slider1_Callback(handles.slider1, eventdata, handles)
-        end
-    elseif strcmp(eventdata.Key, 'leftarrow')
-        if sharedInst.frameNum > 1
-            set(handles.slider1, 'value', sharedInst.frameNum-1);
-            slider1_Callback(handles.slider1, eventdata, handles)
-        end
-    end
-end
 
 %% --- Executes on button press in pushbutton6.
 function pushbutton6_Callback(hObject, eventdata, handles)
@@ -698,8 +818,8 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     boxSize = findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
-    
-outputFlyImageFiles(sharedInst.startFrame, sharedInst.endFrame, boxSize);
+
+outputFlyImageFiles(handles, sharedInst.startFrame, sharedInst.endFrame, boxSize);
 return;
 
     figure;
@@ -719,6 +839,40 @@ return;
 
         subplot(8, 8, i);
         imshow(trimmedImage);
+    end
+end
+
+
+function edit5_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    % Hints: get(hObject,'String') returns contents of edit5 as text
+    %        str2double(get(hObject,'String')) returns contents of edit5 as a double
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    mmPerPixel = str2double(get(hObject,'String'));
+    if isnan(mmPerPixel) || mmPerPixel <= 0
+        set(hObject, 'String', sharedInst.mmPerPixel);
+        return;
+    end
+    sharedInst.mmPerPixel = mmPerPixel;
+    sharedInst.isModified = true;
+    set(handles.pushbutton4, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    guidata(hObject, handles);  % Update handles structure
+end
+
+% --- Executes during object creation, after setting all properties.
+function edit5_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
     end
 end
 
@@ -745,7 +899,7 @@ end
 function outimage = applyFilterAndRoi(handles, img)
     % apply gaussian filter
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img = PD_blobfilter(img, sharedInst.gaussH, sharedInst.gaussSigma);
+    img = PD_blobfilter(img, sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.filterType);
 
     % apply ROI
     if ~isempty(sharedInst.roiMaskImage)
@@ -769,7 +923,7 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     if ~isempty(sharedInst.originalImage) && (ndims(sharedInst.originalImage) > 1) % check cache
         img = sharedInst.originalImage;
     else
-        img = read(sharedInst.shuttleVideo, frameNum);
+        img = TProRead(sharedInst.shuttleVideo, frameNum);
         sharedInst.originalImage = img;
     end
     % show original image
@@ -837,32 +991,29 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     end
 end
 
-%% get image which includes index text
-function [ numbersImage ] = getNumberDrawnImage(img, detectedPointX, detectedPointY)
-    if ~islogical(img)
-        num = size(detectedPointX);
-        for i = 1:num
-            position = [detectedPointX(i)+4 detectedPointY(i)-24];
-            img = insertText(img, position, i, 'FontSize',18, 'TextColor','red', 'BoxOpacity',0);
-        end
-    end
-    numbersImage = img;
-end
-
 %% show result
 function showDetectResultInAxes(hObject, handles, frameImage)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % check cache first. if it exists, just plot
     if ~isempty(sharedInst.detectedPointX)
-        if sharedInst.showIndexNumber
-            frameImage = getNumberDrawnImage(frameImage, sharedInst.detectedPointX, sharedInst.detectedPointY);
-        end
         cla;
         imshow(frameImage);
 
         hold on;
         plot(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), 'or'); % the updated actual tracking
-
+        % show number
+        if sharedInst.showIndexNumber
+            for i=1:size(sharedInst.detectedPointX,1)
+                num_txt = ['  ', num2str(i)];
+                text(sharedInst.detectedPointX(i),sharedInst.detectedPointY(i),num_txt, 'Color','red');
+            end
+        end
+        % show rectangle
+        if sharedInst.showSurrowndBox && ~isempty(sharedInst.detectedBoxes)
+            for i=1:size(sharedInst.detectedBoxes,1)
+                rectangle('Position',sharedInst.detectedBoxes(i,:),'EdgeColor',[0.2 0.2 0.8]);
+            end
+        end
         if sharedInst.showDirection && ~isempty(sharedInst.detectedDirection)
             quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedDirection(1,:)', sharedInst.detectedDirection(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
         end
@@ -894,25 +1045,37 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
     end
     
-    [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
+    [ blobPointY, blobPointX, blobAreas, blobCenterPoints, blobBoxes, ...
+      blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
+          sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
+          1, 0, sharedInst.maxSeparate, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs);
 
     % draw image
-    if sharedInst.showIndexNumber
-        frameImage = getNumberDrawnImage(frameImage, blobPointX, blobPointY);
-    end
     cla;
     imshow(frameImage);
 
     % show detection result    
     hold on;
     plot(blobPointX(:), blobPointY(:), 'or'); % the updated actual tracking
-
+    % show number
+    if sharedInst.showIndexNumber
+        for i=1:size(blobPointX,1)
+            num_txt = ['  ', num2str(i)];
+            text(blobPointX(i),blobPointY(i),num_txt, 'Color','red');
+        end
+    end
+    % show rectangle
+    if sharedInst.showSurrowndBox
+        for i=1:size(blobBoxes,1)
+            rectangle('Position',blobBoxes(i,:),'EdgeColor',[0.2 0.2 0.8]);
+        end
+    end
     % calc and draw direction
     if sharedInst.showDirection
         if sharedInst.useDeepLearning
             keep_direction = PD_direction_deepLearning(handles, sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         else
-            keep_direction = PD_direction(handles, sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            keep_direction = PD_direction2(handles, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
@@ -921,6 +1084,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     % store in cache
     sharedInst.detectedPointX = blobPointX;
     sharedInst.detectedPointY = blobPointY;
+    sharedInst.detectedBoxes = blobBoxes;
     sharedInst.detectedDirection = keep_direction;
     setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
 
@@ -930,225 +1094,11 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 end
 
 %%
-function saveConfigurationFile(handles)
-    % save configuration file
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    name = sharedInst.shuttleVideo.Name;
-    frameNum = sharedInst.shuttleVideo.NumberOfFrames;
-    frameRate = sharedInst.shuttleVideo.FrameRate;
-
-    B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (sharedInst.binaryTh / 100), 0, 1, 200, 0, ...
-        sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.binaryAreaPixel, ...
-        sharedInst.frameSteps, 0.5};
-
-    try
-        T = cell2table(B);
-        confTable = readtable(sharedInst.confFileName);
-        T.Properties.VariableNames = confTable.Properties.VariableNames;
-        writetable(T,sharedInst.confFileName);
-        status = true;
-    catch e
-        status = false;
-        errordlg(['failed to save configuration file : ' sharedInst.confFileName], 'Error');
-    end
-    if status 
-        sharedInst.isModified = false;
-        set(handles.pushbutton4, 'Enable', 'off');
-    end
-    setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-end
-
-%
-function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(blob_img, blob_img_logical, blob_threshold, blobSeparateRate)
-    H = vision.BlobAnalysis;
-    H.MaximumCount = 100;
-    H.MajorAxisLengthOutputPort = 1;
-    H.MinorAxisLengthOutputPort = 1;
-    H.OrientationOutputPort = 1;
-    H.EccentricityOutputPort = 1;
-    H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
-
-    [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical);
-    origAreas = AREA;
-    origCenterPoints = CENTROID;
-    origBoxes = BBOX;
-    origMajorAxis = MAJORAXIS;
-    origMinorAxis = MINORAXIS;
-    origOrient = ORIENTATION;
-    origEcc = ECCENTRICITY;
-
-    labeledImage = bwlabel(blob_img_logical);   % label the image
-
-    blobAvgSize = mean(origAreas);
-    blob_num = size(origAreas,1);
-    blobPointX = [];
-    blobPointY = [];
-    blobAreas = [];
-    blobCenterPoints = [];
-    blobBoxes = [];
-    blobMajorAxis = [];
-    blobMinorAxis = [];
-    blobOrient = [];
-    blobEcc = [];
-
-    % loop for checking all blobs
-    for i = 1 : blob_num
-        % check blobAreas dimension of current blob and how bigger than avarage.
-        area_ratio = double(origAreas(i))/blobAvgSize;
-        if (mod(area_ratio,1) > blobSeparateRate)
-            expect_num = area_ratio + (1-mod(area_ratio,1));
-        else
-            expect_num = round(area_ratio); % round to the nearest integer
-        end
-
-        % check expected number of targets (animals)
-        chooseOne = true;
-        if expect_num <= 1  % expect one
-            % set output later
-        elseif expect_num > 4 % too big! isn't it?
-            chooseOne = false;
-        elseif expect_num > 1
-            % find separated area
-            blob_threshold2 = blob_threshold/100 - 0.2;
-            if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
-
-            label_mask = labeledImage==i;
-            blob_img_masked = blob_img .* label_mask;
-
-            % trimmed from original gray scale image
-            rect = origBoxes(i,:);
-            blob_img_trimmed = imcrop(blob_img_masked, rect);
-
-            % stronger gaussian again
-            blob_img_trimmed = imgaussfilt(blob_img_trimmed, 1);
-            blob_th_max = max(max(blob_img_trimmed));
-            blob_img_trimmed = blob_img_trimmed / blob_th_max;
-
-            for th_i = 1 : 40
-                blob_threshold2 = blob_threshold2 + 0.05;
-                if blob_threshold2 > 1
-                    break;
-                end
-
-                blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
-
-                if expect_num <= size(AREA, 1) % change from <= to == 20161015
-                    x_choose = CENTROID(1:expect_num,1);
-                    y_choose = CENTROID(1:expect_num,2);    % choose expect_num according to area (large)
-                    blobPointX = [blobPointX ; x_choose + double(rect(1))];
-                    blobPointY = [blobPointY ; y_choose + double(rect(2))];
-                    blobAreas = [blobAreas ; AREA(1:expect_num)];
-                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
-                    blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
-                    blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
-                    blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
-                    for j=1 : expect_num
-                        pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
-                        box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
-                        blobCenterPoints = [blobCenterPoints ; pt];
-                        blobBoxes = [blobBoxes ; box];
-                    end
-                    chooseOne = false;
-                    break
-                end
-            end
-        end
-        if chooseOne
-            % choose one
-            blobPointX = [blobPointX ; origCenterPoints(i,1)];
-            blobPointY = [blobPointY ; origCenterPoints(i,2)];
-            blobAreas = [blobAreas ; origAreas(i)];
-            blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
-            blobBoxes = [blobBoxes ; origBoxes(i,:)];
-            blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
-            blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
-            blobOrient = [blobOrient ; origOrient(i)];
-            blobEcc = [blobEcc ; origEcc(i)];
-        end
-    end
-end
-
-%%
-function [ outputImage ] = PD_blobfilter( image, h, sigma )
-    %   h & sigma : the bigger, the larger the blob can be found
-    %   example : >>subplot(121); imagesc(h) >>subplot(122); mesh(h)
-    %   >>colormap(jet)
-
-    %   laplacian of a gaussian (LOG) template
-    logKernel = fspecial('log', h, sigma);
-    %   2d convolution
-    outputImage = conv2(image, logKernel, 'same');
-end
-
-%%
-
-function boxSize = findFlyImageBoxSize(handles, startFrame, endFrame)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    step = int64((endFrame - startFrame) / 12);
-    if step == 0
-        step = 1;
-    end
-    count = 0;
-    sumMajorAxis = 0;
-    for frameNum = startFrame+step:step:endFrame-step % just use middle flames of movie
-        img = read(sharedInst.shuttleVideo, frameNum);
-        step2Image = applyBackgroundSub(handles, img);
-        step3Image = applyFilterAndRoi(handles, step2Image);
-        step4Image = applyBinarizeAndAreaMin(handles, step3Image);
-
-        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
-        sumMajorAxis = sumMajorAxis + mean(blobMajorAxis);
-        count = count + 1;
-    end
-    meanMajorAxis = sumMajorAxis / count;
-    boxSize = int64((meanMajorAxis * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
-end
-
-%%
-function outputFlyImageFiles(handles, startFrame, endFrame, boxSize)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    % create output directory
-    path = strcat(sharedInst.confPath,'detect_flies/');
-    mkdir(path);
-
-    tic;
-    for frameNum = startFrame:endFrame
-        img = read(sharedInst.shuttleVideo, frameNum);
-        step2Image = applyBackgroundSub(handles, img);
-        step3Image = applyFilterAndRoi(handles, step2Image);
-        step4Image = applyBinarizeAndAreaMin(handles, step3Image);
-
-        [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center(step3Image, step4Image, sharedInst.binaryTh, sharedInst.blobSeparateRate);
-        if sharedInst.useDeepLearning
-            flyDirection = PD_direction_deepLearning(handles, step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-        else
-            flyDirection = PD_direction(handles, step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
-        end
-
-        blobNumber = size(blobPointY,1);
-        for i = 1:blobNumber
-            trimmedImage = getOneFlyBoxImage(step2Image, blobPointX, blobPointY, flyDirection, boxSize, i);
-            filename = [sprintf('%05d_%02d', frameNum,i) '.png'];
-            imwrite(trimmedImage, strcat(path,'/',filename));
-            pause(0.001);
-        end
-        disp(strcat('output fly images (', num2str(frameNum) ,') >', num2str(100*(frameNum-startFrame+1)/(endFrame-startFrame+1)), '%', '     detect : ', num2str(blobNumber)));
-        pause(0.001);
-    end
-    time = toc;
-    disp(strcat('output fly images ... done!     t =',num2str(time),'s'));
-end
-
-%%
 function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
     trimSize = boxSize * 1.5;
     rect = [ptX-(trimSize/2) ptY-(trimSize/2) trimSize trimSize];
     trimmedImage = imcrop(image, rect);
-    
+
     % rotate image
     if isempty(dir) || dir(1) == 0
         angle = 0;
@@ -1176,158 +1126,6 @@ function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
             trimmedImage(:,boxSize+1) = [];
             trimmedImage(boxSize+1,:) = [];
         end
-    end
-end
-
-function trimmedImage = getOneFlyBoxImage(image, pointX, pointY, direction, boxSize, i)
-    trimmedImage = getOneFlyBoxImage_(image, pointX(i), pointY(i), direction(:,i), boxSize);
-end
-
-%%
-function [ color1, color2 ] = getTopAndBottomColors(image, len, cosph, sinph, cx, cy, r)
-    dx = len * cosph;
-    dy = len * sinph;
-    x1 = int64(cx+dx); y1 = int64(cy+dy);
-    x2 = int64(cx-dx); y2 = int64(cy-dy);
-    ymax = size(image,1);
-    if (y1-r)<1 y1 = r+1; end
-    if (y2-r)<1 y2 = r+1; end
-    if (y1+r)>ymax y1 = ymax-r; end
-    if (y2+r)>ymax y2 = ymax-r; end
-    colBox1 = image(y1-r:y1+r, x1-r:x1+r);
-    colBox2 = image(y2-r:y2+r, x2-r:x2+r);
-    area = ((r*2+1) * (r*2+1));
-    color1 = sum(sum(colBox1)) / area;
-    color2 = sum(sum(colBox2)) / area;
-end
-
-%%
-function [ outVector, isFound ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, TH_OVER_HEAD_COLOR, TH_WING_COLOR_MAX, TH_WING_COLOR_MIN)
-    found = true;
-    % if c1 is darker, c1 is head.
-    if c1 > c2
-        if c3 < c4
-            % c2 should be head (darker), then c3 should be wing (darker). so flip now
-            vec = -vec;
-        else
-            % oops c1-c2 and c3-c4 is conflicted
-            if c3 > TH_OVER_HEAD_COLOR && TH_WING_COLOR_MIN < c4 && c4 < TH_WING_COLOR_MAX % c4 should be wing & c3 should be over head
-                vec = -vec;
-            else
-                found = false;
-            end
-        end
-    else
-        % c1 should be head (darker), then c4 should be wing (darker).
-        if c3 < c4
-            % oops c1-c2 and c3-c4 is conflicted
-            if c4 > TH_OVER_HEAD_COLOR && TH_WING_COLOR_MIN < c3 && c3 < TH_WING_COLOR_MAX % c3 should be wing & c4 should be over head
-                vec = -vec;
-            else
-                found = false;
-            end
-        end
-    end
-    outVector = vec;
-    isFound = found;
-end
-
-%%
-function [ keep_direction ] = PD_direction(handles, glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
-    % init
-    areaNumber = size(blobAreas, 1);
-    keep_direction = zeros(2, areaNumber); % allocate memory
-    
-    % constant hidden params
-    TH_OVER_HEAD_COLOR = 245;
-    TH_WING_COLOR_MAX = 232;
-    TH_WING_COLOR_MIN = 195;
-    TH_HEAD_WING_DIFF_COLOR = 15; % between head and wing
-    TH_WING_BG_DIFF_COLOR = 25;   % between wing and background
-
-    % find direction for every blobs
-    for i = 1:areaNumber
-        % pre calculation
-        cx = blobCenterPoints(i,1);
-        cy = blobCenterPoints(i,2);
-        ph = -blobOrient(i);
-        cosph =  cos(ph);
-        sinph =  sin(ph);
-        len = blobMajorAxis(i) * 0.35;
-        vec = [len*cosph; len*sinph];
-
-        % get head and tail colors
-        [ c1, c2 ] = getTopAndBottomColors(glayImage, len, cosph, sinph, cx, cy, 2);
-        
-        % get over head and over tail (maybe wing) colors
-        [ c3, c4 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.6, cosph, sinph, cx, cy, 2);
-
-        % 1st step. find head and wing on long axis line (just check 4 points' color) 
-        [ vec, found ] = check4PointsColorsOnBody(vec, c1, c2, c3, c4, TH_OVER_HEAD_COLOR, TH_WING_COLOR_MAX, TH_WING_COLOR_MIN);
-
-        if ~found
-            % 1st step - check one more points
-            [ c1a, c2a ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.4, cosph, sinph, cx, cy, 1);
-            [ c3a, c4a ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.5, cosph, sinph, cx, cy, 1);
-            [ vec, found ] = check4PointsColorsOnBody(vec, c1a, c2a, c3a, c4a, TH_OVER_HEAD_COLOR, TH_WING_COLOR_MAX, TH_WING_COLOR_MIN);
-        end
-        
-        % 2nd step. find side back wing
-        if ~found
-            for j=1:3
-                % check -30 and +30
-                if j==2 continue; end
-                ph2 = ph + pi/180 * (j-2)*30;
-                cosph2 =  cos(ph2);
-                sinph2 =  sin(ph2);
-                [ c5, c6 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.45, cosph2, sinph2, cx, cy, 2);
-                if abs(c5 - c6) > TH_WING_BG_DIFF_COLOR
-                    % wing should connected body and over-wing should white
-                    % because some time miss-detects next side body.
-                    [ c7, c8 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.4, cosph2, sinph2, cx, cy, 2);
-                    [ c9, c10 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * 0.6, cosph2, sinph2, cx, cy, 2);
-                    % if c6 is wing, check colors on line.
-                    if (c6 - c8) > -5 && (c10 - c6) > 5
-                        found = true;
-                        break;
-                    % if c5 is wing, check colors on line.
-                    elseif (c5 - c7) > -5 && (c9 - c5) > 5
-                        vec = -vec;
-                        found = true;
-                        break;
-                    end
-                end
-            end
-        end
-        
-        % 3rd step. check long (body) axis colors
-        if ~found
-            for j=0.40:0.05:0.55
-                [ c5, c6 ] = getTopAndBottomColors(glayImage, blobMajorAxis(i) * j, cosph, sinph, cx, cy, 2);
-                if c6 > TH_OVER_HEAD_COLOR && TH_WING_COLOR_MIN < c5 && c5 < TH_WING_COLOR_MAX % c5 should be wing & c6 should be over head
-                    vec = -vec;
-                    found = true;
-                    break
-                elseif c5 > TH_OVER_HEAD_COLOR && TH_WING_COLOR_MIN < c6 && c6 < TH_WING_COLOR_MAX % c6 should be wing & c5 should be over head
-                    found = true;
-                    break;
-                elseif (c5 - c6) > TH_HEAD_WING_DIFF_COLOR && TH_WING_COLOR_MIN < c5
-                    % c6 should be head. so flip now
-                    vec = -vec;
-                    found = true;
-                    break;
-                elseif (c6 - c5) > TH_HEAD_WING_DIFF_COLOR && TH_WING_COLOR_MIN < c6
-                    % c5 should be head.
-                    found = true;
-                    break;
-                end
-            end
-        end
-        % hmm...not detected well
-        if ~found
-            vec = vec * 0;
-        end
-        keep_direction(:,i) = vec;
     end
 end
 

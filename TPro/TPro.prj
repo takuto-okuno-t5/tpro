@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="1434314597" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2240652064" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -36,8 +36,8 @@
     <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
     <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
     <param.windows.command.prompt>true</param.windows.command.prompt>
-    <param.create.log>false</param.create.log>
-    <param.log.file />
+    <param.create.log>true</param.create.log>
+    <param.log.file>tpro.log</param.log.file>
     <unset>
       <param.icon />
       <param.icons />
@@ -64,26 +64,21 @@
       <param.package.mcr.name />
       <param.no.mcr.name />
       <param.windows.command.prompt />
-      <param.create.log />
-      <param.log.file />
     </unset>
     <fileset.main>
       <file>${PROJECT_ROOT}\gui.m</file>
     </fileset.main>
     <fileset.resources>
-      <file>${PROJECT_ROOT}\detectoptimizer.fig</file>
-      <file>${PROJECT_ROOT}\detectoptimizer.m</file>
-      <file>${PROJECT_ROOT}\dndcontrol.m</file>
+      <file>${PROJECT_ROOT}\calc</file>
+      <file>${PROJECT_ROOT}\dialogs</file>
+      <file>${PROJECT_ROOT}\gui</file>
       <file>${PROJECT_ROOT}\gui.fig</file>
-      <file>${PROJECT_ROOT}\MLDropTarget.class</file>
-      <file>${PROJECT_ROOT}\MLDropTarget.java</file>
-      <file>${PROJECT_ROOT}\startEndDialog.fig</file>
-      <file>${PROJECT_ROOT}\startEndDialog.m</file>
-      <file>${PROJECT_ROOT}\trackingResultDialog.fig</file>
-      <file>${PROJECT_ROOT}\trackingResultDialog.m</file>
+      <file>${PROJECT_ROOT}\io</file>
+      <file>${PROJECT_ROOT}\util</file>
     </fileset.resources>
     <fileset.package>
-      <file>${PROJECT_ROOT}\dndcontrol_license.txt</file>
+      <file>${PROJECT_ROOT}\etc</file>
+      <file>${PROJECT_ROOT}\ui</file>
     </fileset.package>
     <build-deliverables>
       <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\readme.txt</file>

@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 20-Jun-2017 01:28:02
+    % Last Modified by GUIDE v2.5 02-Jul-2017 19:42:53
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -68,7 +68,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if isempty(rowNum), rowNum = 1; end
 
     % load video list
-    inputListFile = './input_videos.mat';
+    inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
         return;
@@ -100,7 +100,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = VideoReader(strcat(videoPath, records{2}));
+    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};
@@ -116,6 +116,8 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.lineMode = 2; % tail
     sharedInst.lineLength = 19;
     sharedInst.backMode = 1; % movie
+    sharedInst.roiNum = records{10};
+    sharedInst.currentROI = 0;
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -168,13 +170,39 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load roi image file
-    roiFileName = strcat(sharedInst.confPath,'roi.png');
-    if exist(roiFileName, 'file')
-        img = imread(roiFileName);
-        sharedInst.roiMaskImage = im2double(img);
-    else
-        sharedInst.roiMaskImage = [];
+    roiMaskImage = [];
+    roiMasks = {};
+    csvFileName = [sharedInst.confPath 'roi.csv'];
+    if exist(csvFileName, 'file')
+        roiTable = readtable(csvFileName,'ReadVariableNames',false);
+        roiFiles = table2cell(roiTable);
     end
+    for i=1:sharedInst.roiNum
+        if exist(csvFileName, 'file')
+            roiFileName = roiFiles{i};
+        else
+            if i==1 idx=''; else idx=num2str(i); end
+            roiFileName = [sharedInst.confPath 'roi' idx '.png'];
+        end
+        if exist(roiFileName, 'file')
+            img = imread(roiFileName);
+            roiMasks = [roiMasks, im2double(img)];
+            if i==1
+                roiMaskImage = roiMasks{i};
+            else
+                roiMaskImage = roiMaskImage | roiMasks{i};
+            end
+        end
+    end
+    sharedInst.roiMaskImage = roiMaskImage;
+    sharedInst.roiMasks = roiMasks;
+
+    % set ROI list box
+    listItem = {'all'};
+    for i = 1:sharedInst.roiNum
+        listItem = [listItem;{['ROI-' num2str(i)]}];
+    end
+    set(handles.popupmenu7,'String',listItem);
 
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
@@ -187,14 +215,6 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 end
 
 
-% --- Executes when user attempts to close figure1.
-function figure1_CloseRequestFcn(hObject, eventdata, handles)
-    % hObject    handle to figure1 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    delete(hObject);
-end
-
 % --- Outputs from this function are returned to the command line.
 function varargout = trackingResultDialog_OutputFcn(hObject, eventdata, handles) 
     % varargout  cell array for returning output args (see VARARGOUT);
@@ -204,6 +224,38 @@ function varargout = trackingResultDialog_OutputFcn(hObject, eventdata, handles)
 
     % Get default command line output from handles structure
     varargout{1} = handles.output;    
+end
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    delete(hObject);
+end
+
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+    %	Key: name of the key that was pressed, in lower case
+    %	Character: character interpretation of the key(s) that was pressed
+    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+    % handles    structure with handles and user data (see GUIDATA)
+    if strcmp(eventdata.Key, 'rightarrow')
+        pushbutton4_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'leftarrow')
+        pushbutton5_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'uparrow')
+        pushbutton2_Callback(hObject, eventdata, handles);
+    elseif strcmp(eventdata.Key, 'downarrow')
+        pushbutton3_Callback(hObject, eventdata, handles);
+    end
+end
+
+function figure1_KeyReleaseFcn(hObject, eventdata, handles)
 end
 
 function edit1_Callback(hObject, eventdata, handles)
@@ -266,23 +318,6 @@ function pushbutton1_Callback(hObject, eventdata, handles)
     figure1_CloseRequestFcn(hFig, eventdata, handles);
 end
 
-% --- Executes on key press with focus on figure1 and none of its controls.
-function figure1_KeyPressFcn(hObject, eventdata, handles)
-    % hObject    handle to figure1 (see GCBO)
-    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
-    %	Key: name of the key that was pressed, in lower case
-    %	Character: character interpretation of the key(s) that was pressed
-    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
-    % handles    structure with handles and user data (see GUIDATA)
-    if strcmp(eventdata.Key, 'rightarrow')
-        pushbutton4_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'leftarrow')
-        pushbutton5_Callback(hObject, eventdata, handles);
-    end
-end
-
-function figure1_KeyReleaseFcn(hObject, eventdata, handles)
-end
 
 % --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
@@ -290,6 +325,10 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    if getappdata(handles.figure1,'playing') > 0
+        return; % already playing
+    end
 
     setappdata(handles.figure1,'playing',1);
     set(handles.pushbutton2, 'Enable', 'off')
@@ -587,6 +626,40 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.pushbutton14, 'Enable', 'on')
 end
 
+
+% --- Executes on selection change in popupmenu7.
+function popupmenu7_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu7 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    contents = cellstr(get(hObject,'String')); % returns popupmenu7 contents as cell array
+    item = contents{get(hObject,'Value')}; % returns selected item from popupmenu7
+
+    if strcmp(item,'all')
+        currentROI = 0;
+    else
+        currentROI = str2num(char(strrep({item},'ROI-','')));
+    end
+    sharedInst.currentROI = currentROI;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu7_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu7 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -598,7 +671,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     if ~isempty(sharedInst.originalImage) && (ndims(sharedInst.originalImage) > 1) % check cache
         img = sharedInst.originalImage;
     else
-        img = read(sharedInst.shuttleVideo, frameNum);
+        img = TProRead(sharedInst.shuttleVideo, frameNum);
         sharedInst.originalImage = img;
     end
     
@@ -611,33 +684,49 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     
     % show detection result
-    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
-    flyNum = size(Q_loc_estimateX, 2);
-    flameMax = size(Q_loc_estimateX, 1);
-    listFly = sharedInst.listFly;
-    
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;    
     if t > size(sharedInst.X,2) || t < 1
         return;
     end
+    
+    X = sharedInst.X{t}(:);
+    Y = sharedInst.Y{t}(:);
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    flameMax = size(Q_loc_estimateX, 1);
+    flyNum = size(Q_loc_estimateX, 2);
+    listFly = sharedInst.listFly;
+    currentMask = sharedInst.roiMaskImage;
+
+    % check ROI
+    if sharedInst.currentROI > 0
+        currentMask = sharedInst.roiMasks{sharedInst.currentROI};
+        for fn = length(X):-1:1
+            if isnan(Y(fn)) || isnan(X(fn)) || currentMask(round(X(fn)),round(Y(fn))) <= 0
+                X(fn) = NaN;
+                Y(fn) = NaN;
+            end
+        end
+    end
 
     % show detection number
-    MARKER_SIZE = [1 1]; %marker sizes
     C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
 
     hold on;
     if sharedInst.showDetectResult
         if sharedInst.listMode == 1
-            plot(sharedInst.Y{t}(:),sharedInst.X{t}(:),'or'); % the actual detecting
+            plot(Y,X,'or'); % the actual detecting
         else
-            plot(Q_loc_estimateY(t,listFly),Q_loc_estimateX(t,listFly),'or'); % the actual detecting
+            fy = Q_loc_estimateY(t,listFly);
+            fx = Q_loc_estimateX(t,listFly);
+            if isnan(fy) || isnan(fx) || currentMask(round(fx),round(fy)) > 0
+                plot(fy,fx,'or'); % the actual detecting
+            end
         end
     end
 
     active_num = 0;
     for fn = 1:flyNum
-        sz  = mod(fn,2)+1; %pick marker size
         col = mod(fn,6)+1; %pick color
 
         if sharedInst.listMode == 2 && listFly ~= fn
@@ -665,7 +754,16 @@ function showFrameInAxes(hObject, handles, frameNum)
 
             tmX = Q_loc_estimateX(ff:fe,fn);
             tmY = Q_loc_estimateY(ff:fe,fn);
-            plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+            % check ROI
+            if sharedInst.currentROI > 0
+                for j = length(tmX):-1:1
+                    if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                        tmX(j) = NaN;
+                        tmY(j) = NaN;
+                    end
+                end
+            end
+            plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
 
             % show number
             if sharedInst.showNumber
@@ -687,7 +785,16 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
                 tmX = Q_loc_estimateX(t-st:t,fn);
                 tmY = Q_loc_estimateY(t-st:t,fn);
-                plot(tmY, tmX, '-', 'markersize', MARKER_SIZE(sz), 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                % check ROI
+                if sharedInst.currentROI > 0
+                    for j = length(tmX):-1:1
+                        if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                            tmX(j) = NaN;
+                            tmY(j) = NaN;
+                        end
+                    end
+                end
+                plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
 
                 % show number
                 if sharedInst.showNumber
