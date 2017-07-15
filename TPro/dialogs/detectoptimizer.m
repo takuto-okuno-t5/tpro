@@ -866,43 +866,6 @@ function edit5_CreateFcn(hObject, eventdata, handles)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% filter and detect functions
-
-%% image calcuration 
-function outimage = applyBackgroundSub(handles, img)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    grayImg = rgb2gray(img);
-    if ~isempty(sharedInst.bgImageMean)
-        grayImg = grayImg + (sharedInst.bgImageMean - mean(mean(grayImg)));
-        grayImageDouble = double(grayImg);
-        img = sharedInst.bgImageDouble - grayImageDouble;
-        img = uint8(img);
-        img = imcomplement(img);
-    else
-        img = grayImg;
-    end
-    outimage = img;
-end
-
-%%
-function outimage = applyFilterAndRoi(handles, img)
-    % apply gaussian filter
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img = PD_blobfilter(img, sharedInst.gaussH, sharedInst.gaussSigma, sharedInst.filterType);
-
-    % apply ROI
-    if ~isempty(sharedInst.roiMaskImage)
-        img = img .* sharedInst.roiMaskImage;
-    end
-    outimage = img;
-end
-
-%%
-function outimage = applyBinarizeAndAreaMin(handles, img)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img = im2bw(img, sharedInst.binaryTh / 100);
-    outimage = bwareaopen(img, sharedInst.binaryAreaPixel);   % delete blob that has area less than 50
-end
 
 %% show frame function
 function showFrameInAxes(hObject, handles, imageMode, frameNum)
@@ -1061,7 +1024,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     end
     % calc and draw direction
     if sharedInst.showDirection
-        keep_direction = PD_direction2(handles, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     hold off;
