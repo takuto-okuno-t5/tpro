@@ -17,9 +17,11 @@ function status = saveConfigurationFile(handles)
     isSeparate = sharedInst.isSeparate;
     maxBlobs = sharedInst.maxBlobs;
     delRectOverlap = sharedInst.delRectOverlap;
+    reject_dist = sharedInst.reject_dist;
+    isInvert = sharedInst.isInvert;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
-        (binaryTh / 100), mmPerPixel, sharedInst.roiNum, 200, 0, ...
+        (binaryTh / 100), mmPerPixel, sharedInst.roiNum, reject_dist, isInvert, ...
         gaussH, gaussSigma, binaryAreaPixel, frameSteps, blobSeparateRate, filterType, ...
         maxSeparate, isSeparate, maxBlobs, delRectOverlap};
 
@@ -28,7 +30,7 @@ function status = saveConfigurationFile(handles)
         try
             % save last detection setting
             save('etc/last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate', ...
-                'mmPerPixel','filterType','maxSeparate','isSeparate','maxBlobs','delRectOverlap');
+                'mmPerPixel','filterType','maxSeparate','isSeparate','maxBlobs','delRectOverlap','reject_dist','isInvert');
             status = true;
         catch e
             status = false;
