@@ -1,7 +1,7 @@
 %% save a input_video_control.csv
 function status = saveInputControlFile(outputFileName, B)
     % config header
-    header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'Dmy3', ...
+    header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'isInvert', ...
         'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate', 'FilterType', 'MaxSeparate', 'isSeparate', 'MaxBlobs', 'DelRectOverlap'};
     % check old compatibility
     if length(B) < 18

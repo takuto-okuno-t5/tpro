@@ -112,10 +112,12 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.binaryTh = records{8} * 100;
     sharedInst.binaryAreaPixel = records{15};
     sharedInst.blobSeparateRate = records{17};
-    sharedInst.isModified = false;
+    sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
-    sharedInst.mmPerPixel = records{9};
+    sharedInst.reject_dist = records{11};
+    sharedInst.isInvert = records{12};
+    sharedInst.isModified = false;
 
     sharedInst.originalImage = [];
     sharedInst.step2Image = [];
@@ -158,6 +160,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.binaryAreaPixel = cf.binaryAreaPixel;
         sharedInst.blobSeparateRate = cf.blobSeparateRate;
         sharedInst.mmPerPixel = cf.mmPerPixel;
+        sharedInst.reject_dist = cf.reject_dist;
+        sharedInst.isInvert = cf.isInvert;
         sharedInst.isModified = true;
     end
 
@@ -200,10 +204,12 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     handles.jhSpinner5 = addLabeledSpinner(spinnerModel, [pos(1)+70,pos(2)-4,60,20], @spinner_Callback5);
 
     % load background image
-    videoName = sharedInst.shuttleVideo.name;
     bgImageFile = strcat(sharedInst.confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
+        if sharedInst.isInvert
+            bgImage = imcomplement(bgImage);
+        end
         if size(size(bgImage),2) == 2 % one plane background
             bgImage(:,:,2) = bgImage(:,:,1);
             bgImage(:,:,3) = bgImage(:,:,1);
