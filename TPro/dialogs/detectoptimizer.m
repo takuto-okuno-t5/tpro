@@ -1,4 +1,3 @@
-
 function varargout = detectoptimizer(varargin)
     % DETECTOPTIMIZER MATLAB code for detectoptimizer.fig
     %      DETECTOPTIMIZER, by itself, creates a new DETECTOPTIMIZER or raises the existing
@@ -118,6 +117,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.reject_dist = records{11};
     sharedInst.isInvert = records{12};
     sharedInst.isModified = false;
+    sharedInst.useDeepLearning = false;
 
     sharedInst.originalImage = [];
     sharedInst.step2Image = [];
@@ -163,6 +163,17 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.reject_dist = cf.reject_dist;
         sharedInst.isInvert = cf.isInvert;
         sharedInst.isModified = true;
+    end
+
+    % deep learning data
+    if exist('./deeplearningFrontBack2.mat', 'file')
+        netForFrontBack = [];
+        classifierFrontBack = [];
+        load('./deeplearningFrontBack2.mat');
+
+        sharedInst.useDeepLearning = true;
+        sharedInst.netForFrontBack = netForFrontBack;
+        sharedInst.classifierFrontBack = classifierFrontBack;
     end
 
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
@@ -1030,7 +1041,12 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     end
     % calc and draw direction
     if sharedInst.showDirection
-        [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        if sharedInst.useDeepLearning
+            [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, ...
+                sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
+        else
+            [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+        end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     hold off;
