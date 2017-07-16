@@ -22,190 +22,226 @@ function varargout = startEndDialog(varargin)
 
 % Edit the above text to modify the response to help startEndDialog
 
-% Last Modified by GUIDE v2.5 24-May-2017 20:25:17
+% Last Modified by GUIDE v2.5 16-Jul-2017 19:09:48
 
 % Begin initialization code - DO NOT EDIT
-gui_Singleton = 1;
-gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @startEndDialog_OpeningFcn, ...
-                   'gui_OutputFcn',  @startEndDialog_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
-if nargin && ischar(varargin{1})
-    gui_State.gui_Callback = str2func(varargin{1});
-end
+    gui_Singleton = 1;
+    gui_State = struct('gui_Name',       mfilename, ...
+                       'gui_Singleton',  gui_Singleton, ...
+                       'gui_OpeningFcn', @startEndDialog_OpeningFcn, ...
+                       'gui_OutputFcn',  @startEndDialog_OutputFcn, ...
+                       'gui_LayoutFcn',  [] , ...
+                       'gui_Callback',   []);
+    if nargin && ischar(varargin{1})
+        gui_State.gui_Callback = str2func(varargin{1});
+    end
 
-if nargout
-    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
-else
-    gui_mainfcn(gui_State, varargin{:});
-end
+    if nargout
+        [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+    else
+        gui_mainfcn(gui_State, varargin{:});
+    end
 % End initialization code - DO NOT EDIT
-
+end
 
 % --- Executes just before startEndDialog is made visible.
 function startEndDialog_OpeningFcn(hObject, eventdata, handles, varargin)
-% This function has no output args, see OutputFcn.
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% varargin   command line arguments to startEndDialog (see VARARGIN)
+    % This function has no output args, see OutputFcn.
+    % hObject    handle to figure
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % varargin   command line arguments to startEndDialog (see VARARGIN)
 
-% Choose default command line output for startEndDialog
-handles.output = hObject;
-handles.startFrame = str2num(char(varargin{1}(1)));
-handles.endFrame = str2num(char(varargin{1}(2)));
-handles.name = char(varargin{1}(3));
-handles.maxFrame = handles.endFrame;
-handles.checkNum = 50;
-if (handles.endFrame - handles.startFrame + 1) < handles.checkNum
-    handles.checkNum = handles.endFrame - handles.startFrame + 1;
+    % Choose default command line output for startEndDialog
+    handles.output = hObject;
+    handles.startFrame = str2num(char(varargin{1}(1)));
+    handles.endFrame = str2num(char(varargin{1}(2)));
+    handles.name = char(varargin{1}(3));
+    handles.maxFrame = handles.endFrame;
+    handles.checkNum = 50;
+    if (handles.endFrame - handles.startFrame + 1) < handles.checkNum
+        handles.checkNum = handles.endFrame - handles.startFrame + 1;
+    end
+
+    set(handles.edit1, 'String', handles.startFrame);
+    set(handles.edit2, 'String', handles.endFrame);
+    set(handles.edit3, 'String', handles.checkNum);
+
+    % set window title
+    set(hObject, 'name', handles.name); % set window title
+
+    % set mode-select list box
+    modeFileName = 'etc/mode_template.csv';
+    if ~exist(modeFileName, 'file')
+        errordlg(['mode template file not found : ' modeFileName], 'Error');
+        return;
+    end
+    confTable = readtable(modeFileName);
+    records = table2cell(confTable);
+
+    modeNum = size(records, 1);
+    listItem = {};
+    for i = 1:modeNum
+        listItem = [listItem; records{i,2}];
+    end
+    set(handles.popupmenu1,'String',listItem);
+    
+    % Update handles structure
+    guidata(hObject, handles);
+
+    % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
+    uiwait(handles.figure1); % wait for finishing dialog
 end
-
-set(handles.edit1, 'String', handles.startFrame);
-set(handles.edit2, 'String', handles.endFrame);
-set(handles.edit3, 'String', handles.checkNum);
-
-% set window title
-set(hObject, 'name', handles.name); % set window title
-
-% Update handles structure
-guidata(hObject, handles);
-
-% UIWAIT makes startEndDialog wait for user response (see UIRESUME)
-uiwait(handles.figure1); % wait for finishing dialog
 
 % --- Outputs from this function are returned to the command line.
 function varargout = startEndDialog_OutputFcn(hObject, eventdata, handles) 
-% varargout  cell array for returning output args (see VARARGOUT);
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+    % varargout  cell array for returning output args (see VARARGOUT);
+    % hObject    handle to figure
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
 
-% Get default command line output from handles structure
-varargout{1} = handles.output;
-varargout{2} = handles.startFrame;
-varargout{3} = handles.endFrame;
-varargout{4} = handles.checkNum;
-
+    % Get default command line output from handles structure
+    varargout{1} = handles.output;
+    varargout{2} = handles.startFrame;
+    varargout{3} = handles.endFrame;
+    varargout{4} = handles.checkNum;
+    varargout{5} = get(handles.popupmenu1,'Value');
+end
 
 % --- Executes when user attempts to close figure1.
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
-% hObject    handle to figure1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-handles.startFrame = -1;
-guidata(hObject, handles);  % Update handles structure
-uiresume(handles.figure1);
-
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    handles.startFrame = -1;
+    guidata(hObject, handles);  % Update handles structure
+    uiresume(handles.figure1);
+end
 
 % --- Executes on button press in pushbutton1.
 function pushbutton1_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-handles.startFrame = -1;
-guidata(hObject, handles);  % Update handles structure
-uiresume(handles.figure1);
-
+    % hObject    handle to pushbutton1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    handles.startFrame = -1;
+    guidata(hObject, handles);  % Update handles structure
+    uiresume(handles.figure1);
+end
 
 % --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-uiresume(handles.figure1);
-
+    % hObject    handle to pushbutton2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    uiresume(handles.figure1);
+end
 
 function edit1_Callback(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-num = str2num(get(handles.edit1, 'String'));
-if isempty(num)
-    set(handles.edit1, 'String', 1);
-else
-    if num < 1 || num > handles.endFrame
-        set(handles.edit1, 'String', handles.startFrame);
+    % hObject    handle to edit1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    num = str2num(get(handles.edit1, 'String'));
+    if isempty(num)
+        set(handles.edit1, 'String', 1);
     else
-        handles.startFrame = num;
+        if num < 1 || num > handles.endFrame
+            set(handles.edit1, 'String', handles.startFrame);
+        else
+            handles.startFrame = num;
+        end
     end
+    guidata(hObject, handles);  % Update handles structure
 end
-guidata(hObject, handles);  % Update handles structure
-
 
 % --- Executes during object creation, after setting all properties.
 function edit1_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+    % hObject    handle to edit1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function edit2_Callback(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-num = str2num(get(handles.edit2, 'String'));
-if isempty(num)
-    set(handles.edit2, 'String', handles.endFrame);
-else
-    if num < handles.startFrame || num > handles.maxFrame
-        set(handles.edit2, 'String', handles.endFrame);
-    else
-        handles.endFrame = num;
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
     end
 end
-guidata(hObject, handles);  % Update handles structure
 
+function edit2_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    num = str2num(get(handles.edit2, 'String'));
+    if isempty(num)
+        set(handles.edit2, 'String', handles.endFrame);
+    else
+        if num < handles.startFrame || num > handles.maxFrame
+            set(handles.edit2, 'String', handles.endFrame);
+        else
+            handles.endFrame = num;
+        end
+    end
+    guidata(hObject, handles);  % Update handles structure
+end
 
 % --- Executes during object creation, after setting all properties.
 function edit2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+    % hObject    handle to edit2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function edit3_Callback(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit3 as text
-%        str2double(get(hObject,'String')) returns contents of edit3 as a double
-num = str2num(get(handles.edit3, 'String'));
-if isempty(num)
-    set(handles.edit3, 'String', handles.checkNum);
-else
-    if num < 1 || num > (handles.endFrame - handles.startFrame + 1)
-        set(handles.edit3, 'String', handles.checkNum);
-    else
-        handles.checkNum = num;
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
     end
 end
-guidata(hObject, handles);  % Update handles structure
 
+function edit3_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    num = str2num(get(handles.edit3, 'String'));
+    if isempty(num)
+        set(handles.edit3, 'String', handles.checkNum);
+    else
+        if num < 1 || num > (handles.endFrame - handles.startFrame + 1)
+            set(handles.edit3, 'String', handles.checkNum);
+        else
+            handles.checkNum = num;
+        end
+    end
+    guidata(hObject, handles);  % Update handles structure
+end
 
 % --- Executes during object creation, after setting all properties.
 function edit3_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
+    % hObject    handle to edit3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+% --- Executes on selection change in popupmenu1.
+function popupmenu1_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu1_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 end

@@ -486,16 +486,37 @@ for data_th = 1:size(records,1)
 
     % set output file name
     pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
-    backgroundFileName = strcat(pathName,'/background.png');
+    backgroundFileName = [pathName 'background.png'];
 
     % show startEndDialog or command line auto start
     if handles.autobackground
         startFrame = records{data_th, 4};
         endFrame = records{data_th, 6};
+        isInvert = records{data_th, 12};
         checkNums = 50;
     else
-        [dlg, startFrame, endFrame, checkNums] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
+        [dlg, startFrame, endFrame, checkNums, detectMode] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
         delete(dlg);
+        
+        % update configuration with mode template
+        modeFileName = 'etc/mode_template.csv';
+        if ~exist(modeFileName, 'file')
+            errordlg(['mode template file not found : ' modeFileName], 'Error');
+            return;
+        end
+        confTable = readtable(modeFileName);
+        templates = table2cell(confTable);
+        template = {templates{detectMode,:}};
+        template(1:7) = {records{data_th, 1:7}};
+
+        confFileName = [pathName 'input_video_control.csv'];
+        status = saveInputControlFile(confFileName, template);
+        if ~status
+            errordlg(['failed to save a configuration file : ' confFileName], 'Error');
+            return;
+        end
+        
+        isInvert = template{12};
     end
 
     if startFrame < 0
@@ -519,7 +540,7 @@ for data_th = 1:size(records,1)
     hWaitBar = waitbar(0,'processing ...','Name',['detecting background for ', shuttleVideo.name],...
                 'CreateCancelBtn',...
                 'setappdata(gcbf,''canceling'',1)');
-    setappdata(hWaitBar,'canceling',0)
+    setappdata(hWaitBar,'canceling',0);
 
     % find appropriate background pixels
     for i = 1 : checkNums
@@ -534,6 +555,9 @@ for data_th = 1:size(records,1)
 
         frameImage = TProRead(shuttleVideo, r(i) + startFrame - 1);
         grayImage = rgb2gray(frameImage);
+        if isInvert
+            grayImages = imcomplement(grayImages);
+        end
         grayImages(:,:,i) = grayImage;
         clear frameImage;
     end
@@ -567,15 +591,17 @@ for data_th = 1:size(records,1)
         figureWindow = figure('name','detecting ','NumberTitle','off');
     end
 
+    if isInvert
+        bgImage = imcomplement(bgImage);
+    end
     % show background image
     figure(figureWindow);
-    clf
+    clf;
     imshow(bgImage);
     set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
 
     % output png file
     imwrite(bgImage, backgroundFileName);
-    disp(num2str(data_th));
     clear bgImage;
 end
 
@@ -722,6 +748,7 @@ for data_th = 1:size(records,1)
     area_pixel = records{data_th, 15};
     blobSeparateRate = records{data_th, 17};
     roiNum = records{data_th, 10};
+    isInvert = records{data_th, 12};
     % check compatibility
     if size(records,2) < 18
         filterType = 'log';
@@ -773,6 +800,9 @@ for data_th = 1:size(records,1)
     bgImageFile = strcat(confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
+        if isInvert
+            bgImage = imcomplement(bgImage);
+        end
         if size(size(bgImage),2) == 2 % one plane background
             bgImage(:,:,2) = bgImage(:,:,1);
             bgImage(:,:,3) = bgImage(:,:,1);
@@ -823,12 +853,12 @@ for data_th = 1:size(records,1)
         if isCancel
             break;
         end
-        if i_count == 3781
-            a=0;
-        end
         % process detection
         img_real = TProRead(shuttleVideo, i_count);
         grayImg = rgb2gray(img_real);
+        if isInvert
+            grayImg = imcomplement(grayImg);
+        end
         clear img_real;
         if ~isempty(bg_img_mean)
             grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));

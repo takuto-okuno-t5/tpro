@@ -2,6 +2,9 @@
 function outimage = applyBackgroundSub(handles, img)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     grayImg = rgb2gray(img);
+    if sharedInst.isInvert
+        grayImg = imcomplement(grayImg);
+    end
     if ~isempty(sharedInst.bgImageMean)
         grayImg = grayImg + (sharedInst.bgImageMean - mean(mean(grayImg)));
         grayImageDouble = double(grayImg);
