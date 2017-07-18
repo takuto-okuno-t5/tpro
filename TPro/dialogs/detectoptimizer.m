@@ -144,6 +144,20 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.maxBlobs = records{21};
         sharedInst.delRectOverlap = records{22};
     end
+    if length(records) < 23
+        sharedInst.rRate = 1;
+        sharedInst.gRate = 1;
+        sharedInst.bRate = 1;
+        sharedInst.keepNear = 0;
+        sharedInst.fixedTrackNum = 0;
+    else
+        sharedInst.rRate = records{23};
+        sharedInst.gRate = records{24};
+        sharedInst.bRate = records{25};
+        sharedInst.keepNear = records{26};
+        sharedInst.fixedTrackNum = records{27};
+    end
+    
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
     if exist(lastConfigFile, 'file') && handles.isArgin
@@ -163,6 +177,11 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.reject_dist = cf.reject_dist;
         sharedInst.isInvert = cf.isInvert;
         sharedInst.isModified = true;
+        sharedInst.rRate = cf.rRate;
+        sharedInst.gRate = cf.gRate;
+        sharedInst.bRate = cf.bRate;
+        sharedInst.keepNear = cf.keepNear;
+        sharedInst.fixedTrackNum = cf.fixedTrackNum;
     end
 
     % deep learning data
@@ -893,6 +912,11 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
         img = sharedInst.originalImage;
     else
         img = TProRead(sharedInst.shuttleVideo, frameNum);
+        if size(img,3) == 3
+            img(:,:,1) = img(:,:,1) * sharedInst.rRate;
+            img(:,:,2) = img(:,:,2) * sharedInst.gRate;
+            img(:,:,3) = img(:,:,3) * sharedInst.bRate;
+        end
         sharedInst.originalImage = img;
     end
     % show original image
@@ -1017,7 +1041,8 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     [ blobPointY, blobPointX, blobAreas, blobCenterPoints, blobBoxes, ...
       blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
           sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
-          1, 0, sharedInst.maxSeparate, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs);
+          1, 0, sharedInst.maxSeparate, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, ...
+          sharedInst.keepNear);
 
     % draw image
     cla;
@@ -1055,7 +1080,9 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     sharedInst.detectedPointX = blobPointX;
     sharedInst.detectedPointY = blobPointY;
     sharedInst.detectedBoxes = blobBoxes;
-    sharedInst.detectedDirection = keep_direction;
+    if sharedInst.showDirection
+        sharedInst.detectedDirection = keep_direction;
+    end
     setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
 
     % update gui

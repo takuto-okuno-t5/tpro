@@ -508,6 +508,7 @@ for data_th = 1:size(records,1)
         templates = table2cell(confTable);
         template = {templates{detectMode,:}};
         template(1:7) = {records{data_th, 1:7}};
+        template{10} = records{data_th, 10};
 
         confFileName = [pathName 'input_video_control.csv'];
         status = saveInputControlFile(confFileName, template);
@@ -515,7 +516,6 @@ for data_th = 1:size(records,1)
             errordlg(['failed to save a configuration file : ' confFileName], 'Error');
             return;
         end
-        
         isInvert = template{12};
     end
 
@@ -751,11 +751,23 @@ for data_th = 1:size(records,1)
         delRectOverlap = 0;
     else
         filterType = records{data_th, 18};
-        maxSeparate = records{19};
-        isSeparate = records{20};
-        maxBlobs = records{21};
-        delRectOverlap = records{22};
+        maxSeparate = records{data_th, 19};
+        isSeparate = records{data_th, 20};
+        maxBlobs = records{data_th, 21};
+        delRectOverlap = records{data_th, 22};
     end
+    if length(records) < 23
+        rRate = 1;
+        gRate = 1;
+        bRate = 1;
+        keepNear = 0;
+    else
+        rRate = records{data_th, 23};
+        gRate = records{data_th, 24};
+        bRate = records{data_th, 25};
+        keepNear = records{data_th, 26};
+    end
+    isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'multi'], 'dir')
@@ -848,6 +860,11 @@ for data_th = 1:size(records,1)
         end
         % process detection
         img_real = TProRead(shuttleVideo, i_count);
+        if isColorFilter && size(img_real,3) == 3
+            img_real(:,:,1) = img_real(:,:,1) * rRate;
+            img_real(:,:,2) = img_real(:,:,2) * gRate;
+            img_real(:,:,3) = img_real(:,:,3) * bRate;
+        end
         grayImg = rgb2gray(img_real);
         if isInvert
             grayImg = imcomplement(grayImg);
@@ -954,7 +971,7 @@ for data_th = 1:size(records,1)
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                 blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize, ...
-                maxSeparate, isSeparate, delRectOverlap, maxBlobs);
+                maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -1226,6 +1243,11 @@ for data_th = 1:size(records,1)
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
     roiNum = records{data_th, 10};
+    if size(records,2) < 23
+        fixedTrackNum = 0;
+    else
+        fixedTrackNum = records{data_th, 27};
+    end
     shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 
     % make output folder
@@ -1422,7 +1444,7 @@ for data_th = 1:size(records,1)
             %check 1: is the detection far from the observation? if so, reject it.
             rej = [];
             for F = 1:flyNum
-                if asgn(F) > 0  % if track F has pair asgn(F)
+                if ~isempty(asgn) && asgn(F) > 0  % if track F has pair asgn(F)
                     estF = invIdx(F);
                     rej(F) = est_dist1(estF,asgnT(estF)) < reject_dist;
 %rej(F) = est_dist(F,asgn(F)) < reject_dist ;
@@ -1551,7 +1573,7 @@ for data_th = 1:size(records,1)
                                 Q_estimate(2,k) = x - Q_estimate(4,k);
                                 Q_estimate(3,k) = 0;
                                 Q_estimate(4,k) = 0;
-                            else
+                            elseif ~fixedTrackNum
                                 estF = invIdx(k);
                                 [m,i] = min(est_dist1(estF,:));
 %[m0,i0] = min(est_dist(k,:));
@@ -1569,9 +1591,17 @@ for data_th = 1:size(records,1)
                 % velocity thresholding, actually this is redundant. maybe I can ommit.
                 if ~isnan(Q_estimate(1,k))  % if the value is not NaN
                     % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
-                    if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > reject_dist
-                       Q_estimate(:,k) = NaN;    % delete
-                        %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
+                    velocity = sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2);
+                    if velocity > reject_dist
+                        if fixedTrackNum
+                            % stop movement
+                            Q_estimate(1,k) = Q_estimate(1,k) - Q_estimate(3,k);
+                            Q_estimate(2,k) = Q_estimate(2,k) - Q_estimate(4,k);
+                            Q_estimate(3,k) = 0;
+                            Q_estimate(4,k) = 0;
+                        else
+                            Q_estimate(:,k) = NaN;    % delete
+                        end
                     end
                 end
 
@@ -1604,7 +1634,7 @@ for data_th = 1:size(records,1)
 
             %find the new detections. basically, anything that doesn't get assigned is a new tracking
             new_trk = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:)';
-            if ~isempty(new_trk)
+            if ~isempty(new_trk) && ~fixedTrackNum
                 Q_estimate(:,flyNum+1:flyNum+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
                 flyNum = flyNum + size(new_trk,2);  % number of track estimates with new ones included
             end
@@ -1640,13 +1670,21 @@ for data_th = 1:size(records,1)
             %if a track has a strike greater than 3, delete the tracking. i.e.
             %make it nan first vid = 3
             bad_trks = find(strk_trks > STRIKE_TRACK_TH);
-            Q_estimate(:,bad_trks) = NaN;
-
-            bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
             if ~isempty(bad_trks)
-                % remove old 3 tracking frames
-                for j = 1:8
-                    keep_data{j}((t-2):t,bad_trks) = NaN;
+                if fixedTrackNum
+                    % stop movement
+                    Q_estimate(3,bad_trks) = 0;
+                    Q_estimate(4,bad_trks) = 0;
+                else
+                    Q_estimate(:,bad_trks) = NaN;
+
+                    bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
+                    if ~isempty(bad_trks)
+                        % remove old 3 tracking frames
+                        for j = 1:8
+                            keep_data{j}((t-2):t,bad_trks) = NaN;
+                        end
+                    end
                 end
             end
         end

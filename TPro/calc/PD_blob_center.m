@@ -2,7 +2,7 @@
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
            blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                         blob_img, blob_img_logical, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn,...
-                        maxSeparate, isSeparate, delRectOverlap, maxBlobs)
+                        maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear)
     H = vision.BlobAnalysis;
     H.MaximumCount = 100;
     H.MajorAxisLengthOutputPort = 1;
@@ -141,22 +141,34 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     end
     
     % check maximum blobs
-    if maxBlobs > 0
-        % find nearest neighbor, then delete smaller area
+    blobNum = length(blobPointX);
+    if maxBlobs > 0 && blobNum > maxBlobs
         dist = pdist(blobCenterPoints);
         dist1 = squareform(dist); %make square
-        dist1(dist1==0) = 9999; % set dummy
         delIdx = [];
-        while maxBlobs < (length(blobPointX) - length(delIdx))
-            [mmin,m] = min(dist1);
-            [nmin,n] = min(mmin);
-            if blobAreas(m(n)) > blobAreas(n)
-                delIdx = [delIdx, n];
-            else
-                delIdx = [delIdx, m(n)];
+
+        if keepNear
+            % find bigest blob, then take nearest blobs
+            [marea,i] = max(blobAreas);
+            while maxBlobs < (blobNum - length(delIdx))
+                [mm,m] = max(dist1(i,:));
+                delIdx = [delIdx, m];
+                dist1(i,m) = 0; 
             end
-            dist1(n,m(n)) = 9999; % set dummy
-            dist1(m(n),n) = 9999; % set dummy
+        else
+            % find nearest neighbor, then delete smaller area
+            dist1(dist1==0) = 9999; % set dummy
+            while maxBlobs < (blobNum - length(delIdx))
+                [mmin,m] = min(dist1);
+                [nmin,n] = min(mmin);
+                if blobAreas(m(n)) > blobAreas(n)
+                    delIdx = [delIdx, n];
+                else
+                    delIdx = [delIdx, m(n)];
+                end
+                dist1(n,m(n)) = 9999; % set dummy
+                dist1(m(n),n) = 9999; % set dummy
+            end
         end
         if ~isempty(delIdx)
             blobPointX(delIdx) = [];

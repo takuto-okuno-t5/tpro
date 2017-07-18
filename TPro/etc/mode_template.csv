@@ -1,4 +1,4 @@
-Enable,Name,Dmy1,Start,End,All,fps,TH,mmPixel,ROI,rej_dist,isInvert,G_Strength,G_Radius,AreaPixel,Step,BlobSeparate,FilterType,MaxSeparate,isSeparate,MaxBlobs,DelRectOverlap
-1,fly (bright background),NaN,1,1000,1000,60,0.6,0.1,1,200,0,12,4,50,1,0.4,log,4,1,0,0
-1,fly & frog (bright background),NaN,1,1000,1000,30,0.2,0.1,1,200,0,10,4,28,1,1,gaussian,4,0,2,1
-1,LED rodent (dark background),NaN,1,1000,1000,60,0.4,0.1,1,200,1,12,5,30,1,0.5,log,4,1,0,0
+Enable,Name,Dmy1,Start,End,All,fps,TH,mmPixel,ROI,rej_dist,isInvert,G_Strength,G_Radius,AreaPixel,Step,BlobSeparate,FilterType,MaxSeparate,isSeparate,MaxBlobs,DelRectOverlap,rRate,gRate,bRate,keepNear,fixedTrackNum
+1,fly (bright background),NaN,1,1000,1000,60,0.6,0.1,1,200,0,12,4,50,1,0.4,log,4,1,0,0,1,1,1,0,0
+1,fly & frog (bright background),NaN,1,1000,1000,30,0.2,0.1,1,200,0,10,4,28,1,1,gaussian,4,0,2,1,1,1,1,0,0
+1,LED rodent (dark background),NaN,1,1000,1000,60,0.4,0.1,1,15,1,12,5,30,1,0.5,log,4,1,0,0,1,0.9,0.6,1,1
