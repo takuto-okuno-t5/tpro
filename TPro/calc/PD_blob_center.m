@@ -146,16 +146,19 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         dist = pdist(blobCenterPoints);
         dist1 = squareform(dist); %make square
         dist1(dist1==0) = 9999; % set dummy
-        while maxBlobs < length(blobPointX)
+        delIdx = [];
+        while maxBlobs < (length(blobPointX) - length(delIdx))
             [mmin,m] = min(dist1);
             [nmin,n] = min(mmin);
             if blobAreas(m(n)) > blobAreas(n)
-                delIdx = n;
+                delIdx = [delIdx, n];
             else
-                delIdx = m(n);
+                delIdx = [delIdx, m(n)];
             end
             dist1(n,m(n)) = 9999; % set dummy
             dist1(m(n),n) = 9999; % set dummy
+        end
+        if ~isempty(delIdx)
             blobPointX(delIdx) = [];
             blobPointY(delIdx) = [];
             blobAreas(delIdx) = [];

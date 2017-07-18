@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="2240652064" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="1174784107" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
