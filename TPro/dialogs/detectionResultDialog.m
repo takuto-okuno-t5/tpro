@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 12-Jul-2017 01:17:58
+% Last Modified by GUIDE v2.5 20-Jul-2017 02:00:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -150,6 +150,8 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % load roi image file
     roiMaskImage = [];
     roiMasks = {};
+    roiX = {};
+    roiY = {};
     csvFileName = [sharedInst.confPath 'roi.csv'];
     if exist(csvFileName, 'file')
         roiTable = readtable(csvFileName,'ReadVariableNames',false);
@@ -170,10 +172,22 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
             else
                 roiMaskImage = roiMaskImage | roiMasks{i};
             end
+            % load ROI points
+            roiMatName = strrep(roiFileName, '.png', '.mat');
+            if exist(roiMatName, 'file')
+                pts = load(roiMatName);
+                roiX = [roiX, pts.roiX];
+                roiY = [roiY, pts.roiY];
+            else
+                roiX = [roiX, zeros(0,1)];
+                roiY = [roiY, zeros(0,1)];
+            end
         end
     end
     sharedInst.roiMaskImage = roiMaskImage;
     sharedInst.roiMasks = roiMasks;    
+    sharedInst.roiX = roiX;
+    sharedInst.roiY = roiY;
 
     % set ROI list box
     listItem = {'all'};
@@ -494,6 +508,90 @@ function pushbutton5_Callback(hObject, eventdata, handles)
     end
 end
 
+% --- Executes on selection change in popupmenu4.
+function popupmenu4_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu4_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+
+% --------------------------------------------------------------------
+function Untitled_1_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_5_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_6_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_7_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_7 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_8_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_9_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_9 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_2_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_3_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_4_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -543,6 +641,15 @@ function showFrameInAxes(hObject, handles, frameNum)
     if sharedInst.showDetectResult
         plot(Y,X,'or'); % the actual detecting
     end
+    vY = Y;
+    vX = X;
+    for i=1:length(sharedInst.roiMasks)
+        if sharedInst.currentROI == 0 || (sharedInst.currentROI > 0 && sharedInst.currentROI==i)
+            vY = [vY;sharedInst.roiX{i}(:)];
+            vX = [vX;sharedInst.roiY{i}(:)];
+        end
+    end
+    voronoi(vY,vX);
     hold off;
 
     % show long params
@@ -632,5 +739,4 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
-
 

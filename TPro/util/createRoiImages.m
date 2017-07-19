@@ -10,7 +10,9 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
 
         if i==1 idx=''; else idx=num2str(i); end
-        roiFileName = [videoPath shuttleVideo.name '_tpro/roi' idx '.png'];
+        confRoiName = [videoPath shuttleVideo.name '_tpro/roi'];
+        roiFileName = [confRoiName idx '.png'];
+        roiMatName = [confRoiName idx '.mat'];
         if exist(roiFileName, 'file')
             roiImage = imread(roiFileName);
             roiImage = im2double(roiImage);
@@ -33,7 +35,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         end
 
         % show polygon selection window
-        newRoiImage = roipoly(img);
+        [newRoiImage, roiX, roiY] = roipoly(img);
 
         % if canceled, do not show and save roi file
         if ~isempty(newRoiImage)
@@ -43,6 +45,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
 
             % write roi file
             imwrite(newRoiImage, roiFileName);
+            save(roiMatName, 'roiX','roiY');
         else
             newRoiImage = roiImage;
         end
@@ -53,7 +56,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         end
 
         % confirm to set next ROI
-        roiFileName = [videoPath shuttleVideo.name '_tpro/roi' num2str(i+1) '.png'];
+        roiFileName = [confRoiName num2str(i+1) '.png'];
         if roiNum <= i || ~exist(roiFileName, 'file')
             selection = questdlg('Do you create one more ROI for same movie?',...
                                  'Confirmation',...
