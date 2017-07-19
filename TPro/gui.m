@@ -1245,8 +1245,10 @@ for data_th = 1:size(records,1)
     roiNum = records{data_th, 10};
     if size(records,2) < 23
         fixedTrackNum = 0;
+        fixedTrackDir = 0;
     else
         fixedTrackNum = records{data_th, 27};
+        fixedTrackDir = records{data_th, 28};
     end
     shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
 

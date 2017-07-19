@@ -24,12 +24,13 @@ function status = saveConfigurationFile(handles)
     bRate = sharedInst.bRate;
     keepNear = sharedInst.keepNear;
     fixedTrackNum = sharedInst.fixedTrackNum;
+    fixedTrackDir = sharedInst.fixedTrackDir;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
         (binaryTh / 100), mmPerPixel, sharedInst.roiNum, reject_dist, isInvert, ...
         gaussH, gaussSigma, binaryAreaPixel, frameSteps, blobSeparateRate, ...
         filterType, maxSeparate, isSeparate, maxBlobs, delRectOverlap, ...
-        rRate, gRate, bRate, keepNear, fixedTrackNum};
+        rRate, gRate, bRate, keepNear, fixedTrackNum, fixedTrackDir};
 
     status = saveInputControlFile(sharedInst.confFileName, B);
     if status
@@ -37,7 +38,7 @@ function status = saveConfigurationFile(handles)
             % save last detection setting
             save('etc/last_detect_config.mat','frameSteps','gaussH','gaussSigma','binaryTh','binaryAreaPixel','blobSeparateRate', ...
                 'mmPerPixel','filterType','maxSeparate','isSeparate','maxBlobs','delRectOverlap','reject_dist','isInvert', ...
-                'rRate', 'gRate', 'bRate', 'keepNear', 'fixedTrackNum');
+                'rRate', 'gRate', 'bRate', 'keepNear', 'fixedTrackNum', 'fixedTrackDir');
             status = true;
         catch e
             status = false;

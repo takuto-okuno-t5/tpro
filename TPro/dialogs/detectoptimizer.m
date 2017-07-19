@@ -150,12 +150,14 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.bRate = 1;
         sharedInst.keepNear = 0;
         sharedInst.fixedTrackNum = 0;
+        sharedInst.fixedTrackDir = 0;
     else
         sharedInst.rRate = records{23};
         sharedInst.gRate = records{24};
         sharedInst.bRate = records{25};
         sharedInst.keepNear = records{26};
         sharedInst.fixedTrackNum = records{27};
+        sharedInst.fixedTrackDir = records{28};
     end
     
     % load last detection setting (do not read when local debug)
@@ -182,6 +184,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.bRate = cf.bRate;
         sharedInst.keepNear = cf.keepNear;
         sharedInst.fixedTrackNum = cf.fixedTrackNum;
+        sharedInst.fixedTrackDir = cf.fixedTrackDir;
     end
 
     % deep learning data

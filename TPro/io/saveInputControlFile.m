@@ -4,13 +4,13 @@ function status = saveInputControlFile(outputFileName, B)
     header = {'Enable', 'Name', 'Dmy1', 'Start', 'End', 'All', 'fps', 'TH', 'mmPixel', 'ROI', 'rej_dist', 'isInvert', ...
         'G_Strength','G_Radius', 'AreaPixel', 'Step', 'BlobSeparate', ...
         'FilterType', 'MaxSeparate', 'isSeparate', 'MaxBlobs', 'DelRectOverlap', ...
-        'rRate', 'gRate', 'bRate', 'keepNear', 'fixedTrackNum'};
+        'rRate', 'gRate', 'bRate', 'keepNear', 'fixedTrackNum', 'fixedTrackDir'};
     % check old compatibility
     if length(B) < 18
         B = [B, 'log', 4, 1, 0, 0];
     end
     if length(B) < 23
-        B = [B, 1, 1, 1, 0, 0];
+        B = [B, 1, 1, 1, 0, 0, 0];
     end
     try
         T = cell2table(B);
