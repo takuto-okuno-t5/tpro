@@ -1410,9 +1410,9 @@ for data_th = 1:size(records,1)
             idx = find(nancount(1,1:flyNum) < IGNORE_NAN_COUNT);
             idxlen = length(idx);
 
-            est_dist1 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
-            est_dist1 = squareform(est_dist1); %make square
-            est_dist1 = est_dist1(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
+            est_dist0 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
+            est_dist0 = squareform(est_dist0); %make square
+            est_dist1 = est_dist0(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
 %est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
 %est_dist = squareform(est_dist); %make square
 %est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
@@ -1568,23 +1568,31 @@ for data_th = 1:size(records,1)
                         if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
                             % if the predict is out of bound then delete
                             Q_estimate(:,k) = NaN;
-                        else
-                            if ~isempty(roiImage) && roiImage(y,x) == 0
-                                % if the predict is out of ROI then stop fly movement
+                        elseif ~isempty(roiImage) && roiImage(y,x) == 0
+                            % if the predict is out of ROI then stop fly movement
+                            Q_estimate(1,k) = y - Q_estimate(3,k);
+                            Q_estimate(2,k) = x - Q_estimate(4,k);
+                            Q_estimate(3,k) = 0;
+                            Q_estimate(4,k) = 0;
+                        elseif fixedTrackDir && fixedTrackNum
+                            % check if estimated point is too far or not
+                            invK = [1:(k-1),(k+1):flyNum];
+                            maxDir = max(est_dist0(k,invK));
+                            if maxDir > fixedTrackDir
                                 Q_estimate(1,k) = y - Q_estimate(3,k);
                                 Q_estimate(2,k) = x - Q_estimate(4,k);
                                 Q_estimate(3,k) = 0;
                                 Q_estimate(4,k) = 0;
-                            elseif ~fixedTrackNum
-                                estF = invIdx(k);
-                                [m,i] = min(est_dist1(estF,:));
+                            end
+                        else
+                            estF = invIdx(k);
+                            [m,i] = min(est_dist1(estF,:));
 %[m0,i0] = min(est_dist(k,:));
 %if m0 ~= m && i0 ~= i
 %    a=0;
 %end
-                                if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op                                
-                                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
-                                end
+                            if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
                         end
                     end
@@ -1642,7 +1650,7 @@ for data_th = 1:size(records,1)
             end
 
         end  % end of if ~isempty(Q_loc_meas)
-
+        
         %give a strike to any tracking that didn't get matched up to a detection
         if exist('asgn', 'var')
             aIdx = find(asgn>0);
@@ -1674,6 +1682,21 @@ for data_th = 1:size(records,1)
             bad_trks = find(strk_trks > STRIKE_TRACK_TH);
             if ~isempty(bad_trks)
                 if fixedTrackNum
+                    if fixedTrackDir
+                        nonAsgn = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:);
+                        if ~isempty(nonAsgn)
+                            idx = asgn(find(asgn>0));
+                            asgnLen = length(idx);
+                            pts = [Q_loc_meas(idx,:); nonAsgn];
+                            dist = pdist(pts);
+                            dist1 = squareform(dist); %make square
+                            for i=1:length(bad_trks)
+                                if (asgnLen+i) <= size(dist1,1) && max(dist1(asgnLen+i,1:asgnLen)) < fixedTrackDir
+                                    Q_estimate(1:2,bad_trks(i)) = pts(asgnLen+i,:)';
+                                end
+                            end
+                        end
+                    end
                     % stop movement
                     Q_estimate(3,bad_trks) = 0;
                     Q_estimate(4,bad_trks) = 0;
@@ -1690,7 +1713,15 @@ for data_th = 1:size(records,1)
                 end
             end
         end
-        
+
+        if fixedTrackDir && t == 1 % if first track, check its distances
+            points = Q_estimate(1:2, 1:flyNum)';
+            dist = pdist(points);
+            dist1 = squareform(dist); %make square
+            fixedTrackDir = max(dist1(1,2:flyNum)) * 1.2;
+            min_dist_threshold = fixedTrackDir;
+        end
+
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
         disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
         % Report current estimate in the waitbar's message field
