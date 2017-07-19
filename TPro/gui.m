@@ -1684,9 +1684,9 @@ for data_th = 1:size(records,1)
                 if fixedTrackNum
                     if fixedTrackDir
                         nonAsgn = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:);
-                        if ~isempty(nonAsgn)
-                            idx = asgn(find(asgn>0));
-                            asgnLen = length(idx);
+                        idx = asgn(find(asgn>0));
+                        asgnLen = length(idx);
+                        if ~isempty(nonAsgn) && asgnLen > 0
                             pts = [Q_loc_meas(idx,:); nonAsgn];
                             dist = pdist(pts);
                             dist1 = squareform(dist); %make square
