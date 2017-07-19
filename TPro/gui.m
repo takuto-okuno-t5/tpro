@@ -1468,7 +1468,16 @@ for data_th = 1:size(records,1)
             if size(asgn,2) > 0
                 asgn = asgn.*rej;
             end
-
+            % check point distance each other
+            if fixedTrackDir && t > 1
+                for fn = 1:flyNum
+                    cnt = sum(est_dist0(fn,1:flyNum) > fixedTrackDir);
+                    if  cnt >= (flyNum-1) && flyNum >= 3
+                        invFn = invIdx(fn);
+                        asgn(invFn) = 0;
+                    end
+                end
+            end
 
             % check 2
             if ~kalman_only_enable
@@ -1543,7 +1552,6 @@ for data_th = 1:size(records,1)
             else
                 asgn2 = asgn.*0;
             end
-
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
@@ -1672,7 +1680,7 @@ for data_th = 1:size(records,1)
             if ~isempty(no_trk_list)
                 strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
             end
-        
+
             % consecutive strike
             % if the strike is not consecutive then reset
             strk_trks(strk_trks == prev_strk_trks) = 0;
