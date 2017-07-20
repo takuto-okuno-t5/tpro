@@ -2186,7 +2186,8 @@ pause(0.01);
 addpath(videoPath);
 
 % select roi for every movie
-for data_th = 1:size(records,1)
+data_th = 1;
+while data_th <= size(records,1)
     if records{data_th, 1}
         shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
         frameImage = TProRead(shuttleVideo,1);
@@ -2204,17 +2205,16 @@ for data_th = 1:size(records,1)
             delete(dlg);
 
             if selectedType < 0
+                data_th = data_th + 1;
                 continue;
             end
         end
 
         % select fixed ROI image files or create new ROI images
         if selectedType == 2
-            while true
-                [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
-                figureWindow = [];
-                if i>=0 break; end
-            end
+            [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
+            figureWindow = [];
+            if i<0 continue; end
         else
             [i, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, records{data_th, 10});
         end
@@ -2229,6 +2229,7 @@ for data_th = 1:size(records,1)
             errordlg(['failed to save a configuration file : ' confFileName], 'Error');
         end
     end
+    data_th = data_th + 1;
 end
 
 % close background image window

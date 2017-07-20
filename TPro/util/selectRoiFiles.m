@@ -1,5 +1,6 @@
 %% select ROI files
 function [count, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage)
+    figureWindow = [];
     if exist(csvFileName, 'file')
         roiTable = readtable(csvFileName,'ReadVariableNames',false);
         roiFiles = table2cell(roiTable);

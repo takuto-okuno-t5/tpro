@@ -114,6 +114,11 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.currentROI = 0;
     sharedInst.axesType1 = 'count';
 
+    % fix old parameters
+    if sharedInst.mmPerPixel <= 0
+        sharedInst.mmPerPixel = 0.1;
+    end
+    
     sharedInst.X = X;
     sharedInst.Y = Y;
 
