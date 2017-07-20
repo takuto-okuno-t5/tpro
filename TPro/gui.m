@@ -1465,7 +1465,7 @@ for data_th = 1:size(records,1)
                     rej(F) = 0;
                 end
             end
-            if size(asgn,2) > 0
+            if size(asgn,2) > 0 && ~isempty(rej)
                 asgn = asgn.*rej;
             end
             % check point distance each other

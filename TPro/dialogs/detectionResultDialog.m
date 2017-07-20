@@ -109,6 +109,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.stepTime = 0.03;
     sharedInst.showDetectResult = 1;
     sharedInst.backMode = 1; % movie
+    sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
     sharedInst.axesType1 = 'count';
@@ -201,7 +202,6 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     img_w = size(roiMaskImage,2);
     xsize = size(X, 2);
     flyCounts = zeros(xsize,1);
-    roiCounts = cell(sharedInst.roiNum,1);
     for i=1:sharedInst.roiNum
         roiCount = zeros(xsize,1);
         % cook raw data before saving
@@ -220,16 +220,15 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
             flyCounts(row_count) = flyNum;
             roiCount(row_count) = count;
         end
-        roiCounts{i} = roiCount;
+        setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
     end
-    sharedInst.flyCounts = flyCounts;
-    sharedInst.roiCounts = roiCounts;    
+    setappdata(handles.figure1,'count_0',flyCounts); % set axes data
     
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
     
     % show long params
-    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.axesType1);
+    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.axesType1, sharedInst.currentROI);
     
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
@@ -422,7 +421,7 @@ function popupmenu3_Callback(hObject, eventdata, handles)
     sharedInst.currentROI = currentROI;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     % show long params
-    showLongAxes(handles.axes2, handles, sharedInst.frameNum, sharedInst.axesType1);
+    showLongAxes(handles.axes2, handles, sharedInst.frameNum, sharedInst.axesType1, sharedInst.currentROI);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -513,6 +512,15 @@ function popupmenu4_Callback(hObject, eventdata, handles)
     % hObject    handle to popupmenu4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    % show long params
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    contents = cellstr(get(hObject,'String'));
+    sharedInst.axesType1 = contents{get(hObject,'Value')};
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    showLongAxes(handles.axes2, handles, t, sharedInst.axesType1, sharedInst.currentROI);
+    showFrameInAxes(hObject, handles, t);
 end
 
 % --- Executes during object creation, after setting all properties.
@@ -562,6 +570,74 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_8 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % calc local density of veronoi
+    result = calcLocalDensityVoronoi(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, ...
+        sharedInst.roiX, sharedInst.roiY, sharedInst.currentROI);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+    
+    % add result to axes & show in axes
+    cname = 'aggr_voronoi_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+
+% calculate local density (voronoi)
+function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI)
+    xsize = length(X);
+    result = zeros(length(xsize),1);
+    for row_count = 1:xsize
+        % get detected points and roi points
+        fy = X{row_count}(:);
+        fx = Y{row_count}(:);
+        flyCount = length(fy);
+        for i=1:length(roiMasks)
+            if currentROI == 0 || (currentROI > 0 && currentROI==i)
+                if ~isempty(roiX)
+                    fy = [fy; roiX{i}(:)];
+                    fx = [fx; roiY{i}(:)];
+                end
+            end
+        end
+        
+        DT = delaunayTriangulation(fx,fy);
+        [V,R] = voronoiDiagram(DT);
+%        sharedInst.V{row_count} = V;
+%        sharedInst.R{row_count} = R;
+        area = zeros(flyCount,1);
+        for j=1:flyCount
+            poly = V(R{j},:);
+            area(j) = polyarea(poly(:,1),poly(:,2));
+        end
+        totalArea = nansum(area);
+        result(row_count) = 1 / (totalArea / flyCount);
+%        sharedInst.vArea{row_count} = area;
+    end
+end
+
+function addResult2Axes(handles, result, itemName, popupmenu)
+    listItems = cellstr(get(popupmenu,'String'));
+    added = sum(strcmp(itemName, listItems));
+    if added == 0
+        listItems = [listItems;{itemName}];
+        set(popupmenu,'String',listItems);
+    end
+    setappdata(handles.figure1,itemName,result); % update shared
+
+    % update axes
+    idx = 0;
+    for i=1:length(listItems)
+        if strcmp(listItems{i},itemName)
+            idx = i; break;
+        end
+    end
+    if idx > 0
+        set(popupmenu,'Value',idx);
+    end
 end
 
 % --------------------------------------------------------------------
@@ -569,6 +645,74 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_9 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % calc local density of veronoi
+    r = 10 / sharedInst.mmPerPixel;
+    result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI, r);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+
+    % add result to axes & show in axes
+    cname = 'aggr_ewd_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+% ----- calculate local density (frame) -----
+function result = calcLocalDensityEwdFrame(x, y, r)
+    xlen = length(x);
+    ewd = zeros(xlen,1);
+    ewd(:) = NaN;
+
+    r2 = r*r;
+    rev_pI_r = 1 / (pi * r2);
+    % calc local_dencity
+    for i=1:xlen
+        local_dencity = 0;
+        if isnan(x(i))
+            ewd(i) = NaN;
+        else
+            for j=1:xlen
+                if i~=j && ~isnan(x(j))
+                    dx = x(i) - x(j);
+                    dy = y(i) - y(j);
+                    fr = exp(-(dx*dx + dy*dy)/r2);
+                    local_dencity = local_dencity + fr;
+                end
+            end
+            ewd(i) = rev_pI_r * local_dencity;
+        end
+    end
+    result = nanmean(ewd);
+end
+
+% calculate local density (EWD)
+function result = calcLocalDensityEwd(X, Y, roiMasks, currentROI, r)
+    xsize = length(X);
+    result = zeros(length(xsize),1);
+    for row_count = 1:xsize
+        % get detected points and roi points
+        fy = X{row_count}(:);
+        fx = Y{row_count}(:);
+        fx(fx==0) = NaN;
+        fy(fy==0) = NaN;
+
+        result(row_count) = calcLocalDensityEwdFrame(fx,fy,r);
+    end
+end
+
+%%
+function plotWithNewFigure(handles, yval, ymax, ymin)
+    figure;
+    hold on;
+    plot(1:length(yval), yval);
+    xlim([1 length(yval)]);
+    ylim([ymin ymax]);
+    hold off;
+    pause(0.1);
+    axes(handles.axes1); % set back drawing area
 end
 
 % --------------------------------------------------------------------
@@ -641,15 +785,21 @@ function showFrameInAxes(hObject, handles, frameNum)
     if sharedInst.showDetectResult
         plot(Y,X,'or'); % the actual detecting
     end
-    vY = Y;
-    vX = X;
-    for i=1:length(sharedInst.roiMasks)
-        if sharedInst.currentROI == 0 || (sharedInst.currentROI > 0 && sharedInst.currentROI==i)
-            vY = [vY;sharedInst.roiX{i}(:)];
-            vX = [vX;sharedInst.roiY{i}(:)];
+    if strcmp(sharedInst.axesType1,'aggr_voronoi_result')
+        vY = Y;
+        vX = X;
+        for i=1:length(sharedInst.roiMasks)
+            if sharedInst.currentROI == 0 || (sharedInst.currentROI > 0 && sharedInst.currentROI==i)
+                if ~isempty(sharedInst.roiX)
+                    vY = [vY;sharedInst.roiX{i}(:)];
+                    vX = [vX;sharedInst.roiY{i}(:)];
+                end
+            end
+        end
+        if length(vY) > 2
+            voronoi(vY,vX);
         end
     end
-    voronoi(vY,vX);
     hold off;
 
     % show long params
@@ -658,31 +808,37 @@ function showFrameInAxes(hObject, handles, frameNum)
     % reset current axes (prevent miss click)
     axes(handles.axes1); % set drawing area
 
-    % show detected count
-    set(handles.text9, 'String', fly_num);
+    % show axes value
+    cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
+    data = getappdata(handles.figure1, cname); % get data
+    if isempty(data)
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+    if ~isempty(data)
+        set(handles.text9, 'String', data(t));
+    end
     guidata(hObject, handles);    % Update handles structure
 end
 
 %% show long axis data function
-function showLongAxes(hObject, handles, t, type)
+function showLongAxes(hObject, handles, t, type, roi)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     
     % get data
     switch type
         case 'count'
-            if sharedInst.currentROI > 0
-                yval = sharedInst.roiCounts{sharedInst.currentROI}(:);
-            else
-                yval = sharedInst.flyCounts(:);
-            end
+            yval = getappdata(handles.figure1, [type '_' num2str(roi)]); % get data
             ymin = floor(min(yval) * 0.5);
             ymax = floor(max(yval) * 1.2);
             if ymax < 5
                 ymax = 5;
             end
         otherwise
-            data = getappdata(handles.figure1, type); % get data
-            if isnan(data)
+            data = getappdata(handles.figure1, [type '_' roi]); % get data
+            if isempty(data)
+                data = getappdata(handles.figure1, type);
+            end
+            if isempty(data) || isnan(data(1))
                 yval = [];
                 ymin = 0;
                 ymax = 0;
@@ -690,6 +846,9 @@ function showLongAxes(hObject, handles, t, type)
                 yval = data(:);
                 ymin = min(yval);
                 ymax = max(yval);
+                if 1 > ymin && ymin > 0
+                    ymin = 0;
+                end
             end
     end
     if ymin==ymax
@@ -717,9 +876,10 @@ function showLongAxes(hObject, handles, t, type)
     hold off;
 end
 
+%%
 function showLongAxesTimeLine(handles, t)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    yval = sharedInst.flyCounts(:);
+    yval = sharedInst.X(:);
     ymin = 0;
     ymax = 1;
 

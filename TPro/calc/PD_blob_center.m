@@ -24,6 +24,9 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
 
     area_mean = mean(origAreas);
     blobAvgSize = (area_mean + blobAvgSizeIn * (frameCount - 1)) / frameCount;
+    if isnan(blobAvgSize) || blobAvgSize == 0
+        blobAvgSize = area_mean;
+    end
     blob_num = size(origAreas,1);
     blobPointX = [];
     blobPointY = [];
