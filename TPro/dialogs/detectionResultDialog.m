@@ -108,6 +108,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.frameNum = sharedInst.startFrame;
     sharedInst.stepTime = 0.03;
     sharedInst.showDetectResult = 1;
+    sharedInst.showIndexNumber = 0;
     sharedInst.backMode = 1; % movie
     sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
@@ -597,8 +598,8 @@ function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI
     result = zeros(length(xsize),1);
     for row_count = 1:xsize
         % get detected points and roi points
-        fy = X{row_count}(:);
-        fx = Y{row_count}(:);
+        fy = Y{row_count}(:);
+        fx = X{row_count}(:);
         flyCount = length(fy);
         for i=1:length(roiMasks)
             if currentROI == 0 || (currentROI > 0 && currentROI==i)
@@ -609,7 +610,7 @@ function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI
             end
         end
         
-        DT = delaunayTriangulation(fx,fy);
+        DT = delaunayTriangulation(fy,fx);
         [V,R] = voronoiDiagram(DT);
 %        sharedInst.V{row_count} = V;
 %        sharedInst.R{row_count} = R;
@@ -790,6 +791,13 @@ function showFrameInAxes(hObject, handles, frameNum)
     if sharedInst.showDetectResult
         plot(Y,X,'or'); % the actual detecting
     end
+    % show number
+    if sharedInst.showIndexNumber
+        for i=1:size(X,1)
+            num_txt = ['  ', num2str(i)];
+            text(Y(i),X(i),num_txt, 'Color','red');
+        end
+    end
     if strcmp(sharedInst.axesType1,'aggr_voronoi_result')
         vY = Y;
         vX = X;
@@ -802,7 +810,8 @@ function showFrameInAxes(hObject, handles, frameNum)
             end
         end
         if length(vY) > 2
-            voronoi(vY,vX);
+            DT = delaunayTriangulation(vY,vX);
+            voronoi(DT);
         end
     end
     hold off;
