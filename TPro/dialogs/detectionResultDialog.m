@@ -210,7 +210,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     flyCounts = zeros(xsize,1);
     for i=1:sharedInst.roiNum
         roiCount = zeros(xsize,1);
-        % cook raw data before saving
+        % count flies by each ROI
         for row_count = 1:xsize
             fy = X{row_count}(:);
             fx = Y{row_count}(:);
@@ -569,6 +569,24 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_7 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    if sharedInst.roiNum < 2
+        errordlg('There should be more than 2 ROIs.', 'Error');
+        return;
+    end
+    roi1 = 1;
+    roi2 = 2;
+    piCounts = calcPI(sharedInst.X, sharedInst.Y, {sharedInst.roiMasks{roi1}, sharedInst.roiMasks{roi2}});
+
+    % show in plot
+    plotWithNewFigure(handles, piCounts, 1, -1);
+    
+    % add result to axes & show in axes
+    cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, piCounts, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
 % --------------------------------------------------------------------
@@ -592,60 +610,6 @@ function Untitled_8_Callback(hObject, eventdata, handles)
 end
 
 
-% calculate local density (voronoi)
-function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI)
-    xsize = length(X);
-    result = zeros(length(xsize),1);
-    for row_count = 1:xsize
-        % get detected points and roi points
-        fy = Y{row_count}(:);
-        fx = X{row_count}(:);
-        flyCount = length(fy);
-        for i=1:length(roiMasks)
-            if currentROI == 0 || (currentROI > 0 && currentROI==i)
-                if ~isempty(roiX)
-                    fy = [fy; roiX{i}(:)];
-                    fx = [fx; roiY{i}(:)];
-                end
-            end
-        end
-        
-        DT = delaunayTriangulation(fy,fx);
-        [V,R] = voronoiDiagram(DT);
-%        sharedInst.V{row_count} = V;
-%        sharedInst.R{row_count} = R;
-        area = zeros(flyCount,1);
-        for j=1:flyCount
-            poly = V(R{j},:);
-            area(j) = polyarea(poly(:,1),poly(:,2));
-        end
-        totalArea = nansum(area);
-        result(row_count) = 1 / (totalArea / flyCount);
-%        sharedInst.vArea{row_count} = area;
-    end
-end
-
-function addResult2Axes(handles, result, itemName, popupmenu)
-    listItems = cellstr(get(popupmenu,'String'));
-    added = sum(strcmp(itemName, listItems));
-    if added == 0
-        listItems = [listItems;{itemName}];
-        set(popupmenu,'String',listItems);
-    end
-    setappdata(handles.figure1,itemName,result); % update shared
-
-    % update axes
-    idx = 0;
-    for i=1:length(listItems)
-        if strcmp(listItems{i},itemName)
-            idx = i; break;
-        end
-    end
-    if idx > 0
-        set(popupmenu,'Value',idx);
-    end
-end
-
 % --------------------------------------------------------------------
 function Untitled_9_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_9 (see GCBO)
@@ -664,61 +628,6 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
-end
-
-% ----- calculate local density (frame) -----
-function result = calcLocalDensityEwdFrame(x, y, r)
-    xlen = length(x);
-    ewd = zeros(xlen,1);
-    ewd(:) = NaN;
-
-    r2 = r*r;
-    rev_pI_r = 1 / (pi * r2);
-    % calc local_dencity
-    for i=1:xlen
-        local_dencity = 0;
-        if isnan(x(i))
-            ewd(i) = NaN;
-        else
-            for j=1:xlen
-                if i~=j && ~isnan(x(j))
-                    dx = x(i) - x(j);
-                    dy = y(i) - y(j);
-                    fr = exp(-(dx*dx + dy*dy)/r2);
-                    local_dencity = local_dencity + fr;
-                end
-            end
-            ewd(i) = rev_pI_r * local_dencity;
-        end
-    end
-    result = nanmean(ewd);
-end
-
-% calculate local density (EWD)
-function result = calcLocalDensityEwd(X, Y, roiMasks, currentROI, r)
-    xsize = length(X);
-    result = zeros(length(xsize),1);
-    for row_count = 1:xsize
-        % get detected points and roi points
-        fy = X{row_count}(:);
-        fx = Y{row_count}(:);
-        fx(fx==0) = NaN;
-        fy(fy==0) = NaN;
-
-        result(row_count) = calcLocalDensityEwdFrame(fx,fy,r);
-    end
-end
-
-%%
-function plotWithNewFigure(handles, yval, ymax, ymin)
-    figure;
-    hold on;
-    plot(1:length(yval), yval);
-    xlim([1 length(yval)]);
-    ylim([ymin ymax]);
-    hold off;
-    pause(0.1);
-    axes(handles.axes1); % set back drawing area
 end
 
 % --------------------------------------------------------------------
@@ -757,6 +666,22 @@ function showFrameInAxes(hObject, handles, frameNum)
         sharedInst.originalImage = img;
     end
     
+    % show ROIs with color
+    if strncmp(sharedInst.axesType1,'pi_roi_', 7)
+        C = strsplit(sharedInst.axesType1, '_');
+        % to color
+        if ismatrix(img)
+            img = cat(3,img,img,img);
+        end
+
+        redImage = img(:,:,2);
+        redImage = uint8(double(redImage).*(imcomplement(sharedInst.roiMasks{str2num(C{3})}*0.1)));
+        img(:,:,2) = redImage;
+        blueImage = img(:,:,1);
+        blueImage = uint8(double(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
+        img(:,:,1) = blueImage;
+    end
+
     % show original image
     cla;
     if sharedInst.backMode == 1
