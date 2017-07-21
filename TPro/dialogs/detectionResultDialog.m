@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 20-Jul-2017 02:00:01
+% Last Modified by GUIDE v2.5 21-Jul-2017 16:36:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -577,15 +577,15 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     end
     roi1 = 1;
     roi2 = 2;
-    piCounts = calcPI(sharedInst.X, sharedInst.Y, {sharedInst.roiMasks{roi1}, sharedInst.roiMasks{roi2}});
+    result = calcPI(sharedInst.X, sharedInst.Y, {sharedInst.roiMasks{roi1}, sharedInst.roiMasks{roi2}});
 
     % show in plot
-    plotWithNewFigure(handles, piCounts, 1, -1);
+    plotWithNewFigure(handles, result, 1, -1);
     
     % add result to axes & show in axes
     cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
     sharedInst.axesType1 = cname;
-    addResult2Axes(handles, piCounts, cname, handles.popupmenu4);
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -630,6 +630,33 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
+
+% --------------------------------------------------------------------
+function Untitled_10_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_10 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % show wait dialog
+    hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density scan',...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
+    % calc local density of veronoi
+    r = 10 / sharedInst.mmPerPixel;
+    result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+
+    % add result to axes & show in axes
+    cname = 'aggr_pixelscan_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
 % --------------------------------------------------------------------
 function Untitled_2_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_2 (see GCBO)
@@ -666,6 +693,11 @@ function showFrameInAxes(hObject, handles, frameNum)
         sharedInst.originalImage = img;
     end
     
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    X = sharedInst.X{t}(:);
+    Y = sharedInst.Y{t}(:);
+    fly_num = length(X);
+
     % show ROIs with color
     if strncmp(sharedInst.axesType1,'pi_roi_', 7)
         C = strsplit(sharedInst.axesType1, '_');
@@ -681,6 +713,17 @@ function showFrameInAxes(hObject, handles, frameNum)
         blueImage = uint8(double(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
         img(:,:,1) = blueImage;
     end
+    if strcmp(sharedInst.axesType1,'aggr_pixelscan_result')
+        img_h = size(img,1);
+        img_w = size(img,2);
+        [rr cc] = meshgrid(1:img_w, 1:img_h);
+        r = 10 / sharedInst.mmPerPixel;
+        map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+        map(sharedInst.roiMaskImage==0) = 0;
+        redImage = img(:,:,2);
+        redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
+        img(:,:,2) = redImage;
+    end
 
     % show original image
     cla;
@@ -691,15 +734,9 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     
     % show detection result
-    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;    
     if t > size(sharedInst.X,2) || t < 1
         return;
     end
-    
-    X = sharedInst.X{t}(:);
-    Y = sharedInst.Y{t}(:);
-    fly_num = length(X);
-    currentMask = sharedInst.roiMaskImage;
 
     % check ROI
     if sharedInst.currentROI > 0
@@ -838,4 +875,3 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
-
