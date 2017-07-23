@@ -1126,7 +1126,7 @@ for data_th = 1:size(records,1)
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath shuttleVideo.name '_' filename];
         
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks)
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks);
         
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);

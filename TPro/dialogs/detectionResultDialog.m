@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 21-Jul-2017 16:36:47
+% Last Modified by GUIDE v2.5 24-Jul-2017 01:47:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -114,6 +114,8 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
     sharedInst.axesType1 = 'count';
+    sharedInst.isModified = false;
+    sharedInst.editMode = 1; % select / add mode
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -122,6 +124,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     sharedInst.X = X;
     sharedInst.Y = Y;
+    sharedInst.selectX = [];
+    sharedInst.selectY = [];
+    sharedInst.selectFrame = 0;
 
     sharedInst.originalImage = [];
 
@@ -131,8 +136,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.edit1, 'String', sharedInst.frameNum);
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
-    set(handles.pushbutton3, 'Enable', 'off')
-    
+    set(handles.pushbutton3, 'Enable', 'off');
+    set(handles.pushbutton6, 'Enable', 'off');
+
     set(hObject, 'name', ['Detection result for ', sharedInst.shuttleVideo.name]); % set window title
 
     % load background image
@@ -212,19 +218,11 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         roiCount = zeros(xsize,1);
         % count flies by each ROI
         for row_count = 1:xsize
-            fy = X{row_count}(:);
-            fx = Y{row_count}(:);
+            fx = X{row_count}(:);
+            fy = Y{row_count}(:);
             flyNum = length(fx);
-            count = 0;
-            for j = 1:flyNum
-                y = round(fy(j));
-                x = round(fx(j));
-                if (y <= img_h) && (x <= img_w) && ~isnan(y) && ~isnan(x) && x >= 1 && y >= 1 && roiMasks{i}(y,x) > 0
-                    count = count + 1;
-                end
-            end
             flyCounts(row_count) = flyNum;
-            roiCount(row_count) = count;
+            roiCount(row_count) = countRoiFly(fy,fx,img_h,img_w,flyNum,roiMasks{i});
         end
         setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
     end
@@ -238,6 +236,17 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
+end
+
+function count = countRoiFly(fx,fy,img_h,img_w,flyNum,roiMask)
+    count = 0;
+    for j = 1:flyNum
+        y = round(fy(j));
+        x = round(fx(j));
+        if (y <= img_h) && (x <= img_w) && ~isnan(y) && ~isnan(x) && x >= 1 && y >= 1 && roiMask(y,x) > 0
+            count = count + 1;
+        end
+    end
 end
 
 % --- Outputs from this function are returned to the command line.
@@ -267,14 +276,56 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
     %	Character: character interpretation of the key(s) that was pressed
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
     % handles    structure with handles and user data (see GUIDATA)
-    if strcmp(eventdata.Key, 'rightarrow')
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = sharedInst.frameNum;
+    switch eventdata.Key
+    case 'rightarrow'
         pushbutton4_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'leftarrow')
+    case 'leftarrow'
         pushbutton5_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'uparrow')
+    case 'uparrow'
         pushbutton2_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'downarrow')
+    case 'downarrow'
         pushbutton3_Callback(hObject, eventdata, handles);
+    case 'delete'
+        if sharedInst.selectFrame == t && ~isempty(sharedInst.selectX)
+            for i=1:length(sharedInst.selectX)
+                for j=1:length(sharedInst.X)
+                    if sharedInst.X{t}(j) == sharedInst.selectX(i) && sharedInst.Y{t}(j) == sharedInst.selectY(i)
+                        sharedInst.X{t}(j) = [];
+                        sharedInst.Y{t}(j) = [];
+                        break;
+                    end
+                end
+            end
+            flyCounts = getappdata(handles.figure1,'count_0');
+            flyCounts(t) = length(sharedInst.X{t});
+            setappdata(handles.figure1,'count_0',flyCounts);
+            showLongAxes(handles.axes2, handles, t, sharedInst.axesType1, sharedInst.currentROI);
+
+            sharedInst.selectX = [];
+            sharedInst.selectY = [];
+            sharedInst.selectFrame = 0;
+            sharedInst.isModified = true;
+            set(handles.pushbutton6, 'Enable', 'on');
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            showFrameInAxes(hObject, handles, t);
+        end
+    case {'a', 'insert'}
+        sharedInst.editMode = 2;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        showFrameInAxes(hObject, handles, t);
+    case 's'
+        sharedInst.editMode = 1;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        showFrameInAxes(hObject, handles, t);
+    case 'escape'
+        sharedInst.editMode = 1;
+        sharedInst.selectX = [];
+        sharedInst.selectY = [];
+        sharedInst.selectFrame = 0;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        showFrameInAxes(hObject, handles, t);
     end
 end
 
@@ -284,8 +335,67 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    if gca == handles.axes2 || gca == handles.axes3
-        sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if gca == handles.axes1
+        frame = sharedInst.frameNum;
+        cp = get(gca,'CurrentPoint');
+        
+        % select point
+        if sharedInst.editMode == 1
+            unselected = false;
+            selected = false;
+            A = [cp(1,2), cp(1,1)];
+            if sharedInst.selectFrame ~= frame
+                sharedInst.selectX = [];
+                sharedInst.selectY = [];
+            end
+            if ~isempty(sharedInst.selectX)
+                B = [sharedInst.selectX, sharedInst.selectY];
+                distances = sqrt(sum(bsxfun(@minus, B, A).^2,2));
+                [minDist,i] = min(distances);
+                if minDist < 9
+                    sharedInst.selectX(i) = [];
+                    sharedInst.selectY(i) = [];
+                    unselected = true;
+                end
+            end
+            if ~unselected
+                B = [sharedInst.X{frame}(:), sharedInst.Y{frame}(:)];                
+                distances = sqrt(sum(bsxfun(@minus, B, A).^2,2));
+                [minDist,i] = min(distances);
+                if minDist < 9
+                    sharedInst.selectX = [sharedInst.selectX; B(i,1)];
+                    sharedInst.selectY = [sharedInst.selectY; B(i,2)];
+                    sharedInst.selectFrame = frame;
+                    selected = true;
+                end
+            end
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            % unselect all point
+            if ~unselected && ~selected
+                sharedInst.selectX = [];
+                sharedInst.selectY = [];
+                sharedInst.selectFrame = 0;
+                setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            end
+        end
+        % adding new point
+        if sharedInst.editMode == 2
+            sharedInst.X{frame} = [sharedInst.X{frame}(:); cp(1,2)];
+            sharedInst.Y{frame} = [sharedInst.Y{frame}(:); cp(1,1)];
+            sharedInst.isModified = true;
+            set(handles.pushbutton6, 'Enable', 'on');
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+            flyCounts = getappdata(handles.figure1,'count_0');
+            flyCounts(frame) = flyCounts(frame) + 1;
+            setappdata(handles.figure1,'count_0',flyCounts);
+        end
+        % show frame and long axes
+        showLongAxes(handles.axes2, handles, sharedInst.frameNum, sharedInst.axesType1, sharedInst.currentROI);
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
+
+    elseif gca == handles.axes2 || gca == handles.axes3
         cp = get(gca,'CurrentPoint');
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
         set(handles.slider1, 'value', sharedInst.startFrame + cp(1));
@@ -511,6 +621,32 @@ function pushbutton5_Callback(hObject, eventdata, handles)
         set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps);
         slider1_Callback(handles.slider1, eventdata, handles)
     end
+end
+
+% --- Executes on button press in pushbutton6.
+function pushbutton6_Callback(hObject, eventdata, handles)
+    % hObject    handle to pushbutton6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    img_h = size(sharedInst.originalImage, 1);
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    dataFileName = [sharedInst.confPath 'multi/detect_' filename '.mat'];
+
+    % load detection & tracking
+    load(dataFileName);
+    X = sharedInst.X;
+    Y = sharedInst.Y;
+    save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+
+    % save data as text
+    for i=1:length(sharedInst.roiMasks)
+        outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
+        dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
+        
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks);
+    end
+    set(handles.pushbutton6, 'Enable', 'off');
 end
 
 % --- Executes on selection change in popupmenu4.
@@ -752,6 +888,9 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold on;
     if sharedInst.showDetectResult
         plot(Y,X,'or'); % the actual detecting
+        if ~isempty(sharedInst.selectX) && sharedInst.selectFrame == t
+            plot(sharedInst.selectY,sharedInst.selectX,'or','Color', [.3 1 .3]);
+        end
     end
     % show number
     if sharedInst.showIndexNumber
@@ -775,6 +914,16 @@ function showFrameInAxes(hObject, handles, frameNum)
             DT = delaunayTriangulation(vY,vX);
             voronoi(DT);
         end
+    end
+    % show edit mode
+    if sharedInst.editMode > 0
+        switch sharedInst.editMode
+            case 1
+                modeText = 'MODE: select   please click to select detection point.';
+            case 2
+                modeText = 'MODE: add      please click to add new detection point.';
+        end
+        text(6, 12, modeText, 'Color',[1 .4 .4])
     end
     hold off;
 
@@ -859,7 +1008,6 @@ function showLongAxesTimeLine(handles, t)
     ymin = 0;
     ymax = 1;
 
-    % plot current time line
     handles.axes3.Box = 'off';
     handles.axes3.Color = 'None';
     handles.axes3.FontSize = 1;
@@ -870,8 +1018,16 @@ function showLongAxesTimeLine(handles, t)
     axes(handles.axes3); % set drawing area
     cla;    
     hold on;
+    % plot selected frame
+    frame = sharedInst.selectFrame;
+    if frame > 0 && ~isempty(sharedInst.selectX)
+        plot([frame frame], [ymin ymax], '-', 'markersize', 1, 'color', [.1 .7 .1], 'linewidth', 1)  % rodent 1 instead of Cz
+    end
+    % plot current time line
     plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
     xlim([1 size(yval,1)]);
     ylim([ymin ymax]);
     hold off;
 end
+
+
