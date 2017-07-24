@@ -749,7 +749,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
-    % calc local density of veronoi
+    % calc local density of voronoi
     result = calcLocalDensityVoronoi(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, ...
         sharedInst.roiX, sharedInst.roiY, sharedInst.currentROI);
     % show in plot
@@ -770,7 +770,7 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
-    % calc local density of veronoi
+    % calc local density of ewd
     r = 10 / sharedInst.mmPerPixel;
     result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI, r);
     % show in plot
@@ -792,12 +792,12 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % show wait dialog
-    hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density scan',...
+    hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density-besed scan',...
                 'CreateCancelBtn',...
                 'setappdata(gcbf,''canceling'',1)');
     setappdata(hWaitBar,'canceling',0)
 
-    % calc local density of veronoi
+    % calc local density of pixel density-based scan
     r = 10 / sharedInst.mmPerPixel;
     result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
     % show in plot
