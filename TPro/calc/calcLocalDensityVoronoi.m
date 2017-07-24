@@ -4,7 +4,7 @@ function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI
     result = zeros(length(xsize),1);
     tic;
     % calc roi unique points
-    for i=1:length(roiMasks)
+    for i=1:length(roiX)
         [C,ia,ic] = unique(roiX{i}(:));
         roiX{i} = roiX{i}(ia);
         roiY{i} = roiY{i}(ia);
