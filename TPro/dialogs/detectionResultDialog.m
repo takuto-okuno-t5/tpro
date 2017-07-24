@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 24-Jul-2017 01:47:29
+% Last Modified by GUIDE v2.5 24-Jul-2017 17:17:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -116,6 +116,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
     sharedInst.editMode = 1; % select / add mode
+    sharedInst.showPixelScanOneFrame = false;
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -830,6 +831,83 @@ function Untitled_4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
 end
 
+% --------------------------------------------------------------------
+function Untitled_11_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_11 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    frameNum = sharedInst.frameNum;
+    t = round((frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    X = sharedInst.X{t}(:);
+    Y = sharedInst.Y{t}(:);
+
+    flyNum = length(X);
+    img = sharedInst.roiMaskImage;
+    img_h = size(img,1);
+    img_w = size(img,2);
+    [rr cc] = meshgrid(1:img_w, 1:img_h);
+
+    r = 10 / sharedInst.mmPerPixel;
+    map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+    map(sharedInst.roiMaskImage==0) = -1;
+    roiTotal = sum(sum(sharedInst.roiMaskImage==1));
+
+    % count pixels and plot
+    counts = zeros(1,flyNum+1);
+    for i=1:(flyNum+1)
+        counts(i) = sum(sum(map==(i-1)));
+    end
+    % show in plot
+    barWithNewFigure(handles, counts, roiTotal*0.7, 0,  0, flyNum);
+    
+    sharedInst.showPixelScanOneFrame = true;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, frameNum)
+
+    sharedInst.showPixelScanOneFrame = false;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+end
+
+% --------------------------------------------------------------------
+function Untitled_12_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_12 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % calc local density of Minimum Distance
+    result = calcLocalDensityMd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+    
+    % add result to axes & show in axes
+    cname = 'aggr_md_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+% --------------------------------------------------------------------
+function Untitled_13_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_13 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % calc local density of Harmonically Weighted Mean Distance
+    result = calcLocalDensityHwmd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+    
+    % add result to axes & show in axes
+    cname = 'aggr_hwmd_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -865,7 +943,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         blueImage = uint8(double(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
         img(:,:,1) = blueImage;
     end
-    if strcmp(sharedInst.axesType1,'aggr_pixelscan_result')
+    if strcmp(sharedInst.axesType1,'aggr_pixelscan_result') || sharedInst.showPixelScanOneFrame
         img_h = size(img,1);
         img_w = size(img,2);
         [rr cc] = meshgrid(1:img_w, 1:img_h);
@@ -1046,5 +1124,3 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
-
-

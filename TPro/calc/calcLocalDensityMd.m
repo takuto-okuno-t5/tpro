@@ -1,5 +1,5 @@
-% calculate local density (EWD)
-function result = calcLocalDensityEwd(X, Y, roiMasks, currentROI, r)
+% calculate local density (MD)
+function result = calcLocalDensityMd(X, Y, roiMasks, currentROI)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;
@@ -10,8 +10,8 @@ function result = calcLocalDensityEwd(X, Y, roiMasks, currentROI, r)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        result(row_count) = calcLocalDensityEwdFrame(fy,fx,r);
+        result(row_count) = calcLocalDensityMdFrame(fy,fx);
     end
     time = toc;
-    disp(['calcLocalDensityEwd ... done : ' num2str(time) 's']);
+    disp(['calcLocalDensityMd ... done : ' num2str(time) 's']);
 end

@@ -2,6 +2,14 @@
 function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI)
     xsize = length(X);
     result = zeros(length(xsize),1);
+    tic;
+    % calc roi unique points
+    for i=1:length(roiMasks)
+        [C,ia,ic] = unique(roiX{i}(:));
+        roiX{i} = roiX{i}(ia);
+        roiY{i} = roiY{i}(ia);
+    end
+    % calc voronoi
     for row_count = 1:xsize
         % get detected points and roi points
         fy = Y{row_count}(:);
@@ -29,4 +37,6 @@ function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI
         result(row_count) = 1 / (totalArea / flyCount);
 %        sharedInst.vArea{row_count} = area;
     end
+    time = toc;
+    disp(['calcLocalDensityVoronoi ... done : ' num2str(time) 's']);
 end

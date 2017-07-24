@@ -7,7 +7,8 @@ function result = calcLocalDensityPxScan(X, Y, roiMaskImage, r, hWaitBar)
     [rr cc] = meshgrid(1:img_w, 1:img_h);
     roiIdx = find(roiMaskImage==1);
     roiLen = length(roiIdx);
-    
+
+    tic;
     for row_count = 1:xsize
         % Check for Cancel button press
         if ~isempty(hWaitBar)
@@ -31,6 +32,9 @@ function result = calcLocalDensityPxScan(X, Y, roiMaskImage, r, hWaitBar)
             waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
         end
     end
+    time = toc;
+    disp(['calcLocalDensityPxScan ... done : ' num2str(time) 's']);
+
     % delete dialog bar
     if ~isempty(hWaitBar)
         delete(hWaitBar);
