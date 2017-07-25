@@ -1,5 +1,5 @@
 % calculate local density (HWMD)
-function result = calcLocalDensityHwmd(X, Y, roiMasks, currentROI)
+function result = calcLocalDensityHwmd(X, Y, roiMask)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;

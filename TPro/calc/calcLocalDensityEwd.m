@@ -1,5 +1,5 @@
 % calculate local density (EWD)
-function result = calcLocalDensityEwd(X, Y, roiMasks, currentROI, r)
+function result = calcLocalDensityEwd(X, Y, roiMask, r)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;

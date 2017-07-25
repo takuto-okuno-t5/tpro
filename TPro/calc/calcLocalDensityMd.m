@@ -1,5 +1,5 @@
 % calculate local density (MD)
-function result = calcLocalDensityMd(X, Y, roiMasks, currentROI)
+function result = calcLocalDensityMd(X, Y, roiMask)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;

@@ -1,11 +1,11 @@
-function result = calcLocalDensityPxScan(X, Y, roiMaskImage, r, hWaitBar)
-    img_h = size(roiMaskImage,1);
-    img_w = size(roiMaskImage,2);
+function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar)
+    img_h = size(roiMask,1);
+    img_w = size(roiMask,2);
     xsize = length(X);
     result = zeros(length(xsize),1);
     % for calc circle
     [rr cc] = meshgrid(1:img_w, 1:img_h);
-    roiIdx = find(roiMaskImage==1);
+    roiIdx = find(roiMask==1);
     roiLen = length(roiIdx);
 
     tic;

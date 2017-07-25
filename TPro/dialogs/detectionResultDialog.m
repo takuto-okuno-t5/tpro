@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 24-Jul-2017 17:17:39
+% Last Modified by GUIDE v2.5 24-Jul-2017 19:58:51
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -771,8 +771,9 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % calc local density of ewd
-    r = 10 / sharedInst.mmPerPixel;
-    result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI, r);
+    mm = 10;
+    r = mm / sharedInst.mmPerPixel;
+    result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
 
@@ -798,7 +799,8 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     setappdata(hWaitBar,'canceling',0)
 
     % calc local density of pixel density-based scan
-    r = 10 / sharedInst.mmPerPixel;
+    mm = 10;
+    r = mm / sharedInst.mmPerPixel;
     result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
@@ -878,7 +880,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % calc local density of Minimum Distance
-    result = calcLocalDensityMd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI);
+    result = calcLocalDensityMd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
     
@@ -897,12 +899,33 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % calc local density of Harmonically Weighted Mean Distance
-    result = calcLocalDensityHwmd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, sharedInst.currentROI);
+    result = calcLocalDensityHwmd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
     
     % add result to axes & show in axes
     cname = 'aggr_hwmd_result';
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+% --------------------------------------------------------------------
+function Untitled_14_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_13 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % calc local density of Harmonically Weighted Mean Distance
+    w = 10 / sharedInst.mmPerPixel;
+    h = 10 / sharedInst.mmPerPixel;
+    result = calcLocalDensityGrid(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, w, h);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), 0);
+    
+    % add result to axes & show in axes
+    cname = 'aggr_grid_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -927,6 +950,8 @@ function showFrameInAxes(hObject, handles, frameNum)
     X = sharedInst.X{t}(:);
     Y = sharedInst.Y{t}(:);
     fly_num = length(X);
+    img_h = size(img,1);
+    img_w = size(img,2);
 
     % show ROIs with color
     if strncmp(sharedInst.axesType1,'pi_roi_', 7)
@@ -944,14 +969,31 @@ function showFrameInAxes(hObject, handles, frameNum)
         img(:,:,1) = blueImage;
     end
     if strcmp(sharedInst.axesType1,'aggr_pixelscan_result') || sharedInst.showPixelScanOneFrame
-        img_h = size(img,1);
-        img_w = size(img,2);
         [rr cc] = meshgrid(1:img_w, 1:img_h);
         r = 10 / sharedInst.mmPerPixel;
         map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
         map(sharedInst.roiMaskImage==0) = 0;
         redImage = img(:,:,2);
         redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
+        img(:,:,2) = redImage;
+    end
+    if strcmp(sharedInst.axesType1,'aggr_grid_result')
+        mm = 10;
+        w = mm / sharedInst.mmPerPixel;
+        h = mm / sharedInst.mmPerPixel;
+        gridAreas = getGridAreas(sharedInst.roiMaskImage, img_w, img_h, w, h);
+        [result, gridDensity] = calcLocalDensityGridFrame(round(X), round(Y), gridAreas, img_w, img_h, w, h);
+        map = zeros(img_h, img_w);
+        for i=1:size(gridDensity,2)
+            iEnd = min([i*h, img_h]);
+            for j=1:size(gridDensity,1)
+                jEnd = min([j*w, img_w]);
+                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i)*w*h*0.1;
+            end
+        end
+        map(sharedInst.roiMaskImage==0) = 0;
+        redImage = img(:,:,2);
+        redImage = uint8(double(redImage).*(imcomplement(map)));
         img(:,:,2) = redImage;
     end
 
@@ -1124,3 +1166,4 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
+
