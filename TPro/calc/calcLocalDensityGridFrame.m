@@ -9,6 +9,7 @@ function [result, gridDensity] = calcLocalDensityGridFrame(x, y, gridAreas, img_
     counts = zeros(1,sum(sum(gridAreas>0)));
     gridDensity = gridAreas;
     gridDensity(:,:) = 0;
+    boxArea = width * height;
     k = 1;
     for i=1:width:img_w
         iEnd = min([i+width-1, img_w]);
@@ -17,7 +18,7 @@ function [result, gridDensity] = calcLocalDensityGridFrame(x, y, gridAreas, img_
             if area > 0
                 jEnd = min([j+height-1, img_h]);
                 count = sum(sum(map(j:jEnd, i:iEnd)));
-                counts(k) = count / area;
+                counts(k) = count / boxArea;
                 gridDensity(ceil(j / height), ceil(i / width)) = counts(k);
                 k = k + 1;
             end

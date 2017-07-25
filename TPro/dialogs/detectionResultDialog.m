@@ -995,7 +995,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             iEnd = min([i*h, img_h]);
             for j=1:size(gridDensity,1)
                 jEnd = min([j*w, img_w]);
-                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i)*w*h*0.1;
+                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i)*w*h*0.2;
             end
         end
         map(sharedInst.roiMaskImage==0) = 0;
