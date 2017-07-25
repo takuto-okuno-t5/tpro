@@ -1,13 +1,15 @@
 % calculate local density (voronoi)
-function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI)
+function result = calcLocalDensityVoronoi(X, Y, roiMask, roiX, roiY)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;
     % calc roi unique points
-    for i=1:length(roiX)
-        [C,ia,ic] = unique(roiX{i}(:));
-        roiX{i} = roiX{i}(ia);
-        roiY{i} = roiY{i}(ia);
+    if ~isempty(roiX)
+        last = length(roiX);
+        if roiX(1) == roiX(last) && roiY(1) == roiY(last)
+            roiX(last) = [];
+            roiY(last) = [];
+        end
     end
     % calc voronoi
     for row_count = 1:xsize
@@ -15,13 +17,9 @@ function result = calcLocalDensityVoronoi(X, Y, roiMasks, roiX, roiY, currentROI
         fy = Y{row_count}(:);
         fx = X{row_count}(:);
         flyCount = length(fy);
-        for i=1:length(roiMasks)
-            if currentROI == 0 || (currentROI > 0 && currentROI==i)
-                if ~isempty(roiX)
-                    fy = [fy; roiX{i}(:)];
-                    fx = [fx; roiY{i}(:)];
-                end
-            end
+        if ~isempty(roiX)
+            fy = [fy; roiX(:)];
+            fx = [fx; roiY(:)];
         end
         
         DT = delaunayTriangulation(fy,fx);

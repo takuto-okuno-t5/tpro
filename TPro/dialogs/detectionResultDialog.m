@@ -750,8 +750,15 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % calc local density of voronoi
-    result = calcLocalDensityVoronoi(sharedInst.X, sharedInst.Y, sharedInst.roiMasks, ...
-        sharedInst.roiX, sharedInst.roiY, sharedInst.currentROI);
+    if isempty(sharedInst.roiX)
+        roiX = [];
+        roiY = [];
+    else
+        roiX = sharedInst.roiX{1};
+        roiY = sharedInst.roiY{1};
+    end
+    result = calcLocalDensityVoronoi(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, roiX, roiY);
+
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
     
