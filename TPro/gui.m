@@ -1413,9 +1413,6 @@ for data_th = 1:size(records,1)
             est_dist0 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
             est_dist0 = squareform(est_dist0); %make square
             est_dist1 = est_dist0(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
-%est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
-%est_dist = squareform(est_dist); %make square
-%est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
 
             %                 for est_count = 1:nF    % added on 2016-07-28
             %                     if min(est_dist(est_count,:)) < 50
@@ -1435,11 +1432,6 @@ for data_th = 1:size(records,1)
                     invIdx(fn) = i;
                 end
             end
-%[asgnOrg, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
-%asgnOrg = asgnOrg';
-%if ~isequal(asgn, asgnOrg)
-%    a=0;
-%end
             %check for tough situations and if it's tough, just go with estimate and ignore the data
             %make asgn = 0 for that tracking element
 
@@ -1449,7 +1441,6 @@ for data_th = 1:size(records,1)
                 if ~isempty(asgn) && asgn(F) > 0  % if track F has pair asgn(F)
                     estF = invIdx(F);
                     rej(F) = est_dist1(estF,asgnT(estF)) < reject_dist;
-%rej(F) = est_dist(F,asgn(F)) < reject_dist ;
                     v1 = direction_track(:,F);
                     v2 = direction_meas(:,asgn(F));
                     if (norm(v1) ~= 0) && (norm(v2) ~= 0)
@@ -1492,19 +1483,10 @@ for data_th = 1:size(records,1)
                 est_dist3 = squareform(est_dist3); %make square
                 est_dist3 = est_dist3(1:idxlen2,idxlen2+1:end) ; %limit to just the tracks to detection distances
 
-%est_dist2 = pdist([Q_estimate_before_update(1:2,1:flyNum)'; Q_loc_meas2]);
-%est_dist2 = squareform(est_dist2); %make square
-%est_dist2 = est_dist2(1:flyNum,flyNum+1:end);  %limit to just the tracks to detection distances
-
                 % Closest Neighbour Approach
                 asgn2 = asgn.*0;
-%row_est_dist2 = max(sum(~isnan(est_dist2)));
-%col_est_dist2 = max(sum(~isnan(est_dist2),2));
                 row_est_dist3 = max(sum(~isnan(est_dist3)));
                 col_est_dist3 = max(sum(~isnan(est_dist3),2));
-%if row_est_dist2~=row_est_dist3 && col_est_dist2~=col_est_dist3
-%    a=0;
-%end
                 if ((row_est_dist3 - col_est_dist3) >= 0)
                     count_target = col_est_dist3;
                 else
@@ -1513,31 +1495,17 @@ for data_th = 1:size(records,1)
 
                 for count2 = 1:count_target
                     %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
-%[mmin,m0] = min(est_dist2);
-%[nmin,n] = min(mmin);
-%if ~isempty(m0)
-%    m = m0(n);
-%    asgn2(m) = n;
-%    est_dist2(m,:) = NaN;
-%    est_dist2(:,n) = NaN;
-%end
                     [mmin,m0] = min(est_dist3);
                     [nmin,n] = min(mmin);
                     if ~isempty(m0)
                         if size(est_dist3,1) > 1
                             m = m0(n);
-%if asgn2(idx2(m)) ~= n
-%    a=0;
-%end
                             if nmin < reject_dist
                                 asgn2(idx2(m)) = n;
                             end
                             est_dist3(m,:) = NaN;
                             est_dist3(:,n) = NaN;
                         else
-%if asgn2(idx2(n)) ~= m0
-%    a=0;
-%end
                             if mmin < reject_dist
                                 asgn2(idx2(n)) = m0;
                             end
@@ -1595,10 +1563,6 @@ for data_th = 1:size(records,1)
                         else
                             estF = invIdx(k);
                             [m,i] = min(est_dist1(estF,:));
-%[m0,i0] = min(est_dist(k,:));
-%if m0 ~= m && i0 ~= i
-%    a=0;
-%end
                             if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
                                 Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
