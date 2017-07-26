@@ -1,6 +1,11 @@
 %%
-function plotWithNewFigure(handles, yval, ymax, ymin)
-    figure;
+function retFigure = plotWithNewFigure(handles, yval, ymax, ymin, hFigure)
+    if isempty(hFigure)
+        retFigure = figure();
+    else
+        figure(hFigure);
+        retFigure = hFigure;
+    end
     hold on;
     plot(1:length(yval), yval);
     xlim([1 length(yval)]);

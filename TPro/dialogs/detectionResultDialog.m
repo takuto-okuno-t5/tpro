@@ -228,7 +228,19 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
     end
     setappdata(handles.figure1,'count_0',flyCounts); % set axes data
-    
+
+    % load last time data
+    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pixelscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    for i=1:length(resultNames)
+        fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
+        if exist(fname, 'file')
+            load(fname);
+            setappdata(handles.figure1,resultNames{i},result);
+            addResult2Axes(handles, result, resultNames{i}, handles.popupmenu4);
+        end
+    end
+    set(handles.popupmenu4,'Value',1);
+
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
     
@@ -766,6 +778,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     cname = 'aggr_voronoi_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -778,16 +791,24 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % calc local density of ewd
-    mm = 10;
-    r = mm / sharedInst.mmPerPixel;
-    result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
-    % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    hFig = [];
+    lastMax = 0;
+    for mm=10:5:10
+        r = mm / sharedInst.mmPerPixel;
+        result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
+
+        % show in plot
+        if lastMax < max(result)
+            lastMax = max(result)
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+    end
 
     % add result to axes & show in axes
     cname = 'aggr_ewd_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -806,16 +827,23 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     setappdata(hWaitBar,'canceling',0)
 
     % calc local density of pixel density-based scan
-    mm = 10;
-    r = mm / sharedInst.mmPerPixel;
-    result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
-    % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    hFig = [];
+    lastMax = 0;
+    for mm=10:5:10
+        r = mm / sharedInst.mmPerPixel;
+        result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
+        % show in plot
+        if lastMax < max(result)
+            lastMax = max(result)
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+    end
 
     % add result to axes & show in axes
     cname = 'aggr_pixelscan_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -895,6 +923,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     cname = 'aggr_md_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -909,11 +938,12 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     result = calcLocalDensityHwmd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0);
-    
+
     % add result to axes & show in axes
     cname = 'aggr_hwmd_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
@@ -935,6 +965,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     cname = 'aggr_grid_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
