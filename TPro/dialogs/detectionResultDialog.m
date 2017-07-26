@@ -745,7 +745,7 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     result = calcPI(sharedInst.X, sharedInst.Y, {sharedInst.roiMasks{roi1}, sharedInst.roiMasks{roi2}});
 
     % show in plot
-    plotWithNewFigure(handles, result, 1, -1);
+    plotWithNewFigure(handles, result, 1, -1, []);
     
     % add result to axes & show in axes
     cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
@@ -772,7 +772,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     result = calcLocalDensityVoronoi(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, roiX, roiY);
 
     % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    plotWithNewFigure(handles, result, max(result), 0, []);
     
     % add result to axes & show in axes
     cname = 'aggr_voronoi_result';
@@ -889,7 +889,15 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     r = 10 / sharedInst.mmPerPixel;
     map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
     map(sharedInst.roiMaskImage==0) = -1;
-    roiTotal = sum(sum(sharedInst.roiMaskImage==1));
+    
+    roiIdx = find(sharedInst.roiMaskImage==1);
+    roiLen = length(roiIdx);
+    roiTotal = sum(map(roiIdx));
+    mMean = mean(map(roiIdx));
+    map2 = map - mMean;
+    map2 = map2 .* map2;
+    total = sum(map2(roiIdx));
+    score = total / roiLen;
 
     % count pixels and plot
     counts = zeros(1,flyNum+1);
@@ -905,6 +913,8 @@ function Untitled_11_Callback(hObject, eventdata, handles)
 
     sharedInst.showPixelScanOneFrame = false;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    % show score
+    set(handles.text9, 'String', score);
 end
 
 % --------------------------------------------------------------------
@@ -917,7 +927,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     % calc local density of Minimum Distance
     result = calcLocalDensityMd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage);
     % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    plotWithNewFigure(handles, result, max(result), 0, []);
     
     % add result to axes & show in axes
     cname = 'aggr_md_result';
@@ -937,7 +947,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     % calc local density of Harmonically Weighted Mean Distance
     result = calcLocalDensityHwmd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage);
     % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    plotWithNewFigure(handles, result, max(result), 0, []);
 
     % add result to axes & show in axes
     cname = 'aggr_hwmd_result';
@@ -959,7 +969,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     h = 10 / sharedInst.mmPerPixel;
     result = calcLocalDensityGrid(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, w, h);
     % show in plot
-    plotWithNewFigure(handles, result, max(result), 0);
+    plotWithNewFigure(handles, result, max(result), 0, []);
     
     % add result to axes & show in axes
     cname = 'aggr_grid_result';
