@@ -820,16 +820,16 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
-    % show wait dialog
-    hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density-besed scan',...
-                'CreateCancelBtn',...
-                'setappdata(gcbf,''canceling'',1)');
-    setappdata(hWaitBar,'canceling',0)
-
     % calc local density of pixel density-based scan
     hFig = [];
     lastMax = 0;
     for mm=10:5:10
+        % show wait dialog
+        hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density-besed scan',...
+                    'CreateCancelBtn',...
+                    'setappdata(gcbf,''canceling'',1)');
+        setappdata(hWaitBar,'canceling',0)
+
         r = mm / sharedInst.mmPerPixel;
         result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
         % show in plot
