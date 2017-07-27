@@ -1,4 +1,4 @@
-function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar)
+function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar, areaMap)
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
     xsize = length(X);
@@ -21,6 +21,8 @@ function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar)
         fx = X{row_count}(:);
         fy = Y{row_count}(:);
         map = calcLocalDensityPxScanFrame(fy, fx, rr, cc, r, img_h, img_w);
+        map = map .* areaMap;
+
         mMean = mean(map(roiIdx));
         map = map - mMean;
         map = map .* map;

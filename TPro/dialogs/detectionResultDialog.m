@@ -799,7 +799,7 @@ function Untitled_9_Callback(hObject, eventdata, handles)
 
         % show in plot
         if lastMax < max(result)
-            lastMax = max(result)
+            lastMax = max(result);
         end
         hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
     end
@@ -820,6 +820,21 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
+    % considering wall issue. near wall pixels have small density.
+    % if pixel count is devided such density, near wall pixels becomes too strong
+    % and aggregation index is affected too much. so, we should not use this.
+    %{
+    mm = 10;
+    areaMapFile = [sharedInst.confPath 'multi/areamap_' num2str(mm) '.mat'];
+    if exist(areaMapFile,'file')
+        load(areaMapFile);
+    end
+    maxArea = max(max(areaMap));
+    areaMap = maxArea ./ areaMap;
+    areaMap(isinf(areaMap)) = 0;
+%}
+    areaMap = sharedInst.roiMaskImage;
+
     % calc local density of pixel density-based scan
     hFig = [];
     lastMax = 0;
@@ -831,10 +846,10 @@ function Untitled_10_Callback(hObject, eventdata, handles)
         setappdata(hWaitBar,'canceling',0)
 
         r = mm / sharedInst.mmPerPixel;
-        result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar);
+        result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar, areaMap);
         % show in plot
         if lastMax < max(result)
-            lastMax = max(result)
+            lastMax = max(result);
         end
         hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
     end
@@ -886,12 +901,49 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     img_w = size(img,2);
     [rr cc] = meshgrid(1:img_w, 1:img_h);
 
-    r = 10 / sharedInst.mmPerPixel;
-    map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
-    map(sharedInst.roiMaskImage==0) = -1;
-    
     roiIdx = find(sharedInst.roiMaskImage==1);
     roiLen = length(roiIdx);
+    mm = 10;
+    r = mm / sharedInst.mmPerPixel;
+
+    % count pixel area
+    % considering wall issue. near wall pixels have small density.
+    % if pixel count is devided such density, near wall pixels becomes too strong
+    % and aggregation index is affected too much. so, we should not use this.
+    %{
+    areaMapFile = [sharedInst.confPath 'multi/areamap_' num2str(mm) '.mat'];
+    if exist(areaMapFile,'file')
+        load(areaMapFile);
+    else
+        tic;
+        areaMap = zeros(img_h,img_w);
+        for i=1:roiLen
+            j = roiIdx(i);
+            cx1 = mod(j-1,img_h) + 1;
+            cy1 = floor((j-1)/img_h) + 1;
+            C = ((rr-cx1).^2 + (cc-cy1).^2) <= r^2;
+            m = C .* img;
+            areaMap(j) = length(find(m>0));
+            if mod(i,100) == 0
+                disp(['count pixel area : ' num2str(i)]);
+            end
+        end
+        time = toc;
+        disp(['count pixel area time=' num2str(time)]);
+        save(areaMapFile, 'areaMap');
+    end
+
+    maxArea = max(max(areaMap));
+%img0 = (areaMap ./ maxArea);
+%img1 = double(sharedInst.bgImage) .* img0;
+%imshow(uint8(img1));
+    areaMap = sqrt(maxArea ./ areaMap);
+    areaMap(isinf(areaMap)) = 0;
+    %}
+    map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+    map(sharedInst.roiMaskImage==0) = -1;
+%    map = map .* areaMap;
+
     roiTotal = sum(map(roiIdx));
     mMean = mean(map(roiIdx));
     map2 = map - mMean;
@@ -993,6 +1045,9 @@ function showFrameInAxes(hObject, handles, frameNum)
         img = TProRead(sharedInst.shuttleVideo, frameNum);
         sharedInst.originalImage = img;
     end
+    if sharedInst.backMode == 2
+        img = sharedInst.bgImage;
+    end
 
     t = round((frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     X = sharedInst.X{t}(:);
@@ -1021,6 +1076,10 @@ function showFrameInAxes(hObject, handles, frameNum)
         r = 10 / sharedInst.mmPerPixel;
         map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
         map(sharedInst.roiMaskImage==0) = 0;
+        % to color
+        if ismatrix(img)
+            img = cat(3,img,img,img);
+        end
         redImage = img(:,:,2);
         redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
         img(:,:,2) = redImage;
@@ -1040,6 +1099,10 @@ function showFrameInAxes(hObject, handles, frameNum)
             end
         end
         map(sharedInst.roiMaskImage==0) = 0;
+        % to color
+        if ismatrix(img)
+            img = cat(3,img,img,img);
+        end
         redImage = img(:,:,2);
         redImage = uint8(double(redImage).*(imcomplement(map)));
         img(:,:,2) = redImage;
@@ -1047,10 +1110,8 @@ function showFrameInAxes(hObject, handles, frameNum)
 
     % show original image
     cla;
-    if sharedInst.backMode == 1
+    if sharedInst.backMode ~= 3
         imshow(img);
-    elseif sharedInst.backMode == 2
-        imshow(sharedInst.bgImage);
     end
     
     % show detection result
