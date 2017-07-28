@@ -225,7 +225,8 @@ pause(0.01);
 tic;
 
 % create config files if possible
-status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+[status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+tebleItems(:,1) = videoFiles;
 
 time = toc;
 
@@ -268,7 +269,7 @@ if length(handles.batch) > 0
     handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    status = createConfigFiles([videoPath '/'], videoFiles, handles.batch);
+    [status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.batch);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -292,7 +293,7 @@ if length(handles.movies) > 0
     handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+    [status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.template);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -415,7 +416,8 @@ for n = 1:length(videoFiles)
 end
 
 % create config files if possible
-status = createConfigFiles(videoPath, videoFiles, handles.template);
+[status, videoFiles] = createConfigFiles(videoPath, videoFiles, handles.template);
+tebleItems(:,1) = videoFiles;
 
 time = toc;
 
@@ -479,7 +481,7 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % show detecting message
     set(handles.text14, 'String', ['detecting background for ', shuttleVideo.name]);
@@ -774,7 +776,7 @@ for data_th = 1:size(records,1)
         mkdir([confPath 'multi']);
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % ROI
     roi_mask = [];
@@ -828,8 +830,8 @@ for data_th = 1:size(records,1)
             mkdir(outputPath);
         end
     end
-    X = cell(1,length(end_frame-start_frame+1));
-    Y = cell(1,length(end_frame-start_frame+1));
+    X = cell(1,end_frame-start_frame+1);
+    Y = cell(1,end_frame-start_frame+1);
     X_update2 = X;
     Y_update2 = Y;
     detection_num = nan(2,end_frame-start_frame+1);
@@ -1250,7 +1252,7 @@ for data_th = 1:size(records,1)
         fixedTrackNum = records{data_th, 27};
         fixedTrackDir = records{data_th, 28};
     end
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % make output folder
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -2153,7 +2155,7 @@ addpath(videoPath);
 data_th = 1;
 while data_th <= size(records,1)
     if records{data_th, 1}
-        shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+        shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
         frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 

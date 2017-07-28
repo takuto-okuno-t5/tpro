@@ -1,5 +1,5 @@
 %%
-function status = createConfigFiles(videoPath, videoFiles, templateFile)
+function [status, videoFiles] = createConfigFiles(videoPath, videoFiles, templateFile)
     status = true;
     tmpl = {};
     if ~isempty(templateFile)
@@ -13,6 +13,14 @@ function status = createConfigFiles(videoPath, videoFiles, templateFile)
     for i = 1:size(videoFiles, 1)
         fileName = videoFiles{i};
 
+        % check work dir or not
+        if length(fileName) > 5 && strcmp(fileName(end-4:end),'_tpro')
+            movieName = fileName(1:end-5);
+            % file, dir, or blank name
+            fileName = movieName;
+            videoFiles{i} = fileName;
+        end
+
         outPathName = [videoPath fileName '_tpro'];
         outputFileName = [outPathName '/input_video_control.csv'];
 
@@ -23,7 +31,7 @@ function status = createConfigFiles(videoPath, videoFiles, templateFile)
 
         % open video file
         try
-            shuttleVideo = TProVideoReader(videoPath, fileName);
+            shuttleVideo = TProVideoReader(videoPath, fileName, 0);
         catch e
             errordlg('please select movie files or image folders.', 'Error');
             status = false;

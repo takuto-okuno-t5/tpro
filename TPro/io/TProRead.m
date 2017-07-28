@@ -7,6 +7,17 @@ function img = TProRead(videoStructs, frameNum)
         catch e
             errordlg(['failed to read image file : ' videoStructs.files(frameNum)], 'Error');
         end
+    elseif isfield(videoStructs, 'blankWidth')
+        filename = [videoStructs.videoPath videoStructs.Name '_tpro/background.png'];
+        if exist(filename, 'file')
+            img = imread(filename);
+        else
+            img = zeros(videoStructs.blankHeight, videoStructs.blankWidth);
+            img(:,:) = 150;
+        end
+        if ismatrix(img)
+            img = cat(3,img,img,img);
+        end
     else
         img = read(videoStructs,frameNum);
     end

@@ -108,7 +108,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2});
+    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2}, records{6});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};

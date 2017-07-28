@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 24-Jul-2017 19:58:51
+% Last Modified by GUIDE v2.5 27-Jul-2017 18:14:11
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -98,7 +98,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2});
+    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2}, records{6});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};
@@ -230,7 +230,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     setappdata(handles.figure1,'count_0',flyCounts); % set axes data
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pixelscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -318,7 +318,7 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
     case 'delete'
         if sharedInst.selectFrame == sharedInst.frameNum && ~isempty(sharedInst.selectX)
             for i=1:length(sharedInst.selectX)
-                for j=1:length(sharedInst.X)
+                for j=1:length(sharedInst.X{t})
                     if sharedInst.X{t}(j) == sharedInst.selectX(i) && sharedInst.Y{t}(j) == sharedInst.selectY(i)
                         sharedInst.X{t}(j) = [];
                         sharedInst.Y{t}(j) = [];
@@ -661,11 +661,18 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
     dataFileName = [sharedInst.confPath 'multi/detect_' filename '.mat'];
 
-    % load detection & tracking
+    % load and save detection & tracking
     load(dataFileName);
     X = sharedInst.X;
     Y = sharedInst.Y;
     save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    % save keep_count
+    keep_count = zeros(1,length(X));
+    for i=1:length(X)
+        keep_count(i) = length(X{i}(:));
+    end
+    dataFileName = [sharedInst.confPath 'multi/detect_' filename 'keep_count.mat'];
+    save(dataFileName, 'keep_count');
 
     % save data as text
     for i=1:length(sharedInst.roiMasks)
@@ -847,15 +854,26 @@ function Untitled_10_Callback(hObject, eventdata, handles)
 
         r = mm / sharedInst.mmPerPixel;
         result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar, areaMap);
+
         % show in plot
         if lastMax < max(result)
             lastMax = max(result);
         end
         hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+
+        % show aggregation index frequency
+        rmin = min(result);
+        rmax = max(result);
+        steps = rmin:((rmax - rmin) / 100):rmax;
+        freq = zeros(1,length(steps)-1);
+        for i=1:(length(steps)-1)
+            freq(i) = sum(result >= steps(i) & result < steps(i+1));
+        end
+        barWithNewFigure(handles, freq, max(freq), 0, 1, length(steps)-1);
     end
 
     % add result to axes & show in axes
-    cname = 'aggr_pixelscan_result';
+    cname = 'aggr_pdbscan_result';
     sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
@@ -940,7 +958,7 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     areaMap = sqrt(maxArea ./ areaMap);
     areaMap(isinf(areaMap)) = 0;
     %}
-    map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+    [map, counts] = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
     map(sharedInst.roiMaskImage==0) = -1;
 %    map = map .* areaMap;
 
@@ -951,17 +969,12 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     total = sum(map2(roiIdx));
     score = total / roiLen;
 
-    % count pixels and plot
-    counts = zeros(1,flyNum+1);
-    for i=1:(flyNum+1)
-        counts(i) = sum(sum(map==(i-1)));
-    end
     % show in plot
     barWithNewFigure(handles, counts, roiTotal*0.7, 0,  0, flyNum);
     
     sharedInst.showPixelScanOneFrame = true;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    showFrameInAxes(hObject, handles, frameNum)
+    showFrameInAxes(hObject, handles, frameNum);
 
     sharedInst.showPixelScanOneFrame = false;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -1031,6 +1044,24 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
+% --------------------------------------------------------------------
+function Untitled_15_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_15 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    
+    dotNum = 20;
+    [X, Y] = calcRandomDots(sharedInst.roiMaskImage, sharedInst.startFrame, sharedInst.endFrame, dotNum);
+    sharedInst.X = X;
+    sharedInst.Y = Y;
+
+    sharedInst.isModified = true;
+    set(handles.pushbutton6, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1050,6 +1081,16 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
 
     t = round((frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    % show detection result
+    if t > size(sharedInst.X,2) || t < 1
+        % show original image
+        cla;
+        if sharedInst.backMode ~= 3
+            imshow(img);
+        end
+        return;
+    end
+
     X = sharedInst.X{t}(:);
     Y = sharedInst.Y{t}(:);
     fly_num = length(X);
@@ -1071,10 +1112,10 @@ function showFrameInAxes(hObject, handles, frameNum)
         blueImage = uint8(double(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
         img(:,:,1) = blueImage;
     end
-    if strcmp(sharedInst.axesType1,'aggr_pixelscan_result') || sharedInst.showPixelScanOneFrame
+    if strcmp(sharedInst.axesType1,'aggr_pdbscan_result') || sharedInst.showPixelScanOneFrame
         [rr cc] = meshgrid(1:img_w, 1:img_h);
         r = 10 / sharedInst.mmPerPixel;
-        map = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+        [map, count] = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
         map(sharedInst.roiMaskImage==0) = 0;
         % to color
         if ismatrix(img)
@@ -1112,11 +1153,6 @@ function showFrameInAxes(hObject, handles, frameNum)
     cla;
     if sharedInst.backMode ~= 3
         imshow(img);
-    end
-    
-    % show detection result
-    if t > size(sharedInst.X,2) || t < 1
-        return;
     end
 
     % check ROI
@@ -1275,4 +1311,3 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
-

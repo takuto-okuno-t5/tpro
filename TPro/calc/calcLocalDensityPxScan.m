@@ -20,7 +20,7 @@ function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar, areaMap)
         % get detected points and roi points
         fx = X{row_count}(:);
         fy = Y{row_count}(:);
-        map = calcLocalDensityPxScanFrame(fy, fx, rr, cc, r, img_h, img_w);
+        [map, cnt] = calcLocalDensityPxScanFrame(fy, fx, rr, cc, r, img_h, img_w);
         map = map .* areaMap;
 
         mMean = mean(map(roiIdx));
