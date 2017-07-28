@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 27-Jul-2017 18:14:11
+% Last Modified by GUIDE v2.5 29-Jul-2017 01:24:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -862,13 +862,7 @@ function Untitled_10_Callback(hObject, eventdata, handles)
         hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
 
         % show aggregation index frequency
-        rmin = min(result);
-        rmax = max(result);
-        steps = rmin:((rmax - rmin) / 100):rmax;
-        freq = zeros(1,length(steps)-1);
-        for i=1:(length(steps)-1)
-            freq(i) = sum(result >= steps(i) & result < steps(i+1));
-        end
+        freq = getCountHistgram(result, 100);
         barWithNewFigure(handles, freq, max(freq), 0, 1, length(steps)-1);
     end
 
@@ -885,6 +879,30 @@ function Untitled_2_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    sharedInst.axesType1 = cname;
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
 end
 
 % --------------------------------------------------------------------
@@ -892,6 +910,32 @@ function Untitled_3_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_3 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
+    data = getappdata(handles.figure1, cname); % get data
+    if isempty(data)
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
 end
 
 % --------------------------------------------------------------------
@@ -1061,6 +1105,45 @@ function Untitled_15_Callback(hObject, eventdata, handles)
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
+
+% --------------------------------------------------------------------
+function Untitled_18_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_18 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
+    data = getappdata(handles.figure1, cname); % get data
+    if isempty(data)
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+
+    freq = getCountHistgram(data, 100);
+    barWithNewFigure(handles, freq, max(freq), 0, 1, length(freq));
+end
+
+% --------------------------------------------------------------------
+function Untitled_16_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_16 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.editMode = 1;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_17_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_17 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.editMode = 2;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions

@@ -742,7 +742,7 @@ function Untitled_2_Callback(hObject, eventdata, handles)
         'MultiSelect', 'off', '.');
 
     try
-        csvTable = readtable([path fileName]);
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
         records = table2cell(csvTable);
     catch e
         errordlg('please select a csv file.', 'Error');
