@@ -863,7 +863,7 @@ function Untitled_10_Callback(hObject, eventdata, handles)
 
         % show aggregation index frequency
         freq = getCountHistgram(result, 100);
-        barWithNewFigure(handles, freq, max(freq), 0, 1, length(steps)-1);
+        barWithNewFigure(handles, freq, max(freq), 0, 1, length(freq));
     end
 
     % add result to axes & show in axes
