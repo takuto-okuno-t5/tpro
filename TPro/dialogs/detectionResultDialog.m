@@ -999,7 +999,7 @@ function Untitled_11_Callback(hObject, eventdata, handles)
 %img0 = (areaMap ./ maxArea);
 %img1 = double(sharedInst.bgImage) .* img0;
 %imshow(uint8(img1));
-    areaMap = sqrt(maxArea ./ areaMap);
+    areaMap = maxArea ./ areaMap;
     areaMap(isinf(areaMap)) = 0;
     %}
     [map, counts] = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
