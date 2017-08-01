@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 29-Jul-2017 01:24:50
+% Last Modified by GUIDE v2.5 01-Aug-2017 18:56:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1107,6 +1107,23 @@ function Untitled_15_Callback(hObject, eventdata, handles)
 end
 
 % --------------------------------------------------------------------
+function Untitled_19_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_19 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % calc local density of Harmonically Weighted Mean Distance
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
+    data = getappdata(handles.figure1, cname); % get data
+    if isempty(data)
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+
+    % show in plot
+    plotWithNewFigure(handles, data, max(data), 0, []);
+end
+
+% --------------------------------------------------------------------
 function Untitled_18_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_18 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1394,3 +1411,4 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
+
