@@ -125,6 +125,10 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     sharedInst.X = X;
     sharedInst.Y = Y;
+    sharedInst.keep_angle_sorted = keep_angle_sorted;
+    sharedInst.keep_direction_sorted = keep_direction_sorted;
+    sharedInst.keep_areas = keep_areas;
+    sharedInst.keep_ecc_sorted = keep_ecc_sorted;
     sharedInst.selectX = [];
     sharedInst.selectY = [];
     sharedInst.selectFrame = 0;
@@ -656,9 +660,12 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     dataFileName = [sharedInst.confPath 'multi/detect_' filename '.mat'];
 
     % load and save detection & tracking
-    load(dataFileName);
     X = sharedInst.X;
     Y = sharedInst.Y;
+    keep_angle_sorted = sharedInst.keep_angle_sorted;
+    keep_direction_sorted = sharedInst.keep_direction_sorted;
+    keep_areas = sharedInst.keep_areas;
+    keep_ecc_sorted = sharedInst.keep_ecc_sorted;
     save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
     % save keep_count
     keep_count = zeros(1,length(X));
@@ -971,20 +978,43 @@ function Untitled_20_Callback(hObject, eventdata, handles)
     img_h = size(sharedInst.bgImage,1);
     X = cell(1,length(ctrax.ntargets));
     Y = cell(1,length(ctrax.ntargets));
+    keep_angle_sorted = cell(1,length(ctrax.ntargets));
+    keep_direction_sorted = cell(1,length(ctrax.ntargets));
+    keep_areas = cell(1,length(ctrax.ntargets));
+    keep_ecc_sorted = cell(1,length(ctrax.ntargets));
     k = 0;
     for i=1:length(ctrax.ntargets)
         fn = ctrax.ntargets(i);
         s = k + 1;
         k = k + fn;
+        % init
         X{i} = zeros(fn,1);
         Y{i} = zeros(fn,1);
+        keep_angle_sorted{i} = zeros(1,fn);
+        keep_direction_sorted{i} = zeros(2,fn);
+        keep_areas{i} = zeros(1,fn);
+        keep_ecc_sorted{i} = zeros(1,fn);
+        % convert data
         X{i}(:) = img_h - ctrax.y_pos(s:k, 1);
         Y{i}(:) = ctrax.x_pos(s:k, 1);
+        angle = ctrax.angle(s:k, 1) + pi/2;
+        keep_direction_sorted{i}(2,:) = 10 .* cos(angle);
+        keep_direction_sorted{i}(1,:) = 10 .* sin(angle);
+        angle = angle .* (180 / pi);
+        idx1 = find(angle > 90);
+        idx2 = find(angle < -90);
+        angle(idx1) = angle(idx1) - 180;
+        angle(idx2) = angle(idx2) + 180;
+        keep_angle_sorted{i} = angle;
     end
 
-    % update result & show in axes
+    % update result
     sharedInst.X = X;
     sharedInst.Y = Y;
+    sharedInst.keep_angle_sorted = keep_angle_sorted;
+    sharedInst.keep_direction_sorted = keep_direction_sorted;
+    sharedInst.keep_areas = keep_areas;
+    sharedInst.keep_ecc_sorted = keep_ecc_sorted;
 
     % count each ROI fly number
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, sharedInst.roiMasks, sharedInst.roiMaskImage);
@@ -1335,6 +1365,8 @@ function showFrameInAxes(hObject, handles, frameNum)
         if ~isempty(sharedInst.selectX) && sharedInst.selectFrame == frameNum
             plot(sharedInst.selectY,sharedInst.selectX,'or','Color', [.3 1 .3]);
         end
+%        keep_direction = sharedInst.keep_direction_sorted{t}(:,:);
+%        quiver(Y, X, keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
     end
     % show number
     if sharedInst.showIndexNumber
