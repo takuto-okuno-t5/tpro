@@ -33,6 +33,7 @@ function [status, videoFiles] = createConfigFiles(videoPath, videoFiles, templat
         try
             shuttleVideo = TProVideoReader(videoPath, fileName, 0);
         catch e
+            disp(['failed to open : ' fileName]);
             errordlg('please select movie files or image folders.', 'Error');
             status = false;
             return;
@@ -43,6 +44,7 @@ function [status, videoFiles] = createConfigFiles(videoPath, videoFiles, templat
 
         % make directory
         if ~exist(outPathName, 'dir')
+            disp(['mkdir : ' outPathName]);
             mkdir(outPathName);
         end
 
@@ -58,7 +60,9 @@ function [status, videoFiles] = createConfigFiles(videoPath, videoFiles, templat
                 B{5} = tmpl{row,5};
             end
             for j=8:length(B)
-                B{j} = tmpl{row,j};
+                if j <= length(tmpl)
+                    B{j} = tmpl{row,j};
+                end
             end
         end
         status = saveInputControlFile(outputFileName, B);

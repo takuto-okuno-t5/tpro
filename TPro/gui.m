@@ -603,6 +603,7 @@ for data_th = 1:size(records,1)
     set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
 
     % output png file
+    disp(['imwrite : ' backgroundFileName]);
     imwrite(bgImage, backgroundFileName);
     clear bgImage;
 end
@@ -1132,7 +1133,9 @@ for data_th = 1:size(records,1)
         
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);
-        winopen([dataFileName '_count.txt']);
+        countFileName = [dataFileName '_count.txt'];
+        disp(['winopen : ' countFileName]);
+        winopen(countFileName);
     end
 
     set(handles.text9, 'String','100 %'); % done!

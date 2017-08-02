@@ -44,6 +44,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
             imshow(img)
 
             % write roi file
+            disp(['imwrite : ' roiFileName]);
             imwrite(newRoiImage, roiFileName);
             save(roiMatName, 'roiX','roiY');
         else

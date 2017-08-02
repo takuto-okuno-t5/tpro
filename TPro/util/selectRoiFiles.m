@@ -55,6 +55,7 @@ function [count, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayI
     end
 
     % save roi.csv
+    disp(['writetable : ' csvFileName]);
     T = array2table(roiFiles);
     writetable(T,csvFileName,'WriteVariableNames',false);
     count = fileCount;
