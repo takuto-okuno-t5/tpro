@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 01-Aug-2017 18:56:28
+% Last Modified by GUIDE v2.5 02-Aug-2017 13:47:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -211,23 +211,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.popupmenu3,'String',listItem);
 
     % count each ROI fly number
-    img_h = size(roiMaskImage,1);
-    img_w = size(roiMaskImage,2);
-    xsize = size(X, 2);
-    flyCounts = zeros(xsize,1);
-    for i=1:sharedInst.roiNum
-        roiCount = zeros(xsize,1);
-        % count flies by each ROI
-        for row_count = 1:xsize
-            fx = X{row_count}(:);
-            fy = Y{row_count}(:);
-            flyNum = length(fx);
-            flyCounts(row_count) = flyNum;
-            roiCount(row_count) = countRoiFly(fy,fx,img_h,img_w,flyNum,roiMasks{i});
-        end
-        setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
-    end
-    setappdata(handles.figure1,'count_0',flyCounts); % set axes data
+    countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
@@ -251,16 +235,26 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
 end
 
-function count = countRoiFly(fx,fy,img_h,img_w,flyNum,roiMask)
-    count = 0;
-    for j = 1:flyNum
-        y = round(fy(j));
-        x = round(fx(j));
-        if (y <= img_h) && (x <= img_w) && ~isnan(y) && ~isnan(x) && x >= 1 && y >= 1 && roiMask(y,x) > 0
-            count = count + 1;
+function countFliesEachROI(handles, X, Y, roiNum, roiMasks, roiMaskImage)
+    img_h = size(roiMaskImage,1);
+    img_w = size(roiMaskImage,2);
+    xsize = size(X, 2);
+    flyCounts = zeros(xsize,1);
+    for i=1:roiNum
+        roiCount = zeros(xsize,1);
+        % count flies by each ROI
+        for row_count = 1:xsize
+            fx = X{row_count}(:);
+            fy = Y{row_count}(:);
+            flyNum = length(fx);
+            flyCounts(row_count) = flyNum;
+            roiCount(row_count) = countRoiFly(fy,fx,img_h,img_w,flyNum,roiMasks{i});
         end
+        setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
     end
+    setappdata(handles.figure1,'count_0',flyCounts); % set axes data
 end
+
 
 % --- Outputs from this function are returned to the command line.
 function varargout = detectionResultDialog_OutputFcn(hObject, eventdata, handles) 
@@ -885,6 +879,10 @@ function Untitled_2_Callback(hObject, eventdata, handles)
         'Pick a file', ...
         'MultiSelect', 'off', '.');
 
+    if ~filterIndex
+        return;
+    end
+
     try
         csvTable = readtable([path fileName],'ReadVariableNames',false);
         records = table2cell(csvTable);
@@ -914,6 +912,10 @@ function Untitled_3_Callback(hObject, eventdata, handles)
         '*.csv',  'CSV File (*.csv)'}, ...
         'Export as', '.');
 
+    if ~filterIndex
+        return;
+    end
+
     outputFileName = [path fileName];
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
@@ -936,6 +938,67 @@ function Untitled_3_Callback(hObject, eventdata, handles)
         errordlg('can not export a csv file.', 'Error');
         return;
     end
+end
+
+% --------------------------------------------------------------------
+function Untitled_20_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_20 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.mat',  'MAT File (*.mat)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        ctrax = load([path fileName]);
+    catch e
+        errordlg('please select a mat file.', 'Error');
+        return;
+    end
+
+    if ~isfield(ctrax, 'ntargets') || ~isfield(ctrax, 'identity') || ~isfield(ctrax, 'x_pos') || ~isfield(ctrax, 'y_pos')
+        errordlg('please select a CTrax output file.', 'Error');
+        return;
+    end
+
+    % import data
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    img_h = size(sharedInst.bgImage,1);
+    X = cell(1,length(ctrax.ntargets));
+    Y = cell(1,length(ctrax.ntargets));
+    k = 0;
+    for i=1:length(ctrax.ntargets)
+        fn = ctrax.ntargets(i);
+        s = k + 1;
+        k = k + fn;
+        X{i} = zeros(fn,1);
+        Y{i} = zeros(fn,1);
+        X{i}(:) = img_h - ctrax.y_pos(s:k, 1);
+        Y{i}(:) = ctrax.x_pos(s:k, 1);
+    end
+
+    % update result & show in axes
+    sharedInst.X = X;
+    sharedInst.Y = Y;
+
+    % count each ROI fly number
+    countFliesEachROI(handles, X, Y, sharedInst.roiNum, sharedInst.roiMasks, sharedInst.roiMaskImage);
+    set(handles.popupmenu4,'Value',1);
+
+    h = msgbox({'import ctrax output file successfully!'});
+
+    % update gui
+    sharedInst.isModified = true;
+    set(handles.pushbutton6, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
 end
 
 % --------------------------------------------------------------------
@@ -1411,4 +1474,3 @@ function showLongAxesTimeLine(handles, t)
     ylim([ymin ymax]);
     hold off;
 end
-
