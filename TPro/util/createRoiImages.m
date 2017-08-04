@@ -5,6 +5,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         if ~exist('figureWindow','var') || isempty(figureWindow) || ~ishandle(figureWindow)
             figureWindow = figure('name','selecting roi','NumberTitle','off');
         end
+        count = i;
 
         % change title message
         set(figureWindow, 'name', ['select roi for ', shuttleVideo.name, ' (' num2str(i) ')']);
@@ -19,6 +20,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
             img = double(grayImage).*(imcomplement(roiImage*0.5));
             img = uint8(img);
         else
+            roiImage = [];
             img = frameImage;
         end
         % show previous multi roi images
@@ -47,8 +49,11 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
             disp(['imwrite : ' roiFileName]);
             imwrite(newRoiImage, roiFileName);
             save(roiMatName, 'roiX','roiY');
-        else
+        elseif ~isempty(roiImage)
             newRoiImage = roiImage;
+        else
+            % no new roi image.
+            return;
         end
         if i==1
             multiRoiImage = im2double(newRoiImage);
@@ -72,5 +77,4 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
             end
         end
     end
-    count = i;
 end

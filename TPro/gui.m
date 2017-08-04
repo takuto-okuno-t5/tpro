@@ -225,7 +225,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+[status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
 tebleItems(:,1) = videoFiles;
 
 time = toc;
@@ -269,7 +269,7 @@ if length(handles.batch) > 0
     handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    [status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.batch);
+    [status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.batch);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -293,7 +293,7 @@ if length(handles.movies) > 0
     handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    [status, videoFiles] = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+    [status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -416,7 +416,7 @@ for n = 1:length(videoFiles)
 end
 
 % create config files if possible
-[status, videoFiles] = createConfigFiles(videoPath, videoFiles, handles.template);
+[status, videoFiles] = openOrNewProject(videoPath, videoFiles, handles.template);
 tebleItems(:,1) = videoFiles;
 
 time = toc;
@@ -1700,7 +1700,7 @@ for data_th = 1:size(records,1)
         end
 
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
-        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
+        disp(['processing : ' shuttleVideo.name ' ' num2str(100*rate) '%     t : ' num2str(t)]);
         % Report current estimate in the waitbar's message field
         waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
         pause(0.01);
@@ -1718,17 +1718,20 @@ for data_th = 1:size(records,1)
     end_row = t - 1;
 
     % delete useless data (mostly NaN tracking)
-    for i=flyNum:-1:1
+    delIdx = [];
+    for i=1:flyNum
         if sum(~isnan(keep_data{1}(:,i))) <= DELETE_TRACK_TH
-            for j = 1:8
-                keep_data{j}(:,i) = [];
-            end
-            flyNum = flyNum - 1;
+            delIdx = [delIdx, i];
         end
+    end
+    moveIdx = 1:flyNum;
+    if ~isempty(delIdx)
+        moveIdx(delIdx) = [];
+        flyNum = length(moveIdx);
     end
     % organize keep_data
     for j = 1:8
-        keep_data{j} = keep_data{j}(:,1:flyNum);
+        keep_data{j} = keep_data{j}(:,moveIdx);
     end
     % inverse the angle upside-down
     % fix angle flip
@@ -1744,7 +1747,7 @@ for data_th = 1:size(records,1)
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
     
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, img_w, roiMasks);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i});
 
         % save input data used for generating this result
         record = {records{data_th,:}};
