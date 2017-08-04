@@ -26,17 +26,14 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %        if row_count > 1
 %            distance_travel = sqrt((fx - keep_data{2}(row_count-1, :)).^2 + (fy - keep_data{1}(row_count-1, :)).^2);
 %        end
-        nanIdx = [];
-        for j = 1:flyNum
-            y = round(fy(j));
-            x = round(fx(j));
-            if isnan(y) || isnan(x)
-                continue;
-            end
-            if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || roiMask(y,x) <= 0
-                nanIdx = [nanIdx, j];
-            end
-        end
+        Y = round(fy);
+        X = round(fx);
+        nanIdxY = find((Y > img_h) | (Y < 1));
+        nanIdxX = find((X > img_w) | (X < 1));
+        roiIdx = (X-1).*img_h + Y;
+        roiIdx(isnan(roiIdx)) = 1; % TOOD: set dummy. this might be bad with empty ROI.
+        roiIdx2 = find(roiMask(roiIdx) <= 0);
+        nanIdx = unique([nanIdxY, nanIdxX, roiIdx2]);
         if ~isempty(nanIdx)
             fx(nanIdx) = NaN; fy(nanIdx) = NaN;
             vx(nanIdx) = NaN; vy(nanIdx) = NaN;
