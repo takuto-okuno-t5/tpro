@@ -409,6 +409,21 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
         if sharedInst.editMode == 2
             sharedInst.X{t} = [sharedInst.X{t}(:); cp(1,2)];
             sharedInst.Y{t} = [sharedInst.Y{t}(:); cp(1,1)];
+            angle = 0;
+            if ~isempty(sharedInst.keep_areas{t})
+                area = mean(sharedInst.keep_areas{t});
+            else
+                area = 100;
+            end
+            if ~isempty(sharedInst.keep_ecc_sorted{t})
+                ecc = mean(sharedInst.keep_ecc_sorted{t});
+            else
+                ecc = 0.96;
+            end
+            sharedInst.keep_angle_sorted{t} = [sharedInst.keep_angle_sorted{t}(1,:), angle];
+            sharedInst.keep_direction_sorted{t} = [sharedInst.keep_direction_sorted{t}(:,:), [10*sind(angle); 10*cosd(angle)]];
+            sharedInst.keep_areas{t} = [sharedInst.keep_areas{t}(1,:), area];
+            sharedInst.keep_ecc_sorted{t} = [sharedInst.keep_ecc_sorted{t}(1,:), ecc];
             sharedInst.isModified = true;
             set(handles.pushbutton6, 'Enable', 'on');
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance

@@ -51,6 +51,6 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         idx2 = find(angle < -90);
         angle(idx1) = angle(idx1) - 180;
         angle(idx2) = angle(idx2) + 180;
-        keep_angle_sorted{i} = angle;
+        keep_angle_sorted{i} = angle';
     end
 end

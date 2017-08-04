@@ -1,5 +1,5 @@
 %%
-function status = createConfigFiles(name, frameNum, frameRate, tmpl, i, outputFileName)
+function [status, B] = createConfigFiles(name, frameNum, frameRate, tmpl, i, outputFileName)
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0.1, 1, 200, 0, 12, 4, 50, 1, 0.4, 'log', 4, 1, 0, 0};
     if ~isempty(tmpl)
         if size(tmpl,1) >= i

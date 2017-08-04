@@ -77,6 +77,14 @@ function newWorkDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.edit2, 'String', path);
     set(handles.edit6, 'String', frames);
     set(handles.edit7, 'String', [path projectName '.mat']);
+    if ~isempty(projectName)
+        set(handles.edit1, 'Enable', 'off');
+        set(handles.edit2, 'Enable', 'off');
+        set(handles.edit6, 'Enable', 'off');
+        set(handles.edit7, 'Enable', 'off');
+        set(handles.pushbutton2, 'Enable', 'off');
+        set(handles.pushbutton5, 'Enable', 'off');
+    end
     guidata(hObject, handles);  % Update handles structure
 
     setappdata(handles.figure1,'projectName',projectName); % set project name

@@ -196,7 +196,6 @@ handles.uitable2.Data = tebleItems;
 %% Callback function
 function onDropFile(hObject, eventdata)
 videoFiles = {};
-tebleItems = {};
 switch eventdata.DropType
     case 'file'
         % process all dragged files
@@ -209,10 +208,6 @@ switch eventdata.DropType
 end
 % sort input files
 videoFiles = sort(videoFiles);
-for n = 1:length(videoFiles)
-    row = {videoFiles{n}, videoPath};
-    tebleItems = [tebleItems; row];
-end
 
 % show starting message
 hUIControl = hObject.hUIControl;
@@ -225,8 +220,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
-tebleItems(:,1) = videoFiles;
+[status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
 
 time = toc;
 
@@ -260,45 +254,37 @@ if length(handles.batch) > 0
     
     videoPath = handles.path;
     videoFiles = {};
-    tebleItems = {};
     for i=1:size(batches,1)
         videoFiles = [videoFiles; batches{i,2}];
-        row = {batches{i,2}, handles.path};
-        tebleItems = [tebleItems; row];
     end
-    handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    [status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.batch);
+    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.batch);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
         return;
     end
+    handles.uitable2.Data = tebleItems;
 end
 % start to load movie files
 if length(handles.movies) > 0
     videoFiles = {};
-    tebleItems = {};
     for i=1:length(handles.movies)
         [videoPath, name, ext] = fileparts(handles.movies{i});
         videoFiles = [videoFiles; [name ext]];
     end
     % sort input files
     videoFiles = sort(videoFiles);
-    for n = 1:length(videoFiles)
-        row = {videoFiles{n}, videoPath};
-        tebleItems = [tebleItems; row];
-    end
-    handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    [status, videoFiles] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
+    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
         return;
     end
+    handles.uitable2.Data = tebleItems;
 end
 % create roi files
 if length(handles.rois) > 0
@@ -410,14 +396,9 @@ for i = 1:fileCount
 end
 % sort input files
 videoFiles = sort(videoFiles);
-for n = 1:length(videoFiles)
-    row = {videoFiles{n}, videoPath};
-    tebleItems = [tebleItems; row];
-end
 
 % create config files if possible
-[status, videoFiles] = openOrNewProject(videoPath, videoFiles, handles.template);
-tebleItems(:,1) = videoFiles;
+[status, tebleItems] = openOrNewProject(videoPath, videoFiles, handles.template);
 
 time = toc;
 
