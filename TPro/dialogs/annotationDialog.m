@@ -236,7 +236,7 @@ function calcVelocitys(handles, keep_data)
     sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
     sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
     sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
-    sharedInst.av = calcAngularVelocity(keep_data{8});
+    sharedInst.av = abs(calcAngularVelocity(keep_data{8}));
     sharedInst.ecc = keep_data{7};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
