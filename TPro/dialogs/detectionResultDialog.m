@@ -889,7 +889,6 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     
     % add result to axes & show in axes
     cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
@@ -916,7 +915,6 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     
     % add result to axes & show in axes
     cname = 'aggr_voronoi_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -946,7 +944,6 @@ function Untitled_9_Callback(hObject, eventdata, handles)
 
     % add result to axes & show in axes
     cname = 'aggr_ewd_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -1001,7 +998,6 @@ function Untitled_10_Callback(hObject, eventdata, handles)
 
     % add result to axes & show in axes
     cname = 'aggr_pdbscan_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -1035,7 +1031,6 @@ function Untitled_2_Callback(hObject, eventdata, handles)
 
     % add result to axes & show in axes
     cname = fileName(1:(end-4));
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 
@@ -1223,7 +1218,6 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     
     % add result to axes & show in axes
     cname = 'aggr_md_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -1243,7 +1237,6 @@ function Untitled_13_Callback(hObject, eventdata, handles)
 
     % add result to axes & show in axes
     cname = 'aggr_hwmd_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
@@ -1265,7 +1258,6 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     
     % add result to axes & show in axes
     cname = 'aggr_grid_result';
-    sharedInst.axesType1 = cname;
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)

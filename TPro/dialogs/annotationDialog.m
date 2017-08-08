@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 05-Jul-2017 12:35:46
+% Last Modified by GUIDE v2.5 08-Aug-2017 19:13:06
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -786,6 +786,195 @@ function Untitled_5_Callback(hObject, eventdata, handles)
 
     try
         T = array2table(mat);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+
+% --------------------------------------------------------------------
+function Untitled_16_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_16 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    if ~isempty(str2num(cname(1)))
+        cname = ['csv_' cname];
+    end
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
+end
+
+% --------------------------------------------------------------------
+function Untitled_17_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_17 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    if ~isempty(str2num(cname(1)))
+        cname = ['csv_' cname];
+    end
+    addResult2Axes(handles, result, cname, handles.popupmenu5);
+    popupmenu5_Callback(handles.popupmenu5, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
+end
+
+% --------------------------------------------------------------------
+function Untitled_18_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_18 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % get data
+    switch sharedInst.axesType1
+    case 'velocity'
+        data = sharedInst.vxy;
+    case 'x velocity'
+        data = sharedInst.keep_data{4};
+    case 'y velocity'
+        data = sharedInst.keep_data{3};
+    case 'sideways'
+        data = sharedInst.sideways;
+    case 'sideways velocity'
+        data = sharedInst.sidewaysVelocity;
+    case 'x'
+        data = sharedInst.keep_data{2};
+    case 'y'
+        data = sharedInst.keep_data{1};
+    case 'angle'
+        data = sharedInst.keep_data{8};
+    case 'angle velocity'
+        data = sharedInst.av;
+    case 'circularity'
+        data = sharedInst.keep_data{7};
+    otherwise
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_19_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_19 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % get data
+    switch sharedInst.axesType2
+    case 'velocity'
+        data = sharedInst.vxy;
+    case 'x velocity'
+        data = sharedInst.keep_data{4};
+    case 'y velocity'
+        data = sharedInst.keep_data{3};
+    case 'sideways'
+        data = sharedInst.sideways;
+    case 'sideways velocity'
+        data = sharedInst.sidewaysVelocity;
+    case 'x'
+        data = sharedInst.keep_data{2};
+    case 'y'
+        data = sharedInst.keep_data{1};
+    case 'angle'
+        data = sharedInst.keep_data{8};
+    case 'angle velocity'
+        data = sharedInst.av;
+    case 'circularity'
+        data = sharedInst.keep_data{7};
+    otherwise
+        data = getappdata(handles.figure1, sharedInst.axesType2);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
         writetable(T,outputFileName,'WriteVariableNames',false);
     catch e
         errordlg('can not export a csv file.', 'Error');
