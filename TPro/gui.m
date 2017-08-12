@@ -196,7 +196,6 @@ handles.uitable2.Data = tebleItems;
 %% Callback function
 function onDropFile(hObject, eventdata)
 videoFiles = {};
-tebleItems = {};
 switch eventdata.DropType
     case 'file'
         % process all dragged files
@@ -209,10 +208,6 @@ switch eventdata.DropType
 end
 % sort input files
 videoFiles = sort(videoFiles);
-for n = 1:length(videoFiles)
-    row = {videoFiles{n}, videoPath};
-    tebleItems = [tebleItems; row];
-end
 
 % show starting message
 hUIControl = hObject.hUIControl;
@@ -225,7 +220,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+[status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
 
 time = toc;
 
@@ -259,45 +254,37 @@ if length(handles.batch) > 0
     
     videoPath = handles.path;
     videoFiles = {};
-    tebleItems = {};
     for i=1:size(batches,1)
         videoFiles = [videoFiles; batches{i,2}];
-        row = {batches{i,2}, handles.path};
-        tebleItems = [tebleItems; row];
     end
-    handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    status = createConfigFiles([videoPath '/'], videoFiles, handles.batch);
+    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.batch);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
         return;
     end
+    handles.uitable2.Data = tebleItems;
 end
 % start to load movie files
 if length(handles.movies) > 0
     videoFiles = {};
-    tebleItems = {};
     for i=1:length(handles.movies)
         [videoPath, name, ext] = fileparts(handles.movies{i});
         videoFiles = [videoFiles; [name ext]];
     end
     % sort input files
     videoFiles = sort(videoFiles);
-    for n = 1:length(videoFiles)
-        row = {videoFiles{n}, videoPath};
-        tebleItems = [tebleItems; row];
-    end
-    handles.uitable2.Data = tebleItems;
 
     % create config files if possible
-    status = createConfigFiles([videoPath '/'], videoFiles, handles.template);
+    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
         return;
     end
+    handles.uitable2.Data = tebleItems;
 end
 % create roi files
 if length(handles.rois) > 0
@@ -409,13 +396,9 @@ for i = 1:fileCount
 end
 % sort input files
 videoFiles = sort(videoFiles);
-for n = 1:length(videoFiles)
-    row = {videoFiles{n}, videoPath};
-    tebleItems = [tebleItems; row];
-end
 
 % create config files if possible
-status = createConfigFiles(videoPath, videoFiles, handles.template);
+[status, tebleItems] = openOrNewProject(videoPath, videoFiles, handles.template);
 
 time = toc;
 
@@ -479,7 +462,7 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % show detecting message
     set(handles.text14, 'String', ['detecting background for ', shuttleVideo.name]);
@@ -508,6 +491,7 @@ for data_th = 1:size(records,1)
         templates = table2cell(confTable);
         template = {templates{detectMode,:}};
         template(1:7) = {records{data_th, 1:7}};
+        template{10} = records{data_th, 10};
 
         confFileName = [pathName 'input_video_control.csv'];
         status = saveInputControlFile(confFileName, template);
@@ -515,7 +499,6 @@ for data_th = 1:size(records,1)
             errordlg(['failed to save a configuration file : ' confFileName], 'Error');
             return;
         end
-        
         isInvert = template{12};
     end
 
@@ -601,6 +584,7 @@ for data_th = 1:size(records,1)
     set(figureWindow, 'name', ['background for ', shuttleVideo.name]);
 
     % output png file
+    disp(['imwrite : ' backgroundFileName]);
     imwrite(bgImage, backgroundFileName);
     clear bgImage;
 end
@@ -758,18 +742,30 @@ for data_th = 1:size(records,1)
         delRectOverlap = 0;
     else
         filterType = records{data_th, 18};
-        maxSeparate = records{19};
-        isSeparate = records{20};
-        maxBlobs = records{21};
-        delRectOverlap = records{22};
+        maxSeparate = records{data_th, 19};
+        isSeparate = records{data_th, 20};
+        maxBlobs = records{data_th, 21};
+        delRectOverlap = records{data_th, 22};
     end
+    if length(records) < 23
+        rRate = 1;
+        gRate = 1;
+        bRate = 1;
+        keepNear = 0;
+    else
+        rRate = records{data_th, 23};
+        gRate = records{data_th, 24};
+        bRate = records{data_th, 25};
+        keepNear = records{data_th, 26};
+    end
+    isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'multi'], 'dir')
         mkdir([confPath 'multi']);
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % ROI
     roi_mask = [];
@@ -823,8 +819,8 @@ for data_th = 1:size(records,1)
             mkdir(outputPath);
         end
     end
-    X = cell(1,length(end_frame-start_frame+1));
-    Y = cell(1,length(end_frame-start_frame+1));
+    X = cell(1,end_frame-start_frame+1);
+    Y = cell(1,end_frame-start_frame+1);
     X_update2 = X;
     Y_update2 = Y;
     detection_num = nan(2,end_frame-start_frame+1);
@@ -855,6 +851,11 @@ for data_th = 1:size(records,1)
         end
         % process detection
         img_real = TProRead(shuttleVideo, i_count);
+        if isColorFilter && size(img_real,3) == 3
+            img_real(:,:,1) = img_real(:,:,1) * rRate;
+            img_real(:,:,2) = img_real(:,:,2) * gRate;
+            img_real(:,:,3) = img_real(:,:,3) * bRate;
+        end
         grayImg = rgb2gray(img_real);
         if isInvert
             grayImg = imcomplement(grayImg);
@@ -961,7 +962,7 @@ for data_th = 1:size(records,1)
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                 blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize, ...
-                maxSeparate, isSeparate, delRectOverlap, maxBlobs);
+                maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear);
         end
 
         %%% for output cut_Video_14.aviblob_splitting_after
@@ -1119,11 +1120,13 @@ for data_th = 1:size(records,1)
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath shuttleVideo.name '_' filename];
         
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks)
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks);
         
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);
-        winopen([dataFileName '_count.txt']);
+        countFileName = [dataFileName '_count.txt'];
+        disp(['winopen : ' countFileName]);
+        winopen(countFileName);
     end
 
     set(handles.text9, 'String','100 %'); % done!
@@ -1197,6 +1200,7 @@ kalman_only_enable = 0;
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
 MAX_FLIES = 800; % maxmum number of flies
+RECURSION_LIMIT = 500; % maxmum number of recursion limit
 IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
@@ -1207,7 +1211,14 @@ if exist(tproConfig, 'file')
     if size(values,1) > 0
         MAX_FLIES = values(1);
     end
+    values = tproConfTable{'recursionLimit',1};
+    if size(values,1) > 0
+        RECURSION_LIMIT = values(1);
+    end
 end
+
+% set recursion limit
+set(0,'RecursionLimit',RECURSION_LIMIT);
 
 u = 0; % no acceleration
 noise_process = 1; % process noise
@@ -1236,7 +1247,14 @@ for data_th = 1:size(records,1)
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
     roiNum = records{data_th, 10};
-    shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+    if size(records,2) < 23
+        fixedTrackNum = 0;
+        fixedTrackDir = 0;
+    else
+        fixedTrackNum = records{data_th, 27};
+        fixedTrackDir = records{data_th, 28};
+    end
+    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % make output folder
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1396,12 +1414,9 @@ for data_th = 1:size(records,1)
             idx = find(nancount(1,1:flyNum) < IGNORE_NAN_COUNT);
             idxlen = length(idx);
 
-            est_dist1 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
-            est_dist1 = squareform(est_dist1); %make square
-            est_dist1 = est_dist1(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
-%est_dist = pdist([Q_estimate(1:2,1:flyNum)'; Q_loc_meas]);
-%est_dist = squareform(est_dist); %make square
-%est_dist = est_dist(1:flyNum,flyNum+1:end) ; %limit to just the tracks to detection distances
+            est_dist0 = pdist([Q_estimate(1:2,idx)'; Q_loc_meas]);
+            est_dist0 = squareform(est_dist0); %make square
+            est_dist1 = est_dist0(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
 
             %                 for est_count = 1:nF    % added on 2016-07-28
             %                     if min(est_dist(est_count,:)) < 50
@@ -1421,21 +1436,15 @@ for data_th = 1:size(records,1)
                     invIdx(fn) = i;
                 end
             end
-%[asgnOrg, cost] = assignmentoptimal(est_dist); %do the assignment with hungarian algo
-%asgnOrg = asgnOrg';
-%if ~isequal(asgn, asgnOrg)
-%    a=0;
-%end
             %check for tough situations and if it's tough, just go with estimate and ignore the data
             %make asgn = 0 for that tracking element
 
             %check 1: is the detection far from the observation? if so, reject it.
             rej = [];
             for F = 1:flyNum
-                if asgn(F) > 0  % if track F has pair asgn(F)
+                if ~isempty(asgn) && asgn(F) > 0  % if track F has pair asgn(F)
                     estF = invIdx(F);
                     rej(F) = est_dist1(estF,asgnT(estF)) < reject_dist;
-%rej(F) = est_dist(F,asgn(F)) < reject_dist ;
                     v1 = direction_track(:,F);
                     v2 = direction_meas(:,asgn(F));
                     if (norm(v1) ~= 0) && (norm(v2) ~= 0)
@@ -1451,10 +1460,19 @@ for data_th = 1:size(records,1)
                     rej(F) = 0;
                 end
             end
-            if size(asgn,2) > 0
+            if size(asgn,2) > 0 && ~isempty(rej)
                 asgn = asgn.*rej;
             end
-
+            % check point distance each other
+            if fixedTrackDir && t > 1
+                for fn = 1:flyNum
+                    cnt = sum(est_dist0(fn,1:flyNum) > fixedTrackDir);
+                    if  cnt >= (flyNum-1) && flyNum >= 3
+                        invFn = invIdx(fn);
+                        asgn(invFn) = 0;
+                    end
+                end
+            end
 
             % check 2
             if ~kalman_only_enable
@@ -1469,19 +1487,10 @@ for data_th = 1:size(records,1)
                 est_dist3 = squareform(est_dist3); %make square
                 est_dist3 = est_dist3(1:idxlen2,idxlen2+1:end) ; %limit to just the tracks to detection distances
 
-%est_dist2 = pdist([Q_estimate_before_update(1:2,1:flyNum)'; Q_loc_meas2]);
-%est_dist2 = squareform(est_dist2); %make square
-%est_dist2 = est_dist2(1:flyNum,flyNum+1:end);  %limit to just the tracks to detection distances
-
                 % Closest Neighbour Approach
                 asgn2 = asgn.*0;
-%row_est_dist2 = max(sum(~isnan(est_dist2)));
-%col_est_dist2 = max(sum(~isnan(est_dist2),2));
                 row_est_dist3 = max(sum(~isnan(est_dist3)));
                 col_est_dist3 = max(sum(~isnan(est_dist3),2));
-%if row_est_dist2~=row_est_dist3 && col_est_dist2~=col_est_dist3
-%    a=0;
-%end
                 if ((row_est_dist3 - col_est_dist3) >= 0)
                     count_target = col_est_dist3;
                 else
@@ -1490,31 +1499,17 @@ for data_th = 1:size(records,1)
 
                 for count2 = 1:count_target
                     %                             if min(min(est_dist2)) < reject_dist    % check again for reject distance in CNA case 20161014
-%[mmin,m0] = min(est_dist2);
-%[nmin,n] = min(mmin);
-%if ~isempty(m0)
-%    m = m0(n);
-%    asgn2(m) = n;
-%    est_dist2(m,:) = NaN;
-%    est_dist2(:,n) = NaN;
-%end
                     [mmin,m0] = min(est_dist3);
                     [nmin,n] = min(mmin);
                     if ~isempty(m0)
                         if size(est_dist3,1) > 1
                             m = m0(n);
-%if asgn2(idx2(m)) ~= n
-%    a=0;
-%end
                             if nmin < reject_dist
                                 asgn2(idx2(m)) = n;
                             end
                             est_dist3(m,:) = NaN;
                             est_dist3(:,n) = NaN;
                         else
-%if asgn2(idx2(n)) ~= m0
-%    a=0;
-%end
                             if mmin < reject_dist
                                 asgn2(idx2(n)) = m0;
                             end
@@ -1529,7 +1524,6 @@ for data_th = 1:size(records,1)
             else
                 asgn2 = asgn.*0;
             end
-
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
@@ -1554,23 +1548,27 @@ for data_th = 1:size(records,1)
                         if (y > img_h) || (x > img_w) || (y < 1) || (x < 1) || isnan(y) || isnan(x)
                             % if the predict is out of bound then delete
                             Q_estimate(:,k) = NaN;
-                        else
-                            if ~isempty(roiImage) && roiImage(y,x) == 0
-                                % if the predict is out of ROI then stop fly movement
+                        elseif ~isempty(roiImage) && roiImage(y,x) == 0
+                            % if the predict is out of ROI then stop fly movement
+                            Q_estimate(1,k) = y - Q_estimate(3,k);
+                            Q_estimate(2,k) = x - Q_estimate(4,k);
+                            Q_estimate(3,k) = 0;
+                            Q_estimate(4,k) = 0;
+                        elseif fixedTrackDir && fixedTrackNum
+                            % check if estimated point is too far or not
+                            invK = [1:(k-1),(k+1):flyNum];
+                            maxDir = max(est_dist0(k,invK));
+                            if maxDir > fixedTrackDir
                                 Q_estimate(1,k) = y - Q_estimate(3,k);
                                 Q_estimate(2,k) = x - Q_estimate(4,k);
                                 Q_estimate(3,k) = 0;
                                 Q_estimate(4,k) = 0;
-                            else
-                                estF = invIdx(k);
-                                [m,i] = min(est_dist1(estF,:));
-%[m0,i0] = min(est_dist(k,:));
-%if m0 ~= m && i0 ~= i
-%    a=0;
-%end
-                                if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op                                
-                                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
-                                end
+                            end
+                        else
+                            estF = invIdx(k);
+                            [m,i] = min(est_dist1(estF,:));
+                            if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
                         end
                     end
@@ -1579,9 +1577,17 @@ for data_th = 1:size(records,1)
                 % velocity thresholding, actually this is redundant. maybe I can ommit.
                 if ~isnan(Q_estimate(1,k))  % if the value is not NaN
                     % velocity filter (delete or use previous if the velocity is higher than velocity_thres)
-                    if sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2) > reject_dist
-                       Q_estimate(:,k) = NaN;    % delete
-                        %                       Q_estimate(:,k) = Q_estimate_previous;  % use the previous
+                    velocity = sqrt(Q_estimate(3,k)^2 + Q_estimate(4,k)^2);
+                    if velocity > reject_dist
+                        if fixedTrackNum
+                            % stop movement
+                            Q_estimate(1,k) = Q_estimate(1,k) - Q_estimate(3,k);
+                            Q_estimate(2,k) = Q_estimate(2,k) - Q_estimate(4,k);
+                            Q_estimate(3,k) = 0;
+                            Q_estimate(4,k) = 0;
+                        else
+                            Q_estimate(:,k) = NaN;    % delete
+                        end
                     end
                 end
 
@@ -1614,13 +1620,13 @@ for data_th = 1:size(records,1)
 
             %find the new detections. basically, anything that doesn't get assigned is a new tracking
             new_trk = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:)';
-            if ~isempty(new_trk)
+            if ~isempty(new_trk) && ~fixedTrackNum
                 Q_estimate(:,flyNum+1:flyNum+size(new_trk,2))=  [new_trk; zeros(2,size(new_trk,2))];
                 flyNum = flyNum + size(new_trk,2);  % number of track estimates with new ones included
             end
 
         end  % end of if ~isempty(Q_loc_meas)
-
+        
         %give a strike to any tracking that didn't get matched up to a detection
         if exist('asgn', 'var')
             aIdx = find(asgn>0);
@@ -1642,7 +1648,7 @@ for data_th = 1:size(records,1)
             if ~isempty(no_trk_list)
                 strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
             end
-        
+
             % consecutive strike
             % if the strike is not consecutive then reset
             strk_trks(strk_trks == prev_strk_trks) = 0;
@@ -1650,19 +1656,50 @@ for data_th = 1:size(records,1)
             %if a track has a strike greater than 3, delete the tracking. i.e.
             %make it nan first vid = 3
             bad_trks = find(strk_trks > STRIKE_TRACK_TH);
-            Q_estimate(:,bad_trks) = NaN;
-
-            bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
             if ~isempty(bad_trks)
-                % remove old 3 tracking frames
-                for j = 1:8
-                    keep_data{j}((t-2):t,bad_trks) = NaN;
+                if fixedTrackNum
+                    if fixedTrackDir
+                        nonAsgn = Q_loc_meas(~ismember(1:size(Q_loc_meas,1),asgn),:);
+                        idx = asgn(find(asgn>0));
+                        asgnLen = length(idx);
+                        if ~isempty(nonAsgn) && asgnLen > 0
+                            pts = [Q_loc_meas(idx,:); nonAsgn];
+                            dist = pdist(pts);
+                            dist1 = squareform(dist); %make square
+                            for i=1:length(bad_trks)
+                                if (asgnLen+i) <= size(dist1,1) && max(dist1(asgnLen+i,1:asgnLen)) < fixedTrackDir
+                                    Q_estimate(1:2,bad_trks(i)) = pts(asgnLen+i,:)';
+                                end
+                            end
+                        end
+                    end
+                    % stop movement
+                    Q_estimate(3,bad_trks) = 0;
+                    Q_estimate(4,bad_trks) = 0;
+                else
+                    Q_estimate(:,bad_trks) = NaN;
+
+                    bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
+                    if ~isempty(bad_trks)
+                        % remove old 3 tracking frames
+                        for j = 1:8
+                            keep_data{j}((t-2):t,bad_trks) = NaN;
+                        end
+                    end
                 end
             end
         end
-        
+
+        if fixedTrackDir && t == 1 % if first track, check its distances
+            points = Q_estimate(1:2, 1:flyNum)';
+            dist = pdist(points);
+            dist1 = squareform(dist); %make square
+            fixedTrackDir = max(dist1(1,2:flyNum)) * 1.2;
+            min_dist_threshold = fixedTrackDir;
+        end
+
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
-        disp(strcat('processing : ',shuttleVideo.name,'  ',num2str(100*rate), '%', '     t : ', num2str(t)   ));
+        disp(['processing : ' shuttleVideo.name ' ' num2str(100*rate) '%     t : ' num2str(t)]);
         % Report current estimate in the waitbar's message field
         waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
         pause(0.01);
@@ -1680,17 +1717,20 @@ for data_th = 1:size(records,1)
     end_row = t - 1;
 
     % delete useless data (mostly NaN tracking)
-    for i=flyNum:-1:1
+    delIdx = [];
+    for i=1:flyNum
         if sum(~isnan(keep_data{1}(:,i))) <= DELETE_TRACK_TH
-            for j = 1:8
-                keep_data{j}(:,i) = [];
-            end
-            flyNum = flyNum - 1;
+            delIdx = [delIdx, i];
         end
+    end
+    moveIdx = 1:flyNum;
+    if ~isempty(delIdx)
+        moveIdx(delIdx) = [];
+        flyNum = length(moveIdx);
     end
     % organize keep_data
     for j = 1:8
-        keep_data{j} = keep_data{j}(:,1:flyNum);
+        keep_data{j} = keep_data{j}(:,moveIdx);
     end
     % inverse the angle upside-down
     % fix angle flip
@@ -1706,7 +1746,7 @@ for data_th = 1:size(records,1)
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
     
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, i, img_h, img_w, roiMasks);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i});
 
         % save input data used for generating this result
         record = {records{data_th,:}};
@@ -1832,251 +1872,6 @@ set(handles.pushbutton10, 'Enable', 'on');
 set(handles.pushbutton11, 'Enable', 'on');
 
 
-%%
-function [assignment, cost] = assignmentoptimal(distMatrix)
-%ASSIGNMENTOPTIMAL    Compute optimal assignment by Munkres algorithm
-%   ASSIGNMENTOPTIMAL(DISTMATRIX) computes the optimal assignment (minimum
-%   overall costs) for the given rectangular distance or cost matrix, for
-%   example the assignment of tracks (in rows) to observations (in
-%   columns). The result is a column vector containing the assigned column
-%   number in each row (or 0 if no assignment could be done).
-%
-%   [ASSIGNMENT, COST] = ASSIGNMENTOPTIMAL(DISTMATRIX) returns the
-%   assignment vector and the overall cost.
-%
-%   The distance matrix may contain infinite values (forbidden
-%   assignments). Internally, the infinite values are set to a very large
-%   finite number, so that the Munkres algorithm itself works on
-%   finite-number matrices. Before returning the assignment, all
-%   assignments with infinite distance are deleted (i.e. set to zero).
-%
-%   A description of Munkres algorithm (also called Hungarian algorithm)
-%   can easily be found on the web.
-%
-%   <a href="assignment.html">assignment.html</a>  <a href="http://www.mathworks.com/matlabcentral/fileexchange/6543">File Exchange</a>  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=EVW2A4G2HBVAU">Donate via PayPal</a>
-%
-%   Markus Buehren
-%   Last modified 05.07.2011
-
-% save original distMatrix for cost computation
-originalDistMatrix = distMatrix;
-
-% check for negative elements
-if any(distMatrix(:) < 0)
-    error('All matrix elements have to be non-negative.');
-end
-
-% get matrix dimensions
-[nOfRows, nOfColumns] = size(distMatrix);
-
-% check for infinite values
-finiteIndex   = isfinite(distMatrix);
-infiniteIndex = find(~finiteIndex);
-if ~isempty(infiniteIndex)
-    % set infinite values to large finite value
-    maxFiniteValue = max(max(distMatrix(finiteIndex)));
-    if maxFiniteValue > 0
-        infValue = abs(10 * maxFiniteValue * nOfRows * nOfColumns);
-    else
-        infValue = 10;
-    end
-    if isempty(infValue)
-        % all elements are infinite
-        assignment = zeros(nOfRows, 1);
-        cost       = 0;
-        return
-    end
-    distMatrix(infiniteIndex) = infValue;
-end
-
-% memory allocation
-coveredColumns = zeros(1,       nOfColumns);
-coveredRows    = zeros(nOfRows, 1);
-starMatrix     = zeros(nOfRows, nOfColumns);
-primeMatrix    = zeros(nOfRows, nOfColumns);
-
-% preliminary steps
-if nOfRows <= nOfColumns
-    minDim = nOfRows;
-    
-    % find the smallest element of each row
-    minVector = min(distMatrix, [], 2);
-    
-    % subtract the smallest element of each row from the row
-    distMatrix = distMatrix - repmat(minVector, 1, nOfColumns);
-    
-    % Steps 1 and 2
-    for row = 1:nOfRows
-        for col = find(distMatrix(row,:)==0)
-            if ~coveredColumns(col)%~any(starMatrix(:,col))
-                starMatrix(row, col) = 1;
-                coveredColumns(col)  = 1;
-                break
-            end
-        end
-    end
-    
-else % nOfRows > nOfColumns
-    minDim = nOfColumns;
-    
-    % find the smallest element of each column
-    minVector = min(distMatrix);
-    
-    % subtract the smallest element of each column from the column
-    distMatrix = distMatrix - repmat(minVector, nOfRows, 1);
-    
-    % Steps 1 and 2
-    for col = 1:nOfColumns
-        for row = find(distMatrix(:,col)==0)'
-            if ~coveredRows(row)
-                starMatrix(row, col) = 1;
-                coveredColumns(col)  = 1;
-                coveredRows(row)     = 1;
-                break
-            end
-        end
-    end
-    coveredRows(:) = 0; % was used auxiliary above
-end
-
-if sum(coveredColumns) == minDim
-    % algorithm finished
-    assignment = buildassignmentvector(starMatrix);
-else
-    % move to step 3
-    [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-        step3(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim); %#ok
-end
-
-% compute cost and remove invalid assignments
-[assignment, cost] = computeassignmentcost(assignment, originalDistMatrix, nOfRows);
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function assignment = buildassignmentvector(starMatrix)
-
-[maxValue, assignment] = max(starMatrix, [], 2);
-assignment(maxValue == 0) = 0;
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [assignment, cost] = computeassignmentcost(assignment, distMatrix, nOfRows)
-
-rowIndex   = find(assignment);
-costVector = distMatrix(rowIndex + nOfRows * (assignment(rowIndex)-1));
-finiteIndex = isfinite(costVector);
-cost = sum(costVector(finiteIndex));
-assignment(rowIndex(~finiteIndex)) = 0;
-
-% Step 2: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step2(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim)
-
-% cover every column containing a starred zero
-maxValue = max(starMatrix);
-coveredColumns(maxValue == 1) = 1;
-
-if sum(coveredColumns) == minDim
-    % algorithm finished
-    assignment = buildassignmentvector(starMatrix);
-else
-    % move to step 3
-    [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-        step3(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim);
-end
-
-% Step 3: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step3(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim)
-
-zerosFound = 1;
-while zerosFound
-    
-    zerosFound = 0;
-    for col = find(~coveredColumns)
-        for row = find(~coveredRows')
-            if distMatrix(row,col) == 0
-                
-                primeMatrix(row, col) = 1;
-                starCol = find(starMatrix(row,:));
-                if isempty(starCol)
-                    % move to step 4
-                    [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-                        step4(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, row, col, minDim);
-                    return
-                else
-                    coveredRows(row)        = 1;
-                    coveredColumns(starCol) = 0;
-                    zerosFound              = 1;
-                    break % go on in next column
-                end
-            end
-        end
-    end
-end
-
-% move to step 5
-[assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step5(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim);
-
-% Step 4: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step4(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, row, col, minDim)
-
-newStarMatrix          = starMatrix;
-newStarMatrix(row,col) = 1;
-
-starCol = col;
-starRow = find(starMatrix(:, starCol));
-
-while ~isempty(starRow)
-    
-    % unstar the starred zero
-    newStarMatrix(starRow, starCol) = 0;
-    
-    % find primed zero in row
-    primeRow = starRow;
-    primeCol = find(primeMatrix(primeRow, :));
-    
-    % star the primed zero
-    newStarMatrix(primeRow, primeCol) = 1;
-    
-    % find starred zero in column
-    starCol = primeCol;
-    starRow = find(starMatrix(:, starCol));
-    
-end
-starMatrix = newStarMatrix;
-
-primeMatrix(:) = 0;
-coveredRows(:) = 0;
-
-% move to step 2
-[assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step2(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim);
-
-
-% Step 5: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step5(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim)
-
-% find smallest uncovered element
-uncoveredRowsIndex    = find(~coveredRows');
-uncoveredColumnsIndex = find(~coveredColumns);
-[s, index1] = min(distMatrix(uncoveredRowsIndex,uncoveredColumnsIndex));
-[s, index2] = min(s); %#ok
-h = distMatrix(uncoveredRowsIndex(index1(index2)), uncoveredColumnsIndex(index2));
-
-% add h to each covered row
-index = find(coveredRows);
-distMatrix(index, :) = distMatrix(index, :) + h;
-
-% subtract h from each uncovered column
-distMatrix(:, uncoveredColumnsIndex) = distMatrix(:, uncoveredColumnsIndex) - h;
-
-% move to step 3
-[assignment, distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows] = ...
-    step3(distMatrix, starMatrix, primeMatrix, coveredColumns, coveredRows, minDim);
-
 
 % --- Executes on button press in RIO.
 function pushbutton6_Callback(hObject, eventdata, handles)
@@ -2117,9 +1912,10 @@ pause(0.01);
 addpath(videoPath);
 
 % select roi for every movie
-for data_th = 1:size(records,1)
+data_th = 1;
+while data_th <= size(records,1)
     if records{data_th, 1}
-        shuttleVideo = TProVideoReader(videoPath, records{data_th, 2});
+        shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
         frameImage = TProRead(shuttleVideo,1);
         grayImage = rgb2gray(frameImage);
 
@@ -2135,17 +1931,16 @@ for data_th = 1:size(records,1)
             delete(dlg);
 
             if selectedType < 0
+                data_th = data_th + 1;
                 continue;
             end
         end
 
         % select fixed ROI image files or create new ROI images
         if selectedType == 2
-            while true
-                [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
-                figureWindow = [];
-                if i>=0 break; end
-            end
+            [i, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayImage);
+            figureWindow = [];
+            if i<0 continue; end
         else
             [i, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameImage, grayImage, records{data_th, 10});
         end
@@ -2160,6 +1955,7 @@ for data_th = 1:size(records,1)
             errordlg(['failed to save a configuration file : ' confFileName], 'Error');
         end
     end
+    data_th = data_th + 1;
 end
 
 % close background image window
@@ -2172,8 +1968,6 @@ end
 set(handles.text14, 'String','selecting "Region of Interest" ... done!')
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
-
-
 
 
 

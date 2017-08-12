@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 05-Jul-2017 12:35:46
+% Last Modified by GUIDE v2.5 08-Aug-2017 19:13:06
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -108,7 +108,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPath;
     sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2});
+    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2}, records{6});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};
@@ -216,8 +216,8 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     calcVelocitys(handles, keep_data);
 
     % show long params
-    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
-    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
+    showLongAxes(handles.axes2, handles, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.listFly, sharedInst.axesType2, true);
     showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
 
     % show first frame
@@ -236,7 +236,7 @@ function calcVelocitys(handles, keep_data)
     sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
     sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
     sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
-    sharedInst.av = calcAngularVelocity(keep_data{8});
+    sharedInst.av = abs(calcAngularVelocity(keep_data{8}));
     sharedInst.ecc = keep_data{7};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
@@ -329,7 +329,7 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
         case {'1','2','3','4','5','6','7','8','9','0', ...
               'numpad1','numpad2','numpad3','numpad4','numpad5', ...
               'numpad6','numpad7','numpad8','numpad9','numpad0', ...
-              'delete','escape'}
+              'delete','escape','return'}
             recodeAnnotation(handles, eventdata.Key);
         end
     end
@@ -599,8 +599,8 @@ function popupmenu3_Callback(hObject, eventdata, handles)
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
-    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
-    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
+    showLongAxes(handles.axes2, handles, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.listFly, sharedInst.axesType2, true);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -654,7 +654,7 @@ function popupmenu4_Callback(hObject, eventdata, handles)
     
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
-    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes2, handles, listFly, sharedInst.axesType1, false);
     showLongAxesTimeLine(handles, t, listFly);
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
 end
@@ -684,7 +684,7 @@ function popupmenu5_Callback(hObject, eventdata, handles)
 
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
-    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
+    showLongAxes(handles.axes5, handles, listFly, sharedInst.axesType2, true);
     showLongAxesTimeLine(handles, t, listFly);
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
@@ -742,7 +742,7 @@ function Untitled_2_Callback(hObject, eventdata, handles)
         'MultiSelect', 'off', '.');
 
     try
-        csvTable = readtable([path fileName]);
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
         records = table2cell(csvTable);
     catch e
         errordlg('please select a csv file.', 'Error');
@@ -786,6 +786,195 @@ function Untitled_5_Callback(hObject, eventdata, handles)
 
     try
         T = array2table(mat);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+
+% --------------------------------------------------------------------
+function Untitled_16_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_16 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    if ~isempty(str2num(cname(1)))
+        cname = ['csv_' cname];
+    end
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
+end
+
+% --------------------------------------------------------------------
+function Untitled_17_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_17 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % show file select modal
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    if ~isempty(str2num(cname(1)))
+        cname = ['csv_' cname];
+    end
+    addResult2Axes(handles, result, cname, handles.popupmenu5);
+    popupmenu5_Callback(handles.popupmenu5, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
+end
+
+% --------------------------------------------------------------------
+function Untitled_18_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_18 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % get data
+    switch sharedInst.axesType1
+    case 'velocity'
+        data = sharedInst.vxy;
+    case 'x velocity'
+        data = sharedInst.keep_data{4};
+    case 'y velocity'
+        data = sharedInst.keep_data{3};
+    case 'sideways'
+        data = sharedInst.sideways;
+    case 'sideways velocity'
+        data = sharedInst.sidewaysVelocity;
+    case 'x'
+        data = sharedInst.keep_data{2};
+    case 'y'
+        data = sharedInst.keep_data{1};
+    case 'angle'
+        data = sharedInst.keep_data{8};
+    case 'angle velocity'
+        data = sharedInst.av;
+    case 'circularity'
+        data = sharedInst.keep_data{7};
+    otherwise
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_19_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_19 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % get data
+    switch sharedInst.axesType2
+    case 'velocity'
+        data = sharedInst.vxy;
+    case 'x velocity'
+        data = sharedInst.keep_data{4};
+    case 'y velocity'
+        data = sharedInst.keep_data{3};
+    case 'sideways'
+        data = sharedInst.sideways;
+    case 'sideways velocity'
+        data = sharedInst.sidewaysVelocity;
+    case 'x'
+        data = sharedInst.keep_data{2};
+    case 'y'
+        data = sharedInst.keep_data{1};
+    case 'angle'
+        data = sharedInst.keep_data{8};
+    case 'angle velocity'
+        data = sharedInst.av;
+    case 'circularity'
+        data = sharedInst.keep_data{7};
+    otherwise
+        data = getappdata(handles.figure1, sharedInst.axesType2);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
         writetable(T,outputFileName,'WriteVariableNames',false);
     catch e
         errordlg('can not export a csv file.', 'Error');
@@ -902,8 +1091,8 @@ function edit3_Callback(hObject, eventdata, handles)
     calcVelocitys(handles, sharedInst.keep_data);
 
     % show long params
-    showLongAxes(handles.axes2, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType1, false);
-    showLongAxes(handles.axes5, handles, sharedInst.startFrame, sharedInst.listFly, sharedInst.axesType2, true);
+    showLongAxes(handles.axes2, handles, sharedInst.listFly, sharedInst.axesType1, false);
+    showLongAxes(handles.axes5, handles, sharedInst.listFly, sharedInst.axesType2, true);
     showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
 
     % show first frame
@@ -1098,7 +1287,7 @@ function showFrameInAxes(hObject, handles, frameNum)
 end
 
 %% show long axis data function
-function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
+function showLongAxes(hObject, handles, listFly, type, xtickOff)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     img_h = size(sharedInst.bgImage,1);
     img_w = size(sharedInst.bgImage,2);
@@ -1188,12 +1377,6 @@ function showLongAxes(hObject, handles, t, listFly, type, xtickOff)
     if xtickOff
 %        xticks(0); % from 2016b
     end
-    % plot recoding annotation
-    if sharedInst.annoStart > 0
-        xv = [sharedInst.annoStart-0.5 sharedInst.annoStart-0.5 t+0.5 t+0.5];
-        yv = [ymin ymax ymax ymin];
-        p = patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
-    end
     type = strrep(type, '_', ' ');
     text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
     hold off;
@@ -1205,7 +1388,6 @@ function showLongAxesTimeLine(handles, t, listFly)
     ymin = 0;
     ymax = 1;
 
-    % plot current time line
     handles.axes7.Box = 'off';
     handles.axes7.Color = 'None';
     handles.axes7.FontSize = 1;
@@ -1214,8 +1396,20 @@ function showLongAxesTimeLine(handles, t, listFly)
     handles.axes7.XTick = [0];
     handles.axes7.YTick = [0];
     axes(handles.axes7); % set drawing area
-    cla;    
+    cla;
     hold on;
+    % plot recoding annotation
+    if sharedInst.annoStart > 0
+        t2 = round((sharedInst.annoStart - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+        if t >= t2
+            xv = [t2-0.5 t2-0.5 t+0.5 t+0.5];
+        else
+            xv = [t-0.5 t-0.5 t2+0.5 t2+0.5];
+        end
+        yv = [ymin ymax ymax ymin];
+        p = patch(xv,yv,'red','FaceAlpha',.2,'EdgeColor','none');
+    end
+    % plot current time line
     plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
     xlim([1 size(yval,1)]);
     ylim([ymin ymax]);
@@ -1364,7 +1558,12 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     end
     % plot recoding annotation
     if sharedInst.annoStart > 0
-        xv = [double(sharedInst.annoStart)-0.5 double(sharedInst.annoStart)-0.5 double(t)+0.5 double(t)+0.5];
+        t2 = round((sharedInst.annoStart - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+        if t >= t2
+            xv = [double(t2)-0.5 double(t2)-0.5 double(t)+0.5 double(t)+0.5];
+        else
+            xv = [double(t)-0.5 double(t)-0.5 double(t2)+0.5 double(t2)+0.5];
+        end
         yv = [ymin ymax ymax ymin];
         patch(xv,yv,'red','FaceAlpha',.3,'EdgeColor','none');
     end
@@ -1385,6 +1584,9 @@ end
 
 function recodeAnnotation(handles, key)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    tStart = round((sharedInst.annoStart - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    listFly = sharedInst.listFly;
     
     key = char(strrep({key},'numpad',''));
     recordText = '--';
@@ -1394,7 +1596,7 @@ function recodeAnnotation(handles, key)
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
         else
-            sharedInst.annotation(sharedInst.frameNum, sharedInst.listFly) = 0;
+            sharedInst.annotation(t, listFly) = 0;
             sharedInst.isModified = 1;
             set(handles.pushbutton6, 'Enable', 'on');
         end
@@ -1403,22 +1605,25 @@ function recodeAnnotation(handles, key)
             sharedInst.annoStart = 0;
             sharedInst.annoKey = -1;
         end
+    case 'return'
+        if sharedInst.annoStart > 0
+            annoNum = getAnnotationNum(handles);
+            if sharedInst.annoStart <= sharedInst.frameNum
+                sharedInst.annotation(tStart:t, listFly) = annoNum;
+            else
+                sharedInst.annotation(t:tStart, listFly) = annoNum;
+            end
+            sharedInst.annoStart = 0;
+            sharedInst.annoKey = -1;
+        end
     otherwise
         if isnumeric(str2num(key))
             if sharedInst.annoStart > 0
-                if isempty(sharedInst.annoLabel)
-                    annoNum = sharedInst.annoKey;
-                else
-                    if sharedInst.annoKey == 0
-                        annoNum = 0;
-                    else
-                        annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
-                    end
-                end
+                annoNum = getAnnotationNum(handles);
                 if sharedInst.annoStart <= sharedInst.frameNum
-                    sharedInst.annotation(sharedInst.annoStart:sharedInst.frameNum, sharedInst.listFly) = annoNum;
+                    sharedInst.annotation(tStart:t, listFly) = annoNum;
                 else
-                    sharedInst.annotation(sharedInst.frameNum:sharedInst.annoStart, sharedInst.listFly) = annoNum;
+                    sharedInst.annotation(t:tStart, listFly) = annoNum;
                 end
                 
                 if sharedInst.annoKey == str2num(key)
@@ -1449,13 +1654,8 @@ function recodeAnnotation(handles, key)
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.text27, 'String', recordText);
-    
-    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-    listFly = sharedInst.listFly;
 
     % show long params
-    showLongAxes(handles.axes2, handles, t, listFly, sharedInst.axesType1, false);
-    showLongAxes(handles.axes5, handles, t, listFly, sharedInst.axesType2, true);
     showLongAxesTimeLine(handles, t, listFly);
 
     % show short params
@@ -1463,6 +1663,18 @@ function recodeAnnotation(handles, key)
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
+function annoNum = getAnnotationNum(handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if isempty(sharedInst.annoLabel)
+        annoNum = sharedInst.annoKey;
+    else
+        if sharedInst.annoKey == 0
+            annoNum = 0;
+        else
+            annoNum = sharedInst.annoKeyMap(sharedInst.annoKey);
+        end
+    end
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% behavior classifiers
