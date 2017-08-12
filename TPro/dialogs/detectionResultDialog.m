@@ -134,6 +134,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.selectFrame = sharedInst.frameNum;
     sharedInst.longAxesDrag = 0;
     sharedInst.shiftAxes = 0;
+    sharedInst.startPoint = [];
 
     sharedInst.originalImage = [];
 
@@ -161,10 +162,14 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.bgImage = bgImage;
         sharedInst.bgImageDouble = double(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
+        sharedInst.img_h = size(bgImage,1);
+        sharedInst.img_w = size(bgImage,2);
     else
         sharedInst.bgImage = [];
         sharedInst.bgImageDouble = [];
         sharedInst.bgImageMean = [];
+        sharedInst.img_h = 1024;
+        sharedInst.img_w = 1024;
     end
 
     % load roi image file
@@ -239,6 +244,8 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
     
     % show first frame
+    showMainAxesRectangle(handles, []);
+    pause(0.01);
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
 end
 
@@ -445,6 +452,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
             if ~unselected && ~selected
                 sharedInst.selectX = {};
                 sharedInst.selectY = {};
+                sharedInst.startPoint = A;
                 setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             end
         end
@@ -488,6 +496,8 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
 
     elseif gca == handles.axes2 || gca == handles.axes3
         cp = get(gca,'CurrentPoint');
+        sharedInst.selectX = {};
+        sharedInst.selectY = {};
         sharedInst.selectFrame = round(sharedInst.startFrame + cp(1));
         sharedInst.longAxesDrag = sharedInst.selectFrame;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -506,6 +516,14 @@ function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if ~isempty(sharedInst.startPoint)
+        A = sharedInst.startPoint;
+        cp = get(handles.axes1,'CurrentPoint');
+        x = min(A(2), cp(1,1));
+        y = min(A(1), cp(1,2));
+        rect = [x, y, abs(cp(1,1)-A(2)), abs(cp(1,2)-A(1))];
+        showMainAxesRectangle(handles, rect);
+    end
     if sharedInst.longAxesDrag > 0
         cp = get(handles.axes3,'CurrentPoint');
         frameNum = round(sharedInst.startFrame + cp(1));
@@ -528,6 +546,43 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if ~isempty(sharedInst.startPoint)
+        % calc points
+        A = sharedInst.startPoint;
+        cp = get(handles.axes1,'CurrentPoint');
+        xmin = min(A(2), cp(1,1));
+        xmax = max(A(2), cp(1,1));
+        ymin = min(A(1), cp(1,2));
+        ymax = max(A(1), cp(1,2));
+
+        % select point
+        frameNum = sharedInst.frameNum;
+        sframe = min(frameNum,sharedInst.selectFrame);
+        eframe = max(frameNum,sharedInst.selectFrame);
+        slen = eframe - sframe + 1;
+        start_t = round((sframe - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+
+        if isempty(sharedInst.selectX)
+            sharedInst.selectX = cell(slen,1);
+            sharedInst.selectY = cell(slen,1);
+        end
+        for i=1:slen
+            t = start_t+(i-1);
+            B = [sharedInst.X{t}(:), sharedInst.Y{t}(:)];
+            for k=1:size(B,1)
+                if xmax > B(k,2) && B(k,2) > xmin && ymax > B(k,1) && B(k,1) > ymin
+                    sharedInst.selectX{i} = [sharedInst.selectX{i}(:); B(k,1)];
+                    sharedInst.selectY{i} = [sharedInst.selectY{i}(:); B(k,2)];
+                end
+            end
+        end
+        sharedInst.startPoint = [];
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        % show plots
+        pause(0.1);
+        showMainAxesRectangle(handles, []);
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    end
     if sharedInst.longAxesDrag > 0
         sharedInst.selectFrame = sharedInst.longAxesDrag;
         sharedInst.longAxesDrag = 0;
@@ -1342,6 +1397,15 @@ end
 
 %% show frame function
 function showFrameInAxes(hObject, handles, frameNum)
+%{
+    drawlock = getappdata(handles.figure1,'drawlock');
+    if drawlock.lock
+        disp('waitfor lock');
+        waitfor(drawlock, 'lock');
+    end
+    drawlock.lock = 1;
+    setappdata(handles.figure1,'drawlock', drawlock);
+%}
     axes(handles.axes1); % set drawing area
 
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
@@ -1621,3 +1685,25 @@ function showLongAxesTimeLine(handles, t)
     hold off;
 end
 
+%%
+function showMainAxesRectangle(handles, rect)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    handles.axes4.Box = 'off';
+    handles.axes4.Color = 'None';
+    handles.axes4.FontSize = 1;
+    handles.axes4.XMinorTick = 'off';
+    handles.axes4.YMinorTick = 'off';
+    handles.axes4.XTick = [0];
+    handles.axes4.YTick = [0];
+    axes(handles.axes4); % set drawing area
+    cla;
+    % show rectangle
+    if ~isempty(rect)
+        hold on;
+        rectangle('Position', rect, 'EdgeColor', [.5 .5 .9]);
+        hold off;
+    end
+    xlim([1 sharedInst.img_w]);
+    ylim([1 sharedInst.img_h]);
+end
