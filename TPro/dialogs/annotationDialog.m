@@ -218,7 +218,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % show long params
     showLongAxes(handles.axes2, handles, sharedInst.listFly, sharedInst.axesType1, false);
     showLongAxes(handles.axes5, handles, sharedInst.listFly, sharedInst.axesType2, true);
-    showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
+    showLongAxesTimeLine(handles.axes7, handles, sharedInst.startFrame, sharedInst.listFly);
 
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
@@ -655,7 +655,7 @@ function popupmenu4_Callback(hObject, eventdata, handles)
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
     showLongAxes(handles.axes2, handles, listFly, sharedInst.axesType1, false);
-    showLongAxesTimeLine(handles, t, listFly);
+    showLongAxesTimeLine(handles.axes7, handles, t, listFly);
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
 end
 
@@ -685,7 +685,7 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     listFly = sharedInst.listFly;
     showLongAxes(handles.axes5, handles, listFly, sharedInst.axesType2, true);
-    showLongAxesTimeLine(handles, t, listFly);
+    showLongAxesTimeLine(handles.axes7, handles, t, listFly);
     showShortAxes(handles.axes6, handles, t, listFly, sharedInst.axesType2, true);
 end
 
@@ -1093,7 +1093,7 @@ function edit3_Callback(hObject, eventdata, handles)
     % show long params
     showLongAxes(handles.axes2, handles, sharedInst.listFly, sharedInst.axesType1, false);
     showLongAxes(handles.axes5, handles, sharedInst.listFly, sharedInst.axesType2, true);
-    showLongAxesTimeLine(handles, sharedInst.startFrame, sharedInst.listFly);
+    showLongAxesTimeLine(handles.axes7, handles, sharedInst.startFrame, sharedInst.listFly);
 
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
@@ -1253,7 +1253,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold off;
     
     % show long params
-    showLongAxesTimeLine(handles, t, listFly);
+    showLongAxesTimeLine(handles.axes7, handles, t, listFly);
 
     % show short params
     axValue = showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);
@@ -1382,20 +1382,20 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
     hold off;
 end
 
-function showLongAxesTimeLine(handles, t, listFly)
+function showLongAxesTimeLine(hObject, handles, t, listFly)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     yval = sharedInst.vxy(:,listFly);
     ymin = 0;
     ymax = 1;
 
-    handles.axes7.Box = 'off';
-    handles.axes7.Color = 'None';
-    handles.axes7.FontSize = 1;
-    handles.axes7.XMinorTick = 'off';
-    handles.axes7.YMinorTick = 'off';
-    handles.axes7.XTick = [0];
-    handles.axes7.YTick = [0];
-    axes(handles.axes7); % set drawing area
+    hObject.Box = 'off';
+    hObject.Color = 'None';
+    hObject.FontSize = 1;
+    hObject.XMinorTick = 'off';
+    hObject.YMinorTick = 'off';
+    hObject.XTick = [0];
+    hObject.YTick = [0];
+    axes(hObject); % set drawing area
     cla;
     hold on;
     % plot recoding annotation
@@ -1656,7 +1656,7 @@ function recodeAnnotation(handles, key)
     set(handles.text27, 'String', recordText);
 
     % show long params
-    showLongAxesTimeLine(handles, t, listFly);
+    showLongAxesTimeLine(handles.axes7, handles, t, listFly);
 
     % show short params
     showShortAxes(handles.axes4, handles, t, listFly, sharedInst.axesType1, false);

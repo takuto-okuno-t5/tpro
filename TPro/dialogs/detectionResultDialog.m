@@ -122,7 +122,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if sharedInst.mmPerPixel <= 0
         sharedInst.mmPerPixel = 0.1;
     end
-    
+
     sharedInst.X = X;
     sharedInst.Y = Y;
     sharedInst.keep_angle_sorted = keep_angle_sorted;
@@ -244,29 +244,12 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
     
     % show first frame
-    showMainAxesRectangle(handles, []);
-    pause(0.01);
-    showFrameInAxes(hObject, handles, sharedInst.startFrame);
-end
-
-function countFliesEachROI(handles, X, Y, roiNum, roiMasks, roiMaskImage)
-    img_h = size(roiMaskImage,1);
-    img_w = size(roiMaskImage,2);
-    xsize = size(X, 2);
-    flyCounts = zeros(xsize,1);
-    for i=1:roiNum
-        roiCount = zeros(xsize,1);
-        % count flies by each ROI
-        for row_count = 1:xsize
-            fx = X{row_count}(:);
-            fy = Y{row_count}(:);
-            flyNum = length(fx);
-            flyCounts(row_count) = flyNum;
-            roiCount(row_count) = countRoiFly(fy,fx,img_h,img_w,flyNum,roiMasks{i});
-        end
-        setappdata(handles.figure1,['count_' num2str(i)],roiCount); % set axes data
+    showMainAxesRectangle(handles.axes4, handles, []);
+    if ~isempty(sharedInst.bgImage)
+        imshow(sharedInst.bgImage);
+        cla;
     end
-    setappdata(handles.figure1,'count_0',flyCounts); % set axes data
+    showFrameInAxes(hObject, handles, sharedInst.startFrame);
 end
 
 
@@ -522,7 +505,7 @@ function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
         x = min(A(2), cp(1,1));
         y = min(A(1), cp(1,2));
         rect = [x, y, abs(cp(1,1)-A(2)), abs(cp(1,2)-A(1))];
-        showMainAxesRectangle(handles, rect);
+        showMainAxesRectangle(handles.axes4, handles, rect);
     end
     if sharedInst.longAxesDrag > 0
         cp = get(handles.axes3,'CurrentPoint');
@@ -532,7 +515,7 @@ function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
             setappdata(handles.figure1,'draglock',1);
             pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
             set(handles.slider1, 'value', frameNum);
-            showLongAxesTimeLine(handles, frameNum);
+            showLongAxesTimeLine(handles.axes3, handles, frameNum);
             pause(0.01);
             setappdata(handles.figure1,'draglock',0);
         end
@@ -580,7 +563,7 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         % show plots
         pause(0.1);
-        showMainAxesRectangle(handles, []);
+        showMainAxesRectangle(handles.axes4, handles, []);
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     end
     if sharedInst.longAxesDrag > 0
@@ -902,6 +885,8 @@ function popupmenu4_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% menu
 
 % --------------------------------------------------------------------
 function Untitled_1_Callback(hObject, eventdata, handles)
@@ -1176,6 +1161,8 @@ function Untitled_4_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_4 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    hFig = ancestor(hObject, 'figure');
+    figure1_CloseRequestFcn(hFig, eventdata, handles);
 end
 
 % --------------------------------------------------------------------
@@ -1581,7 +1568,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold off;
 
     % show long params
-    showLongAxesTimeLine(handles, t);
+    showLongAxesTimeLine(handles.axes3, handles, t);
 
     % reset current axes (prevent miss click)
     axes(handles.axes1); % set drawing area
@@ -1598,112 +1585,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     guidata(hObject, handles);    % Update handles structure
 end
 
-%% show long axis data function
-function showLongAxes(hObject, handles, type, roi)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    
-    % get data
-    switch type
-        case 'count'
-            yval = getappdata(handles.figure1, [type '_' num2str(roi)]); % get data
-            ymin = floor(min(yval) * 0.5);
-            ymax = floor(max(yval) * 1.2);
-            if ymax < 5
-                ymax = 5;
-            end
-        otherwise
-            data = getappdata(handles.figure1, [type '_' roi]); % get data
-            if isempty(data)
-                data = getappdata(handles.figure1, type);
-            end
-            if isempty(data) || isnan(data(1))
-                yval = [];
-                ymin = 0;
-                ymax = 0;
-            else
-                yval = data(:);
-                ymin = min(yval);
-                ymax = max(yval);
-                if 1 > ymin && ymin > 0
-                    ymin = 0;
-                end
-            end
-    end
-    if ymin==ymax
-        ymax = ymin + 1;
-    end
-    
-    axes(hObject); % set drawing area
-    cla;
-    if isempty(yval)
-        return; % noting to show
-    end
-    hold on;
-    plot(1:size(yval,1), yval, 'Color', [.6 .6 1]);
-    xlim([1 size(yval,1)]);
-    ylim([ymin ymax]);
-    hObject.Box = 'off';
-    hObject.Color = [0 .05 .1];
-    hObject.FontSize = 8;
-    hObject.XMinorTick = 'off';
-%    hObject.TightInset = hObject.TightInset / 2;
-    % xtickOff
-    % xticks(0); % from 2016b
-    type = strrep(type, '_', ' ');
-    text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
-    hold off;
-end
 
-%%
-function showLongAxesTimeLine(handles, t)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    yval = sharedInst.X(:);
-    ymin = 0;
-    ymax = 1;
-
-    handles.axes3.Box = 'off';
-    handles.axes3.Color = 'None';
-    handles.axes3.FontSize = 1;
-    handles.axes3.XMinorTick = 'off';
-    handles.axes3.YMinorTick = 'off';
-    handles.axes3.XTick = [0];
-    handles.axes3.YTick = [0];
-    axes(handles.axes3); % set drawing area
-    cla;    
-    hold on;
-    % plot selected frame
-    t2 = round((sharedInst.selectFrame - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-    if abs(t-t2) >= 1
-        xv = [double(t2)-0.5 double(t2)-0.5 double(t)+0.5 double(t)+0.5];
-        yv = [ymin ymax ymax ymin];
-        patch(xv,yv,[.1 .7 .1],'FaceAlpha',.4,'EdgeColor','none');
-    end
-    % plot current time line
-    plot([t t], [ymin ymax], ':', 'markersize', 1, 'color', 'r', 'linewidth', 1)  % rodent 1 instead of Cz
-    xlim([1 size(yval,1)]);
-    ylim([ymin ymax]);
-    hold off;
-end
-
-%%
-function showMainAxesRectangle(handles, rect)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    handles.axes4.Box = 'off';
-    handles.axes4.Color = 'None';
-    handles.axes4.FontSize = 1;
-    handles.axes4.XMinorTick = 'off';
-    handles.axes4.YMinorTick = 'off';
-    handles.axes4.XTick = [0];
-    handles.axes4.YTick = [0];
-    axes(handles.axes4); % set drawing area
-    cla;
-    % show rectangle
-    if ~isempty(rect)
-        hold on;
-        rectangle('Position', rect, 'EdgeColor', [.5 .5 .9]);
-        hold off;
-    end
-    xlim([1 sharedInst.img_w]);
-    ylim([1 sharedInst.img_h]);
-end

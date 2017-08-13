@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 02-Jul-2017 19:42:53
+    % Last Modified by GUIDE v2.5 13-Aug-2017 16:31:19
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -116,8 +116,17 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.lineMode = 2; % tail
     sharedInst.lineLength = 19;
     sharedInst.backMode = 1; % movie
+    sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
     sharedInst.currentROI = 0;
+    sharedInst.axesType1 = 'count';
+    sharedInst.isModified = false;
+    sharedInst.editMode = 1; % select / add mode
+
+    % fix old parameters
+    if sharedInst.mmPerPixel <= 0
+        sharedInst.mmPerPixel = 0.1;
+    end
 
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -126,6 +135,12 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_angle_sorted = keep_angle_sorted;
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
+    sharedInst.selectX = {};
+    sharedInst.selectY = {};
+    sharedInst.selectFrame = sharedInst.frameNum;
+    sharedInst.longAxesDrag = 0;
+    sharedInst.shiftAxes = 0;
+    sharedInst.startPoint = [];
 
     sharedInst.originalImage = [];
 
@@ -163,10 +178,14 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.bgImage = bgImage;
         sharedInst.bgImageDouble = double(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
+        sharedInst.img_h = size(bgImage,1);
+        sharedInst.img_w = size(bgImage,2);
     else
         sharedInst.bgImage = [];
         sharedInst.bgImageDouble = [];
         sharedInst.bgImageMean = [];
+        sharedInst.img_h = 1024;
+        sharedInst.img_w = 1024;
     end
 
     % load roi image file
@@ -204,12 +223,31 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     set(handles.popupmenu7,'String',listItem);
 
+    % count each ROI fly number
+    countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
+
+    % load last time data
+    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    for i=1:length(resultNames)
+        fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
+        if exist(fname, 'file')
+            load(fname);
+            setappdata(handles.figure1,resultNames{i},result);
+            addResult2Axes(handles, result, resultNames{i}, handles.popupmenu8);
+        end
+    end
+    set(handles.popupmenu8,'Value',1);
+
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    setappdata(handles.figure1,'draglock',0);
     guidata(hObject, handles);  % Update handles structure
+
+    % show long params
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
 
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
-    
+
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
     %uiwait(handles.figure1); % wait for finishing dialog
 end
@@ -235,29 +273,93 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     delete(hObject);
 end
 
-
-% --- Executes on key press with focus on figure1 and none of its controls.
-function figure1_KeyPressFcn(hObject, eventdata, handles)
+% --- Executes on key press with focus on figure1 or any of its controls.
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
     %	Key: name of the key that was pressed, in lower case
     %	Character: character interpretation of the key(s) that was pressed
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
     % handles    structure with handles and user data (see GUIDATA)
-    if strcmp(eventdata.Key, 'rightarrow')
-        pushbutton4_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'leftarrow')
-        pushbutton5_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'uparrow')
-        pushbutton2_Callback(hObject, eventdata, handles);
-    elseif strcmp(eventdata.Key, 'downarrow')
-        pushbutton3_Callback(hObject, eventdata, handles);
+    % just key
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % shift + key
+    if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'shift')
+        switch eventdata.Key
+        case 'rightarrow'
+        case 'leftarrow'
+        end
+        return;
     end
+    switch eventdata.Key
+    case 'rightarrow'
+        pushbutton4_Callback(hObject, eventdata, handles);
+    case 'leftarrow'
+        pushbutton5_Callback(hObject, eventdata, handles);
+    case 'uparrow'
+        pushbutton2_Callback(hObject, eventdata, handles);
+    case 'downarrow'
+        pushbutton3_Callback(hObject, eventdata, handles);
+    case 'escape'
+        sharedInst.editMode = 1;
+        sharedInst.selectX = {};
+        sharedInst.selectY = {};
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    end
+end
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+    figure1_WindowKeyPressFcn(hObject, eventdata, handles);
 end
 
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
 end
 
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if gca == handles.axes1
+        cp = get(gca,'CurrentPoint');
+        frameNum = sharedInst.frameNum;
+
+    elseif gca == handles.axes2 || gca == handles.axes3
+        cp = get(gca,'CurrentPoint');
+        sharedInst.selectX = {};
+        sharedInst.selectY = {};
+        sharedInst.selectFrame = round(sharedInst.startFrame + cp(1));
+        sharedInst.longAxesDrag = sharedInst.selectFrame;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+        setappdata(handles.figure1,'draglock',1);
+        pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+        set(handles.slider1, 'value', sharedInst.longAxesDrag);
+        slider1_Callback(handles.slider1, [], handles)
+        setappdata(handles.figure1,'draglock',0);
+    end
+end
+
+% --- Executes on mouse motion over figure - except title and menu.
+function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --- Executes on mouse press over figure background, over a disabled or
+% --- inactive control, or over an axes background.
+function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+%%
 function edit1_Callback(hObject, eventdata, handles)
     % hObject    handle to edit1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
@@ -289,9 +391,16 @@ function slider1_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frameNum = int64(get(hObject,'Value'));
     sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
+    if ~isempty(eventdata)
+        sharedInst.selectFrame = sharedInst.frameNum;
+    end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    
-    set(handles.edit1, 'String', sharedInst.frameNum);
+
+    if sharedInst.selectFrame == sharedInst.frameNum
+        set(handles.edit1, 'String', sharedInst.frameNum);
+    else
+        set(handles.edit1, 'String', [num2str(sharedInst.selectFrame) '-' num2str(sharedInst.frameNum)]);
+    end
     guidata(hObject, handles);    % Update handles structure
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -659,6 +768,160 @@ function popupmenu7_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+% --- Executes on selection change in popupmenu8.
+function popupmenu8_Callback(hObject, eventdata, handles)
+    % hObject    handle to popupmenu8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    contents = cellstr(get(hObject,'String'));
+    sharedInst.axesType1 = contents{get(hObject,'Value')};
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu8_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to popupmenu8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: popupmenu controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% menu
+
+% --------------------------------------------------------------------
+function Untitled_1_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_2_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uigetfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Pick a file', ...
+        'MultiSelect', 'off', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    try
+        csvTable = readtable([path fileName],'ReadVariableNames',false);
+        records = table2cell(csvTable);
+        result = cell2mat(records);
+    catch e
+        errordlg('please select a csv file.', 'Error');
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % add result to axes & show in axes
+    cname = fileName(1:(end-4));
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles)
+
+    h = msgbox({'import csv file successfully!'});
+end
+
+% --------------------------------------------------------------------
+function Untitled_3_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    [fileName, path, filterIndex] = uiputfile( {  ...
+        '*.csv',  'CSV File (*.csv)'}, ...
+        'Export as', '.');
+
+    if ~filterIndex
+        return;
+    end
+
+    outputFileName = [path fileName];
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    cname = [sharedInst.axesType1 '_' num2str(sharedInst.currentROI)];
+    data = getappdata(handles.figure1, cname); % get data
+    if isempty(data)
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+    end
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_4_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    hFig = ancestor(hObject, 'figure');
+    figure1_CloseRequestFcn(hFig, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_5_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_6_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_7_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_7 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    if sharedInst.roiNum < 2
+        errordlg('There should be more than 2 ROIs.', 'Error');
+        return;
+    end
+    roi1 = 1;
+    roi2 = 2;
+    result = calcPI(sharedInst.X, sharedInst.Y, {sharedInst.roiMasks{roi1}, sharedInst.roiMasks{roi2}});
+
+    % show in plot
+    plotWithNewFigure(handles, result, 1, -1, []);
+    
+    % add result to axes & show in axes
+    cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles)
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -806,6 +1069,12 @@ function showFrameInAxes(hObject, handles, frameNum)
         end
     end
     hold off;
+
+    % show long params
+    showLongAxesTimeLine(handles.axes3, handles, t);
+
+    % reset current axes (prevent miss click)
+    axes(handles.axes1); % set drawing area
 
     % show detected count
     set(handles.text8, 'String', active_num);
