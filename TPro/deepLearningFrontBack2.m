@@ -54,7 +54,7 @@ function deepLearningFrontBack2
 
     if doTraining
         % load checkpoint file
-        if exist(cnnLayersFile, 'file');
+        if exist(cnnLayersFile, 'file')
             load(cnnLayersFile);
             layers = netForFrontBack.Layers;
         else
@@ -477,7 +477,7 @@ function trainingFlyFrontBack(isGrayScale, width, height, netForFrontBack)
 
     %% Try the Newly Trained Classifier on Test Images
     % You can now apply the newly trained classifier to categorize new images.
-    newImage = fullfile(rootFolder, 'fly_question', '01008_12.png');
+    newImage = fullfile(rootFolder, 'fly_question', '00004_01.png');
     figure;
     imshow(newImage);
 
