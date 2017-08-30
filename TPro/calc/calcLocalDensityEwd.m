@@ -10,7 +10,7 @@ function result = calcLocalDensityEwd(X, Y, roiMask, r)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        result(row_count) = calcLocalDensityEwdFrame(fy,fx,r);
+        [result(row_count), ewdfly] = calcLocalDensityEwdFrame(fy,fx,r);
     end
     time = toc;
     disp(['calcLocalDensityEwd ... done : ' num2str(time) 's']);

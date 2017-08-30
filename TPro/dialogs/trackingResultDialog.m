@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 13-Aug-2017 16:31:19
+    % Last Modified by GUIDE v2.5 30-Aug-2017 18:28:15
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -919,9 +919,52 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     % add result to axes & show in axes
     cname = ['pi_roi_' num2str(roi1) '_vs_' num2str(roi2)];
     addResult2Axes(handles, result, cname, handles.popupmenu8);
-    popupmenu8_Callback(handles.popupmenu8, eventdata, handles)
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
+% --------------------------------------------------------------------
+function Untitled_8_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+
+    % calc local density of ewd
+    hFig = [];
+    lastMax = 0;
+    for mm=10:5:10
+        r = mm / sharedInst.mmPerPixel;
+        [means, result] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
+
+        % show in plot
+        %{
+        if lastMax < max(result)
+            lastMax = max(result);
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+        %}
+    end
+
+    % add result to axes & show in axes
+    cname = 'aggr_ewd_tracking_result';
+    if sharedInst.listMode == 1
+        data = means;
+    else
+        data = result(:,sharedInst.listFly);
+    end
+    addResult2Axes(handles, data, cname, handles.popupmenu8);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_9_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_9 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions

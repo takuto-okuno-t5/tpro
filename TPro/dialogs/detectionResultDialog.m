@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 06-Aug-2017 18:39:48
+% Last Modified by GUIDE v2.5 30-Aug-2017 17:55:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1311,8 +1311,16 @@ function Untitled_15_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    
-    dotNum = 20;
+
+    % input dot number
+    [dlg, dotNum] = inputPointNumberDialog();
+    delete(dlg);
+
+    dotNum = str2num(dotNum);
+    if isempty(dotNum) || dotNum < 0
+        return;
+    end
+
     [X, Y] = calcRandomDots(sharedInst.roiMaskImage, sharedInst.startFrame, sharedInst.endFrame, dotNum);
     sharedInst.X = X;
     sharedInst.Y = Y;
@@ -1376,6 +1384,55 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     sharedInst.editMode = 2;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_21_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_21 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    mm = 10;
+
+    for i=2:50
+        % calc rand dot
+        [X, Y] = calcRandomDots(sharedInst.roiMaskImage, sharedInst.startFrame, sharedInst.endFrame, i);
+        sharedInst.X = X;
+        sharedInst.Y = Y;
+
+        % calc EWD
+        r = mm / sharedInst.mmPerPixel;
+        result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
+
+        % add result to axes & show in axes
+        cname = 'aggr_ewd_result';
+        addResult2Axes(handles, result, cname, handles.popupmenu4);
+        save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+        popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+
+        % calc & show histgram
+        x_pdf = [1:0.1:200];
+        d2 = result' * 1000000;
+        pd = fitdist(d2,'Gamma');
+        y = pdf(pd,x_pdf);
+        [phat, pci] = gamfit(d2);
+
+        figure;
+        h = histogram(d2);
+        hold on;
+        scale = max(h.Values)/max(y);
+        plot((x_pdf),(y.*scale));
+
+    %    x3 = gaminv((0:0.01:100),phat(1),phat(2));
+    %    y3 = gampdf(x3,phat(1),phat(2));
+    %    plot((x3),(y3.*scale));
+        hold off;
+
+        disp(['fly=' num2str(i) ' a=' num2str(phat(1)) ' b=' num2str(phat(2))]);
+        pd = makedist('Gamma',phat(1),phat(2));
+        p2 = cdf(pd,d2(1:5));
+    end
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
 
@@ -1584,5 +1641,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
-
 

@@ -1,5 +1,5 @@
 % ----- calculate local density (frame) -----
-function result = calcLocalDensityEwdFrame(x, y, r)
+function [result, ewd] = calcLocalDensityEwdFrame(x, y, r)
     xlen = length(x);
     ewd = zeros(xlen,1);
     ewd(:) = NaN;
