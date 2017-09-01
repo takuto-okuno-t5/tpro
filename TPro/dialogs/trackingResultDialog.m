@@ -93,6 +93,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load detection & tracking
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
+    load(strcat(confPath,'multi/detect_',filename,'keep_count.mat'));
     load(strcat(confPath,'multi/track_',filename,'.mat'));
 
     % initialize GUI
@@ -112,7 +113,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.showDetectResult = 1;
     sharedInst.showNumber = 1;
     sharedInst.listMode = 1; % all
-    sharedInst.listFly = 1;
+    sharedInst.listFly = 0;
     sharedInst.lineMode = 2; % tail
     sharedInst.lineLength = 19;
     sharedInst.backMode = 1; % movie
@@ -156,7 +157,30 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.edit3, 'Enable', 'on')
     
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
-    
+
+    sharedInst.mean_blobmajor = 20;
+    sharedInst.mean_blobminor = 10;
+    if exist('keep_mean_blobmajor', 'var')
+        sharedInst.mean_blobmajor = mean(keep_mean_blobmajor);
+        sharedInst.mean_blobminor = mean(keep_mean_blobminor);
+    else
+        tproConfig = 'etc/tproconfig.csv';
+        if exist(tproConfig, 'file')
+            tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+            values = tproConfTable{'meanBlobMajor',1};
+            if size(values,1) > 0
+                sharedInst.mean_blobmajor = values(1);
+            end
+            values = tproConfTable{'meanBlobMinor',1};
+            if size(values,1) > 0
+                sharedInst.mean_blobminor = values(1);
+            end
+        end
+    end
+
+    % calc color map for ewd
+    sharedInst.ewdColors = expandColor({[0 0 .45], [0 0 1], [1 0 0], [1 .7 .7]}, 100);
+
     % set fly list box
     flyNum = size(keep_data{1}, 2);
     listItem = [];
@@ -227,7 +251,8 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
+        'aggr_ewd_result_tracking'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -243,7 +268,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     guidata(hObject, handles);  % Update handles structure
 
     % show long params
-    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
 
     % show first frame
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
@@ -552,8 +577,11 @@ function radiobutton1_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 1;
+    sharedInst.listFly = 0;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.popupmenu5, 'Enable', 'off')
+
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -564,8 +592,12 @@ function radiobutton2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.listMode = 2;
+    contents = cellstr(get(handles.popupmenu5,'String'));
+    sharedInst.listFly = str2num(contents{get(handles.popupmenu5,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.popupmenu5, 'Enable', 'on')
+
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -602,7 +634,7 @@ function edit3_Callback(hObject, eventdata, handles)
     if isempty(num)
         set(handles.edit3, 'String', sharedInst.lineLength);
     else
-        if num < 1 || num > sharedInst.endFrame
+        if num < 0 || num > sharedInst.endFrame
             set(handles.edit1, 'String', sharedInst.lineLength);
         else
             sharedInst.lineLength = num;
@@ -635,6 +667,8 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     contents = cellstr(get(hObject,'String'));
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -777,8 +811,8 @@ function popupmenu8_Callback(hObject, eventdata, handles)
     contents = cellstr(get(hObject,'String'));
     sharedInst.axesType1 = contents{get(hObject,'Value')};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    
-    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI);
+
+    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -939,22 +973,15 @@ function Untitled_8_Callback(hObject, eventdata, handles)
         [means, result] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
 
         % show in plot
-        %{
-        if lastMax < max(result)
-            lastMax = max(result);
+        if lastMax < max(max(result))
+            lastMax = max(max(result));
         end
-        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
-        %}
+        hFig = plotAllFlyWithNewFigure(handles, result, lastMax, 0, hFig);
     end
 
     % add result to axes & show in axes
-    cname = 'aggr_ewd_tracking_result';
-    if sharedInst.listMode == 1
-        data = means;
-    else
-        data = result(:,sharedInst.listFly);
-    end
-    addResult2Axes(handles, data, cname, handles.popupmenu8);
+    cname = 'aggr_ewd_result_tracking';
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
@@ -987,8 +1014,11 @@ function showFrameInAxes(hObject, handles, frameNum)
         imshow(img);
     elseif sharedInst.backMode == 2
         imshow(sharedInst.bgImage);
+    elseif sharedInst.backMode == 3
+        pos = [0 0 sharedInst.img_w sharedInst.img_h];
+        rectangle('Position',pos,'FaceColor',[0 0 0]);
     end
-    
+
     % show detection result
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;    
     if t > size(sharedInst.X,2) || t < 1
@@ -997,6 +1027,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     
     X = sharedInst.X{t}(:);
     Y = sharedInst.Y{t}(:);
+    angle = sharedInst.keep_data{8};
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
     flameMax = size(Q_loc_estimateX, 1);
@@ -1019,19 +1050,38 @@ function showFrameInAxes(hObject, handles, frameNum)
     C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
 
     hold on;
-    if sharedInst.showDetectResult
+    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking')
+        major = sharedInst.mean_blobmajor;
+        minor = major / 5 * 2;
+        pos = [-major/2 -minor/2 major minor];
+        % get ewd result all fly
+        data = getappdata(handles.figure1, sharedInst.axesType1);
+        ewdmin = min(min(data));
+        ewdmax = max(max(data));
+        fy = Q_loc_estimateY(t,:);
+        fx = Q_loc_estimateX(t,:);
+        for i=1:length(fx)
+            if ~isnan(fy(i)) && ~isnan(fx(i)) && ~isnan(data(t,i))
+                idx = floor((data(t,i) - ewdmin) / (ewdmax - ewdmin) * 100);
+                if idx <= 0, idx = 1; end
+                col = sharedInst.ewdColors(idx,:);
+                g = hgtransform();
+                r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
+                g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-angle(t,i)/180*pi);
+            end
+        end
+    elseif sharedInst.showDetectResult
         if sharedInst.listMode == 1
             plot(Y,X,'or'); % the actual detecting
         else
             fy = Q_loc_estimateY(t,listFly);
             fx = Q_loc_estimateX(t,listFly);
-            if isnan(fy) || isnan(fx) || currentMask(round(fx),round(fy)) > 0
+            if ~isnan(fy) && ~isnan(fx) && currentMask(round(fx),round(fy)) > 0
                 plot(fy,fx,'or'); % the actual detecting
             end
         end
     end
 
-    active_num = 0;
     for fn = 1:flyNum
         col = mod(fn,6)+1; %pick color
 
@@ -1069,18 +1119,18 @@ function showFrameInAxes(hObject, handles, frameNum)
                     end
                 end
             end
-            plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+            if sharedInst.lineLength > 0
+                plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+            end
 
             % show number
-            if sharedInst.showNumber
+            if sharedInst.showNumber && listFly > 0
                 num_txt = ['  ', num2str(fn)];
                 text(Q_loc_estimateY(t,listFly),Q_loc_estimateX(t,listFly),num_txt, 'Color','red')
             end            
         else
             % show tail lines
             if ~isnan(Q_loc_estimateX(t,fn))
-                active_num = active_num + 1;
-
                 if t < sharedInst.lineLength+2
                     st = t-1;
                 else
@@ -1100,7 +1150,9 @@ function showFrameInAxes(hObject, handles, frameNum)
                         end
                     end
                 end
-                plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                if sharedInst.lineLength > 0
+                    plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                end
 
                 % show number
                 if sharedInst.showNumber
@@ -1119,7 +1171,24 @@ function showFrameInAxes(hObject, handles, frameNum)
     % reset current axes (prevent miss click)
     axes(handles.axes1); % set drawing area
 
+    % show axes value
+    flyId = sharedInst.listFly;
+    type = sharedInst.axesType1;
+    data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
+    if isempty(data)
+        if ~isempty(flyId) && flyId == 0
+            type = strrep(type, '_tracking', '');
+        end
+        data = getappdata(handles.figure1, type);
+    end
+    if ~isempty(data)
+        if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+            yval = data(t,flyId);
+        else
+            yval = data(t);
+        end
+        set(handles.text8, 'String', yval);
+    end
     % show detected count
-    set(handles.text8, 'String', active_num);
     guidata(hObject, handles);    % Update handles structure
 end

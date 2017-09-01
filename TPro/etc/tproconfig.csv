@@ -1,3 +1,5 @@
 Row,values
 trackingFlyMax,800
 recursionLimit,500
+meanBlobMajor,20
+meanBlobMinor,12

@@ -842,6 +842,8 @@ for data_th = 1:size(records,1)
 
     keep_i = [];
     keep_count = [];
+    keep_mean_blobmajor = [];
+    keep_mean_blobminor = [];
 
     i = 1;
     for i_count = start_frame : frame_steps : end_frame
@@ -1047,6 +1049,8 @@ for data_th = 1:size(records,1)
         % graph for detection analysis
         keep_i = [keep_i i];
         keep_count = [keep_count size(X_update2{i},1)];
+        keep_mean_blobmajor = [keep_mean_blobmajor mean(blobMajorAxis)];
+        keep_mean_blobminor = [keep_mean_blobminor mean(blobMinorAxis)];
         % Report current estimate in the waitbar's message field
         rate = (i_count-start_frame+1)/(end_frame-start_frame+1);
         waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
@@ -1111,11 +1115,11 @@ for data_th = 1:size(records,1)
             end
         end
     end
-    
+
     % save data
     save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
-    save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count');
-    
+    save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
+
     % save data as text
     for i=1:roiNum
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
