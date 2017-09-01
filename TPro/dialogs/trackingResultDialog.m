@@ -968,7 +968,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
-    for mm=10:5:10
+    for mm=5:5:5
         r = mm / sharedInst.mmPerPixel;
         [means, results] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
 
