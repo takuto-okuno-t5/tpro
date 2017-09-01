@@ -161,8 +161,8 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.mean_blobmajor = 20;
     sharedInst.mean_blobminor = 10;
     if exist('keep_mean_blobmajor', 'var')
-        sharedInst.mean_blobmajor = mean(keep_mean_blobmajor);
-        sharedInst.mean_blobminor = mean(keep_mean_blobminor);
+        sharedInst.mean_blobmajor = nanmean(keep_mean_blobmajor);
+        sharedInst.mean_blobminor = nanmean(keep_mean_blobminor);
     else
         tproConfig = 'etc/tproconfig.csv';
         if exist(tproConfig, 'file')
@@ -970,19 +970,23 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     lastMax = 0;
     for mm=10:5:10
         r = mm / sharedInst.mmPerPixel;
-        [means, result] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
+        [means, results] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
 
         % show in plot
-        if lastMax < max(max(result))
-            lastMax = max(max(result));
+        if lastMax < max(max(results))
+            lastMax = max(max(results));
         end
-        hFig = plotAllFlyWithNewFigure(handles, result, lastMax, 0, hFig);
+        hFig = plotAllFlyWithNewFigure(handles, results, lastMax, 0, hFig);
     end
 
     % add result to axes & show in axes
-    cname = 'aggr_ewd_result_tracking';
-    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    cname = 'aggr_ewd_result';
+    addResult2Axes(handles, means, cname, handles.popupmenu8);
+    addResult2Axes(handles, results, [cname '_tracking'], handles.popupmenu8);
+    result = means;
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    result = results;
+    save([sharedInst.confPath 'multi/' cname '_tracking.mat'], 'result');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 

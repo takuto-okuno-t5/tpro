@@ -15,7 +15,7 @@ function showLongAxes(hObject, handles, type, roi, flyId)
             data = getappdata(handles.figure1, [type '_' roi]); % get data
             if isempty(data)
                 type2 = type;
-                if ~isempty(flyId) && flyId == 0
+                if exist('flyId','var') && ~isempty(flyId) && flyId == 0
                     type2 = strrep(type, '_tracking', '');
                 end
                 data = getappdata(handles.figure1, type2);
@@ -25,7 +25,7 @@ function showLongAxes(hObject, handles, type, roi, flyId)
                 ymin = 0;
                 ymax = 0;
             else
-                if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                if exist('flyId','var') && ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
                     yval = data(:,flyId);
                 else
                     yval = data(:);
