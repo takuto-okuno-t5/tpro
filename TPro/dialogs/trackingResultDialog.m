@@ -597,7 +597,7 @@ function radiobutton2_Callback(hObject, eventdata, handles)
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     set(handles.popupmenu5, 'Enable', 'on')
 
-    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
+    showLongAxesMulti(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -668,7 +668,7 @@ function popupmenu5_Callback(hObject, eventdata, handles)
     sharedInst.listFly = str2num(contents{get(hObject,'Value')});
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
-    showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
+    showLongAxesMulti(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -979,6 +979,21 @@ function Untitled_8_Callback(hObject, eventdata, handles)
         hFig = plotAllFlyWithNewFigure(handles, results, lastMax, 0, hFig);
     end
 
+    % show statistical data
+    flyNum = size(results,2);
+    cells = cell(flyNum,2);
+    for i=1:flyNum
+        cells(i,:) = {i,nanmean(results(:,i))};
+        num = cell2mat(cells(i,2));
+        disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
+    end
+    out = sortrows(cells, 2, 'descend');
+    orderstr = [];
+    for i=1:flyNum
+        orderstr = [orderstr ' ' num2str(cell2mat(out(i,1)))];
+    end
+    disp(['ewd order index =' orderstr]);
+
     % add result to axes & show in axes
     cname = 'aggr_ewd_result';
     addResult2Axes(handles, means, cname, handles.popupmenu8);
@@ -1066,8 +1081,9 @@ function showFrameInAxes(hObject, handles, frameNum)
         fx = Q_loc_estimateX(t,:);
         for i=1:length(fx)
             if ~isnan(fy(i)) && ~isnan(fx(i)) && ~isnan(data(t,i))
-                idx = floor((data(t,i) - ewdmin) / (ewdmax - ewdmin) * 100);
+                idx = floor((data(t,i) - ewdmin) / (ewdmax - ewdmin) * 100 * 1.5);
                 if idx <= 0, idx = 1; end
+                if idx > size(sharedInst.ewdColors,1), idx = size(sharedInst.ewdColors,1); end
                 col = sharedInst.ewdColors(idx,:);
                 g = hgtransform();
                 r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
