@@ -965,10 +965,21 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
 
+    % get config value
+    ewdRadius = 5;
+    tproConfig = 'etc/tproconfig.csv';
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'ewdRadius',1};
+        if size(values,1) > 0
+            ewdRadius = values(1);
+        end
+    end
+
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
-    for mm=5:5:5
+    for mm=ewdRadius:5:ewdRadius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
         [means, results] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
 
