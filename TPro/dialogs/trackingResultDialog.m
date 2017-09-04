@@ -264,6 +264,11 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     % count each ROI fly number
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
+    % calc velocity and etc.
+    result = calcVxy(keep_data{3}, keep_data{4}) * sharedInst.fpsNum * sharedInst.mmPerPixel;
+    cname = 'velocity';
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
         'aggr_ewd_result_tracking'};
