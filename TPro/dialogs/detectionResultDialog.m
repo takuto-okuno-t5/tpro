@@ -214,6 +214,22 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.roiX = roiX;
     sharedInst.roiY = roiY;
 
+    % load config 
+    tproConfig = 'etc/tproconfig.csv';
+    sharedInst.ewdRadius = 5;
+    sharedInst.pdbscanRadius = 5;
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'ewdRadius',1};
+        if size(values,1) > 0
+            sharedInst.pdbscanRadius = values(1);
+        end
+        values = tproConfTable{'pdbscanRadius',1};
+        if size(values,1) > 0
+            sharedInst.pdbscanRadius = values(1);
+        end
+    end
+
     % set ROI list box
     listItem = {'all'};
     for i = 1:sharedInst.roiNum
@@ -968,10 +984,21 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
+    % get config value
+    radius = 5;
+    tproConfig = 'etc/tproconfig.csv';
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'ewdRadius',1};
+        if size(values,1) > 0
+            radius = values(1);
+        end
+    end
+
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
-    for mm=10:5:10
+    for mm=radius:5:radius
         r = mm / sharedInst.mmPerPixel;
         result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
 
@@ -1012,10 +1039,21 @@ function Untitled_10_Callback(hObject, eventdata, handles)
 %}
     areaMap = sharedInst.roiMaskImage;
 
+    % get config value
+    radius = 5;
+    tproConfig = 'etc/tproconfig.csv';
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'pdbscanRadius',1};
+        if size(values,1) > 0
+            radius = values(1);
+        end
+    end
+
     % calc local density of pixel density-based scan
     hFig = [];
     lastMax = 0;
-    for mm=10:5:10
+    for mm=radius:5:radius
         % show wait dialog
         hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density-besed scan',...
                     'CreateCancelBtn',...
@@ -1516,7 +1554,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     if strcmp(sharedInst.axesType1,'aggr_pdbscan_result') || sharedInst.showPixelScanOneFrame
         [rr cc] = meshgrid(1:img_w, 1:img_h);
-        r = 10 / sharedInst.mmPerPixel;
+        r = sharedInst.pdbscanRadius / sharedInst.mmPerPixel;
         [map, count] = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
         map(sharedInst.roiMaskImage==0) = 0;
         % to color

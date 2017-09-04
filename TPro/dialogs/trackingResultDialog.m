@@ -158,13 +158,13 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
 
+    tproConfig = 'etc/tproconfig.csv';
     sharedInst.mean_blobmajor = 20;
     sharedInst.mean_blobminor = 10;
     if exist('keep_mean_blobmajor', 'var')
         sharedInst.mean_blobmajor = nanmean(keep_mean_blobmajor);
         sharedInst.mean_blobminor = nanmean(keep_mean_blobminor);
     else
-        tproConfig = 'etc/tproconfig.csv';
         if exist(tproConfig, 'file')
             tproConfTable = readtable(tproConfig,'ReadRowNames',true);
             values = tproConfTable{'meanBlobMajor',1};
@@ -175,6 +175,20 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
             if size(values,1) > 0
                 sharedInst.mean_blobminor = values(1);
             end
+        end
+    end
+
+    sharedInst.ewdRadius = 5;
+    sharedInst.pdbscanRadius = 5;
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'ewdRadius',1};
+        if size(values,1) > 0
+            sharedInst.pdbscanRadius = values(1);
+        end
+        values = tproConfTable{'pdbscanRadius',1};
+        if size(values,1) > 0
+            sharedInst.pdbscanRadius = values(1);
         end
     end
 
@@ -964,22 +978,12 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
-
-    % get config value
-    ewdRadius = 5;
-    tproConfig = 'etc/tproconfig.csv';
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'ewdRadius',1};
-        if size(values,1) > 0
-            ewdRadius = values(1);
-        end
-    end
+    radius = sharedInst.ewdRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
-    for mm=ewdRadius:5:ewdRadius % start and end value is just for debug
+    for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
         [means, results] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
 
@@ -1021,6 +1025,39 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_9 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    areaMap = sharedInst.roiMaskImage;
+    radius = sharedInst.pdbscanRadius;
+
+    % calc local density of pixel density-based scan
+    hFig = [];
+    lastMax = 0;
+    for mm=radius:5:radius
+        % show wait dialog
+        hWaitBar = waitbar(0,'processing ...','Name','calcurate pixel density-besed scan',...
+                    'CreateCancelBtn',...
+                    'setappdata(gcbf,''canceling'',1)');
+        setappdata(hWaitBar,'canceling',0)
+
+        r = mm / sharedInst.mmPerPixel;
+        result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar, areaMap);
+
+        % show in plot
+        if lastMax < max(result)
+            lastMax = max(result);
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+
+        % show aggregation index frequency
+        freq = getCountHistgram(result, 100);
+        barWithNewFigure(handles, freq, max(freq), 0, 1, length(freq));
+    end
+
+    % add result to axes & show in axes
+    cname = 'aggr_pdbscan_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1037,7 +1074,37 @@ function showFrameInAxes(hObject, handles, frameNum)
         img = TProRead(sharedInst.shuttleVideo, frameNum);
         sharedInst.originalImage = img;
     end
+
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    % show detection result
+    if t > size(sharedInst.X,2) || t < 1
+        % show original image
+        cla;
+        if sharedInst.backMode <= 2
+            imshow(img);
+        end
+        return;
+    end
+
+    X = sharedInst.X{t}(:);
+    Y = sharedInst.Y{t}(:);
+    img_h = size(img,1);
+    img_w = size(img,2);
     
+    if strcmp(sharedInst.axesType1,'aggr_pdbscan_result')
+        [rr cc] = meshgrid(1:img_w, 1:img_h);
+        r = sharedInst.pdbscanRadius / sharedInst.mmPerPixel;
+        [map, count] = calcLocalDensityPxScanFrame(Y, X, rr, cc, r, img_h, img_w);
+        map(sharedInst.roiMaskImage==0) = 0;
+        % to color
+        if ismatrix(img)
+            img = cat(3,img,img,img);
+        end
+        redImage = img(:,:,2);
+        redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
+        img(:,:,2) = redImage;
+    end
+
     % show original image
     cla;
     if sharedInst.backMode == 1
@@ -1049,14 +1116,6 @@ function showFrameInAxes(hObject, handles, frameNum)
         rectangle('Position',pos,'FaceColor',[0 0 0]);
     end
 
-    % show detection result
-    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;    
-    if t > size(sharedInst.X,2) || t < 1
-        return;
-    end
-    
-    X = sharedInst.X{t}(:);
-    Y = sharedInst.Y{t}(:);
     angle = sharedInst.keep_data{8};
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
