@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 30-Aug-2017 18:28:15
+    % Last Modified by GUIDE v2.5 06-Sep-2017 17:05:57
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -153,8 +153,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
     set(handles.pushbutton3, 'Enable', 'off')
+    set(handles.pushbutton15, 'Enable', 'off')
     set(handles.popupmenu5, 'Enable', 'off')
     set(handles.edit3, 'Enable', 'on')
+    set(handles.axes5, 'visible', 'off')
     
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
 
@@ -314,6 +316,21 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.isModified
+        selection = questdlg('Do you save tracking data before closing window?',...
+                             'Confirmation',...
+                             'Yes','No','Cancel','Yes');
+        switch selection
+        case 'Cancel'
+            return;
+        case 'Yes'
+            pushbutton15_Callback(handles.pushbutton15, eventdata, handles);
+        case 'No'
+            % nothing todo
+        end
+    end
+
     delete(hObject);
 end
 
@@ -743,6 +760,7 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.pushbutton5, 'Enable', 'off')
     set(handles.popupmenu2, 'Enable', 'off')
     set(handles.pushbutton14, 'Enable', 'off')
+    set(handles.pushbutton15, 'Enable', 'off')
     
     % make output folder
     confPath = sharedInst.confPath;
@@ -786,8 +804,51 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.pushbutton5, 'Enable', 'on')
     set(handles.popupmenu2, 'Enable', 'on')
     set(handles.pushbutton14, 'Enable', 'on')
+    if sharedInst.isModified
+        set(handles.pushbutton15, 'Enable', 'on')
+    else
+        set(handles.pushbutton15, 'Enable', 'off')
+    end
 end
 
+
+% --- Executes on button press in pushbutton15.
+function pushbutton15_Callback(hObject, eventdata, handles)
+    % hObject    handle to pushbutton15 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    keep_data = sharedInst.keep_data;
+    confPath = sharedInst.confPath;
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    roiMasks = sharedInst.roiMasks;
+
+    sharedInst.isModified = false;
+    set(handles.pushbutton15, 'Enable', 'off')
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    disp(['saving tracking result : ' sharedInst.shuttleVideo.name]);
+    tic;
+    
+    % save keep_data
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
+
+    % save data as text
+    flyNum = size(keep_data{1}, 2);
+    end_row = size(keep_data{1}, 1) - 2;
+    img_h = sharedInst.img_h;
+    img_w = sharedInst.img_w;
+    roiNum = length(roiMasks);
+    for i=1:roiNum
+        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+        dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
+    
+        % output text data
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i});
+    end
+    time = toc;
+    disp(['done!     t =' num2str(time) 's']);
+end
 
 % --- Executes on selection change in popupmenu7.
 function popupmenu7_Callback(hObject, eventdata, handles)
@@ -1063,6 +1124,116 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_10_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_10 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    id1 = get(handles.popupmenu5,'Value');
+    selection = questdlg(['Do you remove fly data (id=' num2str(id1) ')?'],...
+                         'Confirmation',...
+                         'Yes','No','No');
+    switch selection
+    case 'Yes'
+        % nothing todo
+    case 'No'
+        return;
+    end
+
+    % remove fly data (id)
+    for i=1:8
+        sharedInst.keep_data{i}(:,id1) = [];
+    end
+
+    % set fly list box
+    flyNum = size(sharedInst.keep_data{1}, 2);
+    listItem = [];
+    for i = 1:flyNum
+        listItem = [listItem;{i}];
+    end
+    set(handles.popupmenu5,'Value', 1);
+    set(handles.popupmenu5,'String',listItem);
+
+    sharedInst.listFly = 1;
+    sharedInst.isModified = true;
+    set(handles.pushbutton15, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_11_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_11 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    id1 = 1;
+    id2 = size(sharedInst.keep_data{1},2);
+    [dlg, id1, id2, startFrame, endFrame] = inputSwapIdsDialog({num2str(id1), num2str(id2), num2str(sharedInst.startFrame), num2str(sharedInst.endFrame)});
+    delete(dlg);
+    if id1 <= 0
+        return;
+    end
+
+    % swap data
+    startRow = startFrame - sharedInst.startFrame + 1;
+    endRow = (endFrame - sharedInst.startFrame) / sharedInst.frameSteps + 1;
+
+    for i=1:8
+        tmp = sharedInst.keep_data{i}(startRow:endRow,id1);
+        sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
+        sharedInst.keep_data{i}(startRow:endRow,id2) = tmp;
+    end
+
+    sharedInst.isModified = true;
+    set(handles.pushbutton15, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_12_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_12 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    id1 = 1;
+    id2 = size(sharedInst.keep_data{1},2);
+    [dlg, id1, id2] = inputMergeIdsDialog({num2str(id1), num2str(id2), num2str(sharedInst.startFrame), num2str(sharedInst.endFrame)});
+    delete(dlg);
+    if id1 <= 0
+        return;
+    end
+
+    % merge data (id2) into (id1), and remove (id2)
+    idx = find(~isnan(sharedInst.keep_data{1}(:,id2)));
+    startRow = idx(1);
+    endRow = idx(end);
+
+    for i=1:8
+        sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
+        sharedInst.keep_data{i}(:,id2) = [];
+    end
+
+    % set fly list box
+    flyNum = size(sharedInst.keep_data{1}, 2);
+    listItem = [];
+    for i = 1:flyNum
+        listItem = [listItem;{i}];
+    end
+    set(handles.popupmenu5,'Value', 1);
+    set(handles.popupmenu5,'String',listItem);
+
+    sharedInst.listFly = 1;
+    sharedInst.isModified = true;
+    set(handles.pushbutton15, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
