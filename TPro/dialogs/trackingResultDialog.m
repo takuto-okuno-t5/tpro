@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 06-Sep-2017 17:05:57
+    % Last Modified by GUIDE v2.5 07-Sep-2017 18:49:29
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1035,6 +1035,54 @@ function Untitled_7_Callback(hObject, eventdata, handles)
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
+% --------------------------------------------------------------------
+function Untitled_13_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_13 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    radius = sharedInst.ewdRadius;
+
+    % calc local density of ewd
+    hFig = [];
+    lastMax = 0;
+    for mm=radius:5:radius % start and end value is just for debug
+        r = mm / sharedInst.mmPerPixel;
+        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, r*2);
+
+        % show in plot
+        if lastMax < max(max(results))
+            lastMax = max(max(results));
+        end
+        hFig = plotAllFlyWithNewFigure(handles, results, lastMax, 0, hFig);
+    end
+
+    % show statistical data
+    flyNum = size(results,2);
+    cells = cell(flyNum,2);
+    for i=1:flyNum
+        cells(i,:) = {i,nanmean(results(:,i))};
+        num = cell2mat(cells(i,2));
+        disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
+    end
+    out = sortrows(cells, 2, 'descend');
+    orderstr = [];
+    for i=1:flyNum
+        orderstr = [orderstr ' ' num2str(cell2mat(out(i,1)))];
+    end
+    disp(['ewd order index =' orderstr]);
+
+    % add result to axes & show in axes
+    cname = 'aggr_dwd_result';
+    addResult2Axes(handles, means, cname, handles.popupmenu8);
+    addResult2Axes(handles, results, [cname '_tracking'], handles.popupmenu8);
+    result = means;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    result = results;
+    save([sharedInst.confPath 'multi/' cname '_tracking.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);end
 
 % --------------------------------------------------------------------
 function Untitled_8_Callback(hObject, eventdata, handles)
@@ -1315,7 +1363,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
 
     hold on;
-    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking')
+    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dwd_result_tracking')
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];

@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 30-Aug-2017 17:55:43
+% Last Modified by GUIDE v2.5 07-Sep-2017 18:39:19
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -976,6 +976,44 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
+% --------------------------------------------------------------------
+function Untitled_22_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_22 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % get config value
+    radius = 5;
+    tproConfig = 'etc/tproconfig.csv';
+    if exist(tproConfig, 'file')
+        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'ewdRadius',1};
+        if size(values,1) > 0
+            radius = values(1);
+        end
+    end
+
+    % calc local density of ewd
+    hFig = [];
+    lastMax = 0;
+    for mm=radius:5:radius
+        r = mm / sharedInst.mmPerPixel;
+        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, r*2);
+
+        % show in plot
+        if lastMax < max(result)
+            lastMax = max(result);
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+    end
+
+    % add result to axes & show in axes
+    cname = 'aggr_dwd_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
 
 % --------------------------------------------------------------------
 function Untitled_9_Callback(hObject, eventdata, handles)
@@ -1679,4 +1717,3 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
-
