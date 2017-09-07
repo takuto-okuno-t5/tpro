@@ -186,7 +186,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
         values = tproConfTable{'ewdRadius',1};
         if size(values,1) > 0
-            sharedInst.pdbscanRadius = values(1);
+            sharedInst.ewdRadius = values(1);
         end
         values = tproConfTable{'pdbscanRadius',1};
         if size(values,1) > 0
