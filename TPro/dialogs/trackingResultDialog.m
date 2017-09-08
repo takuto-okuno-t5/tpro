@@ -180,10 +180,15 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
     end
 
+    sharedInst.exportEwd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'exportEwd',1};
+        if size(values,1) > 0
+            sharedInst.exportEwd = values(1);
+        end
         values = tproConfTable{'ewdRadius',1};
         if size(values,1) > 0
             sharedInst.ewdRadius = values(1);
@@ -843,8 +848,13 @@ function pushbutton15_Callback(hObject, eventdata, handles)
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
     
+        ewdparam = [];
+        if sharedInst.exportEwd
+            ewdparam = [sharedInst.ewdRadius / sharedInst.mmPerPixel];
+        end
+
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i});
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);
@@ -1082,7 +1092,8 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     result = results;
     save([sharedInst.confPath 'multi/' cname '_tracking.mat'], 'result');
-    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);end
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
 
 % --------------------------------------------------------------------
 function Untitled_8_Callback(hObject, eventdata, handles)

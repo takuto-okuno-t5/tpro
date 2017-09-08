@@ -1,8 +1,11 @@
 %% save tracking result files
-function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks)
+function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, ewdparam)
     write_file_cnt = fopen([dataFileName '_count.txt'], 'wt');
     write_file_x = fopen([dataFileName '_x.txt'], 'wt');
     write_file_y = fopen([dataFileName '_y.txt'], 'wt');
+    if ~isempty(ewdparam)
+        write_file_ewd = fopen([dataFileName '_ewd.txt'], 'wt');
+    end
 
     % cook raw data before saving
     end_row = size(X, 2);
@@ -25,9 +28,17 @@ function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks)
         fprintf(write_file_cnt, '%d\n', flyNum);
         fprintf(write_file_x, fmtString, fx);
         fprintf(write_file_y, fmtString, img_h - fy);
+
+        if ~isempty(ewdparam)
+            [ewd, ewdfly] = calcLocalDensityEwdFrame(fy,fx,ewdparam(1));
+            fprintf(write_file_ewd, '%d\n', ewd);
+        end
     end
 
     fclose(write_file_cnt);
     fclose(write_file_x);
     fclose(write_file_y);
+    if ~isempty(ewdparam)
+        fclose(write_file_ewd);
+    end
 end

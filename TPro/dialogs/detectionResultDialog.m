@@ -216,13 +216,18 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load config 
     tproConfig = 'etc/tproconfig.csv';
+    sharedInst.exportEwd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+        values = tproConfTable{'exportEwd',1};
+        if size(values,1) > 0
+            sharedInst.exportEwd = values(1);
+        end
         values = tproConfTable{'ewdRadius',1};
         if size(values,1) > 0
-            sharedInst.pdbscanRadius = values(1);
+            sharedInst.ewdRadius = values(1);
         end
         values = tproConfTable{'pdbscanRadius',1};
         if size(values,1) > 0
@@ -866,7 +871,11 @@ function pushbutton6_Callback(hObject, eventdata, handles)
         outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
         
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks);
+        ewdparam = [];
+        if sharedInst.exportEwd
+            ewdparam = [sharedInst.ewdRadius / sharedInst.mmPerPixel];
+        end
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, ewdparam);
     end
     sharedInst.isModified = false;
     set(handles.pushbutton6, 'Enable', 'off');

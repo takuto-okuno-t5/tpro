@@ -1,5 +1,5 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, ewdparam)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
@@ -12,6 +12,9 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % bodyline 2017-03-17
 %    write_file_dis = fopen([dataFileName '_dis.txt'],'wt');
 %    write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
+    if ~isempty(ewdparam)
+        write_file_ewd = fopen([dataFileName '_ewd.txt'], 'wt');
+    end
 
     % cook raw data before saving
     for row_count = 1:end_row
@@ -115,6 +118,16 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %                 dir_vxy = atan2d(vy,vx);
 %                 angle_for_svxy = dir_vxy-angle_v1;
 %                 fprintf(write_file_svxy, fmtString, vxy.*sind(angle_for_svxy));
+
+        if ~isempty(ewdparam)
+            % calc ewd
+            [ewd, ewdfly] = calcLocalDensityEwdFrame(fy,fx,ewdparam(1));
+
+            % make save string
+            roiFlyNum = length(ewdfly);
+            fmtString = generatePrintFormatDString(roiFlyNum);
+            fprintf(write_file_ewd, fmtString, ewdfly);
+        end
     end
 
     fclose(write_file_x);
@@ -129,4 +142,7 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     fclose(write_file_angle);
 %    fclose(write_file_dis);
 %    fclose(write_file_svxy);
+    if ~isempty(ewdparam)
+        fclose(write_file_ewd);
+    end
 end

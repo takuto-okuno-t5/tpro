@@ -102,6 +102,11 @@ while true
             handles.autotracking = 1;
         case {'-f','--finish'}
             handles.autofinish = 1;
+        case {'--showcount'}
+            handles.showcount = str2num(varargin{i+1});
+            i = i + 1;
+        case {'--ewd'}
+            handles.autoewd = 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
             disp('  -b, --batch file    batch csv [file]');
@@ -112,6 +117,8 @@ while true
             disp('  -d, --detect        force to start detection');
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
+            disp('  --ewd               force to start ewd calculation');
+            disp('  --showcount 0|1     show detection result [0:off, 1:on]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
         otherwise
@@ -332,6 +339,9 @@ if handles.autodetect
 end
 if handles.autotracking
     pushbutton5_Callback(handles.pushbutton5, eventdata, handles)
+end
+if handles.autoewd
+    cmdCalcEwdAndExportResult(handles)
 end
 if handles.autofinish
     delete(hObject);
@@ -692,6 +702,21 @@ for i = 1:videoFileNum
     records = [records; C];
 end
 
+tproConfig = 'etc/tproconfig.csv';
+exportEwd = 0;
+ewdRadius = 5;
+if exist(tproConfig, 'file')
+    tproConfTable = readtable(tproConfig,'ReadRowNames',true);
+    values = tproConfTable{'ewdRadius',1};
+    if size(values,1) > 0
+        ewdRadius = values(1);
+    end
+    values = tproConfTable{'exportEwd',1};
+    if size(values,1) > 0
+        exportEwd = values(1);
+    end
+end
+
 % show start text
 set(handles.text14, 'String','detection ...')
 set(handles.text9, 'String','Running','BackgroundColor','red');
@@ -734,6 +759,7 @@ for data_th = 1:size(records,1)
     blobSeparateRate = records{data_th, 17};
     roiNum = records{data_th, 10};
     isInvert = records{data_th, 12};
+    mmPerPixel = records{data_th, 9};
     % check compatibility
     if size(records,2) < 18
         filterType = 'log';
@@ -1125,13 +1151,19 @@ for data_th = 1:size(records,1)
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath shuttleVideo.name '_' filename];
         
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks);
+        ewdparam = [];
+        if exportEwd
+            ewdparam = [ewdRadius / mmPerPixel];
+        end
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, ewdparam);
         
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);
-        countFileName = [dataFileName '_count.txt'];
-        disp(['winopen : ' countFileName]);
-        winopen(countFileName);
+        if ~isfield(handles, 'showcount') || handles.showcount
+            countFileName = [dataFileName '_count.txt'];
+            disp(['winopen : ' countFileName]);
+            winopen(countFileName);
+        end
     end
 
     set(handles.text9, 'String','100 %'); % done!
@@ -1209,6 +1241,9 @@ RECURSION_LIMIT = 500; % maxmum number of recursion limit
 IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
+exportEwd = 0;
+ewdRadius = 5;
+
 tproConfig = 'etc/tproconfig.csv';
 if exist(tproConfig, 'file')
     tproConfTable = readtable(tproConfig,'ReadRowNames',true);
@@ -1219,6 +1254,14 @@ if exist(tproConfig, 'file')
     values = tproConfTable{'recursionLimit',1};
     if size(values,1) > 0
         RECURSION_LIMIT = values(1);
+    end
+    values = tproConfTable{'exportEwd',1};
+    if size(values,1) > 0
+        exportEwd = values(1);
+    end
+    values = tproConfTable{'ewdRadius',1};
+    if size(values,1) > 0
+        ewdRadius = values(1);
     end
 end
 
@@ -1252,6 +1295,7 @@ for data_th = 1:size(records,1)
     end_frame = records{data_th, 5};
     frame_steps = records{data_th, 16};
     roiNum = records{data_th, 10};
+    mmPerPixel = records{data_th, 9};
     if size(records,2) < 23
         fixedTrackNum = 0;
         fixedTrackDir = 0;
@@ -1750,8 +1794,13 @@ for data_th = 1:size(records,1)
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
     
+        ewdparam = [];
+        if exportEwd
+            ewdparam = [ewdRadius / mmPerPixel];
+        end
+
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i});
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam);
 
         % save input data used for generating this result
         record = {records{data_th,:}};
@@ -1759,7 +1808,7 @@ for data_th = 1:size(records,1)
         T.Properties.VariableNames = confTable.Properties.VariableNames;
         writetable(T, [dataFileName '_config.csv']);
     end
-    
+
     % show tracking result
     dlg = trackingResultDialog({num2str(data_th)});
     pause(3); % pause 3 sec
