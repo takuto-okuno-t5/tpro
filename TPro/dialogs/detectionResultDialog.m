@@ -997,9 +997,13 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     tproConfig = 'etc/tproconfig.csv';
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'ewdRadius',1};
+        values = tproConfTable{'dwdRadius',1};
         if size(values,1) > 0
             radius = values(1);
+        end
+        values = tproConfTable{'dwdBodyRadius',1};
+        if size(values,1) > 0
+            bodyRadius = values(1);
         end
     end
 
@@ -1008,7 +1012,8 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     lastMax = 0;
     for mm=radius:5:radius
         r = mm / sharedInst.mmPerPixel;
-        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, r*2);
+        r2 = bodyRadius / sharedInst.mmPerPixel;
+        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, r2);
 
         % show in plot
         if lastMax < max(result)

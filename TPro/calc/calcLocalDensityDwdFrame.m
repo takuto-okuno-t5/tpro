@@ -1,11 +1,12 @@
 % ----- calculate local density (frame) -----
-function [result, dwd] = calcLocalDensityDwdFrame(x, y, r, inverseSlope)
+function [result, dwd] = calcLocalDensityDwdFrame(x, y, r, bodyR)
     xlen = length(x);
     dwd = zeros(xlen,1);
     dwd(:) = NaN;
 
     r2 = r*r;
     rev_pI_r = 1 / (pi * r2);
+    slope = -1 / (r - bodyR);
     % calc local_dencity
     for i=1:xlen
         local_dencity = 0;
@@ -16,8 +17,10 @@ function [result, dwd] = calcLocalDensityDwdFrame(x, y, r, inverseSlope)
                 if i~=j && ~isnan(x(j))
                     dx = x(i) - x(j);
                     dy = y(i) - y(j);
-                    fr = 1 - sqrt(dx*dx + dy*dy) / inverseSlope;
+                    distance = sqrt(dx*dx + dy*dy) - bodyR;
+                    fr = 1 + distance * slope;
                     if fr < 0, fr = 0; end
+                    if fr > 1, fr = 1; end
                     local_dencity = local_dencity + fr;
                 end
             end

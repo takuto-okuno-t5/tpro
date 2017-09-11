@@ -6,3 +6,5 @@ meanBlobMinor,12
 ewdRadius,5
 pdbscanRadius,5
 exportEwd,1
+dwdRadius,10
+dwdBodyRadius,1.5
