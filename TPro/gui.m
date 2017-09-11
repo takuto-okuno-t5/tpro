@@ -453,6 +453,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -642,6 +643,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -699,6 +701,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -1056,6 +1059,8 @@ for data_th = 1:size(records,1)
         keep_ecc_sorted{i} = blobEcc';
         keep_angle_sorted{i} = keep_angle;
         keep_areas{i} = blobAreas';
+        keep_major_axis{i} = blobMajorAxis';
+        keep_minor_axis{i} = blobMinorAxis';
 
         if extrema_enable
             if size(imax,1) == size(X_update{i},1)
@@ -1143,7 +1148,7 @@ for data_th = 1:size(records,1)
     end
 
     % save data
-    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas', 'keep_major_axis', 'keep_minor_axis');
     save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
 
     % save data as text
@@ -1156,7 +1161,8 @@ for data_th = 1:size(records,1)
             ewdparam = [ewdRadius / mmPerPixel];
         end
         saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, ewdparam);
-        
+        %saveDetectionEccAxesResultText(dataFileName, X, Y, i, img_h, roiMasks, keep_ecc_sorted, keep_major_axis, keep_minor_axis);
+
         % open text file with notepad (only windows)
         % system(['start notepad ' countFileName]);
         if ~isfield(handles, 'showcount') || handles.showcount
@@ -1204,6 +1210,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -1954,6 +1961,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -2061,6 +2069,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -2099,6 +2108,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
@@ -2137,6 +2147,7 @@ for i = 1:videoFileNum
 
     confTable = readtable(confFileName);
     C = table2cell(confTable);
+    C = checkConfigCompatibility(C);
     records = [records; C];
 end
 
