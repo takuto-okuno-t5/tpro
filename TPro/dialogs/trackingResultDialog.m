@@ -160,6 +160,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
 
+    % load mat or config 
     tproConfig = 'etc/tproconfig.csv';
     sharedInst.mean_blobmajor = 20;
     sharedInst.mean_blobminor = 10;
@@ -180,9 +181,12 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
     end
 
+    % load config 
     sharedInst.exportEwd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
+    sharedInst.dwdRadius = 10;
+    sharedInst.adjacentRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
         values = tproConfTable{'exportEwd',1};
@@ -196,6 +200,14 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         values = tproConfTable{'pdbscanRadius',1};
         if size(values,1) > 0
             sharedInst.pdbscanRadius = values(1);
+        end
+        values = tproConfTable{'dwdRadius',1};
+        if size(values,1) > 0
+            sharedInst.dwdRadius = values(1);
+        end
+        values = tproConfTable{'dwdBodyRadius',1};
+        if size(values,1) > 0
+            sharedInst.adjacentRadius = values(1);
         end
     end
 
@@ -278,7 +290,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
-        'aggr_ewd_result_tracking'};
+        'aggr_ewd_result_tracking', 'aggr_dwd_result', 'aggr_dwd_result_tracking'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1053,14 +1065,16 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
-    radius = sharedInst.ewdRadius;
+    radius = sharedInst.dwdRadius;
+    adjacentRadius = sharedInst.adjacentRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
-        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, r*2);
+        ar = adjacentRadius / sharedInst.mmPerPixel;
+        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, ar);
 
         % show in plot
         if lastMax < max(max(results))

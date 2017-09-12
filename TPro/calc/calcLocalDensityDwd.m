@@ -1,5 +1,5 @@
 % calculate local density (DWD)
-function result = calcLocalDensityDwd(X, Y, roiMask, r, bodyR)
+function result = calcLocalDensityDwd(X, Y, roiMask, r, adjacentR)
     xsize = length(X);
     result = zeros(length(xsize),1);
     tic;
@@ -10,7 +10,7 @@ function result = calcLocalDensityDwd(X, Y, roiMask, r, bodyR)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        [result(row_count), dwdfly] = calcLocalDensityDwdFrame(fy,fx,r,bodyR);
+        [result(row_count), dwdfly] = calcLocalDensityDwdFrame(fy,fx,r,adjacentR);
     end
     time = toc;
     disp(['calcLocalDensityDwd ... done : ' num2str(time) 's']);

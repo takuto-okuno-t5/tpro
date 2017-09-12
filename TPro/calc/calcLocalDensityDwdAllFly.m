@@ -1,5 +1,5 @@
 % calculate local density (DWD)
-function [means, result] = calcLocalDensityDwdAllFly(X, Y, roiMask, r, bodyR)
+function [means, result] = calcLocalDensityDwdAllFly(X, Y, roiMask, r, adjacentR)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
     
@@ -13,7 +13,7 @@ function [means, result] = calcLocalDensityDwdAllFly(X, Y, roiMask, r, bodyR)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        [means(i), result(i,:)] = calcLocalDensityDwdFrame(fy,fx,r,bodyR);
+        [means(i), result(i,:)] = calcLocalDensityDwdFrame(fy,fx,r,adjacentR);
     end
     time = toc;
     disp(['calcLocalDensityDwdAllFly ... done : ' num2str(time) 's']);

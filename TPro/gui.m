@@ -74,6 +74,7 @@ handles.autobackground = 0;
 handles.autodetect = 0;
 handles.autotracking = 0;
 handles.autofinish = 0;
+handles.autoewd = 0;
 
 % load command line input
 i = 1;
