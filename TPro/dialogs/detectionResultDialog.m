@@ -220,7 +220,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
     sharedInst.dwdRadius = 10;
-    sharedInst.adjacentRadius = 2.5;
+    sharedInst.cnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
         values = tproConfTable{'exportEwd',1};
@@ -241,7 +241,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         values = tproConfTable{'dwdBodyRadius',1};
         if size(values,1) > 0
-            sharedInst.adjacentRadius = values(1);
+            sharedInst.cnRadius = values(1);
         end
     end
 
@@ -1004,15 +1004,15 @@ function Untitled_22_Callback(hObject, eventdata, handles)
 
     % get config value
     radius = sharedInst.dwdRadius;
-    adjacentRadius = sharedInst.adjacentRadius;
+    cnRadius = sharedInst.cnRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius
         r = mm / sharedInst.mmPerPixel;
-        ar = adjacentRadius / sharedInst.mmPerPixel;
-        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, ar);
+        cnr = cnRadius / sharedInst.mmPerPixel;
+        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
         if lastMax < max(result)

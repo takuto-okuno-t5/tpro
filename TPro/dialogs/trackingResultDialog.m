@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 07-Sep-2017 18:49:29
+    % Last Modified by GUIDE v2.5 13-Sep-2017 18:38:23
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -186,7 +186,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
     sharedInst.dwdRadius = 10;
-    sharedInst.adjacentRadius = 2.5;
+    sharedInst.cnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
         values = tproConfTable{'exportEwd',1};
@@ -207,7 +207,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         values = tproConfTable{'dwdBodyRadius',1};
         if size(values,1) > 0
-            sharedInst.adjacentRadius = values(1);
+            sharedInst.cnRadius = values(1);
         end
     end
 
@@ -1066,15 +1066,15 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
     radius = sharedInst.dwdRadius;
-    adjacentRadius = sharedInst.adjacentRadius;
+    cnRadius = sharedInst.cnRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
-        ar = adjacentRadius / sharedInst.mmPerPixel;
-        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, ar);
+        cnr = cnRadius / sharedInst.mmPerPixel;
+        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
         if lastMax < max(max(results))
@@ -1106,6 +1106,44 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     result = results;
     save([sharedInst.confPath 'multi/' cname '_tracking.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_14_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_14 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    multiR = 2.5:0.5:10;
+    cnRadius = sharedInst.cnRadius;
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+
+    % calc local density of ewd
+    hFig = [];
+    lastMax = 0;
+    multiR = multiR / sharedInst.mmPerPixel;
+    cnR = cnRadius / sharedInst.mmPerPixel;
+    results = calcLocalDensityDwdAllFlyMultiR(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, multiR, cnR);
+
+    % show in plot
+    lastMax = 0;
+    flyNum = size(results,2);
+    for i = 1:flyNum
+        result = squeeze(results(t,i,:));
+        if lastMax < max(result)
+            lastMax = max(result);
+        end
+        hFig = plotWithNewFigure(handles, result, lastMax, 0, hFig);
+    end
+
+    % add result to axes & show in axes
+    cname = 'aggr_dwd_result_mr';
+    addResult2Axes(handles, results, cname, handles.popupmenu8);
+    result = results;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
@@ -1309,6 +1347,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1388,25 +1427,39 @@ function showFrameInAxes(hObject, handles, frameNum)
     C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
 
     hold on;
-    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dwd_result_tracking')
+    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dwd_result_tracking') || ...
+       strcmp(sharedInst.axesType1,'aggr_dwd_result_mr')
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
         % get ewd result all fly
         data = getappdata(handles.figure1, sharedInst.axesType1);
-        ewdmin = min(min(data));
-        ewdmax = max(max(data));
+        if size(data,3) == 1
+            ewdmin = min(min(data));
+            ewdmax = max(max(data));
+        else
+            mrIdx = 11;
+            ewdmin = min(min(data(:,:,mrIdx)));
+            ewdmax = max(max(data(:,:,mrIdx)));
+        end
         fy = Q_loc_estimateY(t,:);
         fx = Q_loc_estimateX(t,:);
         for i=1:length(fx)
-            if ~isnan(fy(i)) && ~isnan(fx(i)) && ~isnan(data(t,i))
-                idx = floor((data(t,i) - ewdmin) / (ewdmax - ewdmin) * 100 * 1.5);
-                if idx <= 0, idx = 1; end
-                if idx > size(sharedInst.ewdColors,1), idx = size(sharedInst.ewdColors,1); end
-                col = sharedInst.ewdColors(idx,:);
-                g = hgtransform();
-                r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
-                g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-angle(t,i)/180*pi);
+            if ~isnan(fy(i)) && ~isnan(fx(i))
+                if size(data,3) == 1
+                    score = data(t,i);
+                else
+                    score = data(t,i,mrIdx);
+                end
+                if ~isnan(score)
+                    idx = floor((score - ewdmin) / (ewdmax - ewdmin) * 100 * 1.5);
+                    if idx <= 0, idx = 1; end
+                    if idx > size(sharedInst.ewdColors,1), idx = size(sharedInst.ewdColors,1); end
+                    col = sharedInst.ewdColors(idx,:);
+                    g = hgtransform();
+                    r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
+                    g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-angle(t,i)/180*pi);
+                end
             end
         end
     elseif sharedInst.showDetectResult

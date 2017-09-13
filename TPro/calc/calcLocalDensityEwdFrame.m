@@ -13,7 +13,7 @@ function [result, ewd] = calcLocalDensityEwdFrame(x, y, r)
             ewd(i) = NaN;
         else
             for j=1:xlen
-                if i~=j && ~isnan(x(j))
+                if ~isnan(x(j))
                     dx = x(i) - x(j);
                     dy = y(i) - y(j);
                     fr = exp(-(dx*dx + dy*dy)/r2);
