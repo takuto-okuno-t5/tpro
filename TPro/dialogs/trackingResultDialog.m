@@ -182,17 +182,17 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % load config 
-    sharedInst.exportEwd = 0;
+    sharedInst.exportDcd = 0;
     sharedInst.exportMd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
-    sharedInst.dcdRadius = 10;
-    sharedInst.cnRadius = 2.5;
+    sharedInst.dcdRadius = 7.5;
+    sharedInst.dcdCnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'exportEwd',1};
+        values = tproConfTable{'exportDcd',1};
         if size(values,1) > 0
-            sharedInst.exportEwd = values(1);
+            sharedInst.exportDcd = values(1);
         end
         values = tproConfTable{'exportMinDistance',1};
         if size(values,1) > 0
@@ -210,9 +210,9 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         if size(values,1) > 0
             sharedInst.dcdRadius = values(1);
         end
-        values = tproConfTable{'dcdBodyRadius',1};
+        values = tproConfTable{'dcdCnRadius',1};
         if size(values,1) > 0
-            sharedInst.cnRadius = values(1);
+            sharedInst.dcdCnRadius = values(1);
         end
     end
 
@@ -866,16 +866,16 @@ function pushbutton15_Callback(hObject, eventdata, handles)
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
     
         mdparam = [];
-        ewdparam = [];
-        if sharedInst.exportEwd
-            ewdparam = [sharedInst.ewdRadius / sharedInst.mmPerPixel];
+        dcdparam = [];
+        if sharedInst.exportDcd
+            dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
         end
         if sharedInst.exportMd
             mdparam = [sharedInst.mmPerPixel];
         end
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam, mdparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);
@@ -1075,14 +1075,14 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
     radius = sharedInst.dcdRadius;
-    cnRadius = sharedInst.cnRadius;
+    dcdCnRadius = sharedInst.dcdCnRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
-        cnr = cnRadius / sharedInst.mmPerPixel;
+        cnr = dcdCnRadius / sharedInst.mmPerPixel;
         [means, results] = calcLocalDensityDcdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
@@ -1107,7 +1107,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     for i=1:flyNum
         orderstr = [orderstr ' ' num2str(cell2mat(out(i,1)))];
     end
-    disp(['ewd order index =' orderstr]);
+    disp(['dcd order index =' orderstr]);
 
     % add result to axes & show in axes
     cname = 'aggr_dcd_result';
@@ -1129,14 +1129,14 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
     multiR = 2.5:0.5:10;
-    cnRadius = sharedInst.cnRadius;
+    dcdCnRadius = sharedInst.dcdCnRadius;
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     multiR = multiR / sharedInst.mmPerPixel;
-    cnR = cnRadius / sharedInst.mmPerPixel;
+    cnR = dcdCnRadius / sharedInst.mmPerPixel;
     results = calcLocalDensityDcdAllFlyMultiR(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, multiR, cnR);
 
     % show in plot

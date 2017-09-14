@@ -1,6 +1,6 @@
-%% save tracking ewd result files
-function saveTrackingEwdResultText(dataFileName, keep_data, img_h, img_w, roiMask, r)
-    write_file_ewd = fopen([dataFileName '_ewd.txt'],'wt');
+%% save tracking dcd result files
+function saveTrackingDcdResultText(dataFileName, keep_data, img_h, img_w, roiMask, r, cnr)
+    write_file_dcd = fopen([dataFileName '_dcd.txt'],'wt');
 
     % cook raw data before saving
     end_row = size(keep_data{2}, 1) - 2;
@@ -18,15 +18,15 @@ function saveTrackingEwdResultText(dataFileName, keep_data, img_h, img_w, roiMas
         if ~isempty(nanIdx)
             fx(nanIdx) = NaN; fy(nanIdx) = NaN;
         end
-        % calc ewd
-        [ewd, ewdfly] = calcLocalDensityEwdFrame(fy,fx,r);
+        % calc dcd
+        [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,r,cnr);
 
         % make save string
-        roiFlyNum = length(ewdfly);
+        roiFlyNum = length(dcdfly);
         fmtString = generatePrintFormatDString(roiFlyNum);
         
-        fprintf(write_file_ewd, fmtString, ewdfly);
+        fprintf(write_file_dcd, fmtString, dcdfly);
     end
 
-    fclose(write_file_ewd);
+    fclose(write_file_dcd);
 end

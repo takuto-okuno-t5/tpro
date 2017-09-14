@@ -216,16 +216,16 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load config 
     tproConfig = 'etc/tproconfig.csv';
-    sharedInst.exportEwd = 0;
+    sharedInst.exportDcd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
-    sharedInst.dcdRadius = 10;
-    sharedInst.cnRadius = 2.5;
+    sharedInst.dcdRadius = 7.5;
+    sharedInst.dcdCnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'exportEwd',1};
+        values = tproConfTable{'exportDcd',1};
         if size(values,1) > 0
-            sharedInst.exportEwd = values(1);
+            sharedInst.exportDcd = values(1);
         end
         values = tproConfTable{'ewdRadius',1};
         if size(values,1) > 0
@@ -239,9 +239,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         if size(values,1) > 0
             sharedInst.dcdRadius = values(1);
         end
-        values = tproConfTable{'dcdBodyRadius',1};
+        values = tproConfTable{'dcdCnRadius',1};
         if size(values,1) > 0
-            sharedInst.cnRadius = values(1);
+            sharedInst.dcdCnRadius = values(1);
         end
     end
 
@@ -881,11 +881,11 @@ function pushbutton6_Callback(hObject, eventdata, handles)
         outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
         
-        ewdparam = [];
-        if sharedInst.exportEwd
-            ewdparam = [sharedInst.ewdRadius / sharedInst.mmPerPixel];
+        dcdparam = [];
+        if sharedInst.exportDcd
+            dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
         end
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, ewdparam);
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, dcdparam);
     end
     sharedInst.isModified = false;
     set(handles.pushbutton6, 'Enable', 'off');
@@ -1004,14 +1004,14 @@ function Untitled_22_Callback(hObject, eventdata, handles)
 
     % get config value
     radius = sharedInst.dcdRadius;
-    cnRadius = sharedInst.cnRadius;
+    dcdCnRadius = sharedInst.dcdCnRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius
         r = mm / sharedInst.mmPerPixel;
-        cnr = cnRadius / sharedInst.mmPerPixel;
+        cnr = dcdCnRadius / sharedInst.mmPerPixel;
         result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
@@ -1036,15 +1036,7 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % get config value
-    radius = 5;
-    tproConfig = 'etc/tproconfig.csv';
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'ewdRadius',1};
-        if size(values,1) > 0
-            radius = values(1);
-        end
-    end
+    radius = sharedInst.ewdRadius;
 
     % calc local density of ewd
     hFig = [];

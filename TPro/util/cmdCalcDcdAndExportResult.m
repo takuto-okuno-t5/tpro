@@ -1,5 +1,5 @@
 %%
-function cmdCalcEwdAndExportResult(handles)
+function cmdCalcDcdAndExportResult(handles)
     inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
@@ -10,13 +10,18 @@ function cmdCalcEwdAndExportResult(handles)
     videoFiles = vl.videoFiles;
 
     % read tpro configuration
-    radius = 5;
+    dcdRadius = 7.5;
+    dcdCnRadius = 2.5;
     tproConfig = 'etc/tproconfig.csv';
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'ewdRadius',1};
+        values = tproConfTable{'dcdRadius',1};
         if size(values,1) > 0
-            radius = values(1);
+            dcdRadius = values(1);
+        end
+        values = tproConfTable{'dcdCnRadius',1};
+        if size(values,1) > 0
+            dcdCnRadius = values(1);
         end
     end
 
@@ -43,7 +48,8 @@ function cmdCalcEwdAndExportResult(handles)
         name = records{data_th, 2};
         roiNum = records{data_th, 10};
         mmPerPixel = records{data_th, 9};
-        r = radius / mmPerPixel;
+        r = dcdRadius / mmPerPixel;
+        cnr = dcdCnRadius / mmPerPixel;
 
         % get path of output folder
         confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -87,11 +93,11 @@ function cmdCalcEwdAndExportResult(handles)
         for i=1:roiNum
             outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
             dataFileName = [outputPath name '_' filename];
-            saveDetectionEwdResultText(dataFileName, keep_data{1}, keep_data{2}, i, roiMasks, r);
+            saveDetectionDcdResultText(dataFileName, keep_data{1}, keep_data{2}, i, roiMasks, r, cnr);
 
             outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
             dataFileName = [outputPath name '_' filename];
-            saveTrackingEwdResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, r);
+            saveTrackingDcdResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, r, cnr);
         end
     end
 end

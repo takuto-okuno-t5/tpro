@@ -1,5 +1,5 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, ewdparam, mdparam)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
@@ -12,8 +12,8 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % bodyline 2017-03-17
 %    write_file_dis = fopen([dataFileName '_dis.txt'],'wt');
 %    write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
-    if ~isempty(ewdparam)
-        write_file_ewd = fopen([dataFileName '_ewd.txt'], 'wt');
+    if ~isempty(dcdparam)
+        write_file_dcd = fopen([dataFileName '_dcd.txt'], 'wt');
     end
     if ~isempty(mdparam)
         write_file_md = fopen([dataFileName '_md.txt'], 'wt');
@@ -122,14 +122,14 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %                 angle_for_svxy = dir_vxy-angle_v1;
 %                 fprintf(write_file_svxy, fmtString, vxy.*sind(angle_for_svxy));
 
-        if ~isempty(ewdparam)
-            % calc ewd
-            [ewd, ewdfly] = calcLocalDensityEwdFrame(fy,fx,ewdparam(1));
+        if ~isempty(dcdparam)
+            % calc dcd
+            [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,dcdparam(1),dcdparam(2));
 
             % make save string
-            roiFlyNum = length(ewdfly);
+            roiFlyNum = length(dcdfly);
             fmtString = generatePrintFormatDString(roiFlyNum);
-            fprintf(write_file_ewd, fmtString, ewdfly);
+            fprintf(write_file_dcd, fmtString, dcdfly);
         end
         if ~isempty(mdparam)
             % calc min distances
@@ -155,8 +155,8 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     fclose(write_file_angle);
 %    fclose(write_file_dis);
 %    fclose(write_file_svxy);
-    if ~isempty(ewdparam)
-        fclose(write_file_ewd);
+    if ~isempty(dcdparam)
+        fclose(write_file_dcd);
     end
     if ~isempty(mdparam)
         fclose(write_file_md);

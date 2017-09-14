@@ -1,6 +1,6 @@
-%% save detection ewd result files
-function saveDetectionEwdResultText(dataFileName, X, Y, i, roiMasks, r)
-    write_file_ewd = fopen([dataFileName '_ewd.txt'], 'wt');
+%% save detection dcd result files
+function saveDetectionDcdResultText(dataFileName, X, Y, i, roiMasks, r, cnr)
+    write_file_dcd = fopen([dataFileName '_dcd.txt'], 'wt');
 
     % cook raw data before saving
     end_row = size(X, 1) - 2;
@@ -17,9 +17,9 @@ function saveDetectionEwdResultText(dataFileName, X, Y, i, roiMasks, r)
             end
         end
 
-        [ewd, ewdfly] = calcLocalDensityEwdFrame(fy,fx,r);
-        % export ewd
-        fprintf(write_file_ewd, '%d\n', ewd);
+        [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,r,cnr);
+        % export dcd
+        fprintf(write_file_dcd, '%d\n', dcd);
     end
-    fclose(write_file_ewd);
+    fclose(write_file_dcd);
 end
