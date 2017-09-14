@@ -1091,7 +1091,9 @@ function Untitled_13_Callback(hObject, eventdata, handles)
         num = cell2mat(cells(i,2));
         disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
     end
-    out = sortrows(cells, 2, 'descend');
+    tbl = cell2table(cells)
+    outtbl = sortrows(tbl, 2, 'descend');
+    out = table2cell(outtbl);
     orderstr = [];
     for i=1:flyNum
         orderstr = [orderstr ' ' num2str(cell2mat(out(i,1)))];
@@ -1179,7 +1181,9 @@ function Untitled_8_Callback(hObject, eventdata, handles)
         num = cell2mat(cells(i,2));
         disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
     end
-    out = sortrows(cells, 2, 'descend');
+    tbl = cell2table(cells)
+    outtbl = sortrows(tbl, 2, 'descend');
+    out = table2cell(outtbl);
     orderstr = [];
     for i=1:flyNum
         orderstr = [orderstr ' ' num2str(cell2mat(out(i,1)))];

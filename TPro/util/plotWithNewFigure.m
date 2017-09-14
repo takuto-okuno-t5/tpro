@@ -1,13 +1,16 @@
 %%
-function retFigure = plotWithNewFigure(handles, yval, ymax, ymin, hFigure)
+function retFigure = plotWithNewFigure(handles, yval, ymax, ymin, hFigure, lineWidth)
     if isempty(hFigure)
         retFigure = figure();
     else
         figure(hFigure);
         retFigure = hFigure;
     end
+    if ~exist('lineWidth', 'var')
+        lineWidth = 0.5;
+    end
     hold on;
-    plot(1:length(yval), yval);
+    plot(1:length(yval), yval, 'LineWidth',lineWidth);
     xlim([1 length(yval)]);
     ylim([ymin ymax]);
     hold off;

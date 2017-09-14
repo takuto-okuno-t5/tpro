@@ -18,6 +18,10 @@ function showLongAxesMulti(hObject, handles, type, roi, flyId)
         flyNum = 0;
     else
         if exist('flyId','var') && ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+            if size(data,3) > 1
+                mrIdx = 11;
+                data = squeeze(data(:,:,mrIdx));
+            end
             yval = data(:,flyId);
             flyNum = size(data,2);
             frameNum = size(data,1);
