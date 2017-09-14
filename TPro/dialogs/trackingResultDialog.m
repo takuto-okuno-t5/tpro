@@ -183,6 +183,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load config 
     sharedInst.exportEwd = 0;
+    sharedInst.exportMd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
     sharedInst.dwdRadius = 10;
@@ -192,6 +193,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         values = tproConfTable{'exportEwd',1};
         if size(values,1) > 0
             sharedInst.exportEwd = values(1);
+        end
+        values = tproConfTable{'exportMinDistance',1};
+        if size(values,1) > 0
+            sharedInst.exportMd = values(1);
         end
         values = tproConfTable{'ewdRadius',1};
         if size(values,1) > 0
@@ -860,13 +865,17 @@ function pushbutton15_Callback(hObject, eventdata, handles)
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
     
+        mdparam = [];
         ewdparam = [];
         if sharedInst.exportEwd
             ewdparam = [sharedInst.ewdRadius / sharedInst.mmPerPixel];
         end
+        if sharedInst.exportMd
+            mdparam = [sharedInst.mmPerPixel];
+        end
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam, mdparam);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);

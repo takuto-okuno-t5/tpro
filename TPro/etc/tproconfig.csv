@@ -8,3 +8,4 @@ pdbscanRadius,5
 exportEwd,1
 dwdRadius,7.5
 dwdBodyRadius,2.5
+exportMinDistance,1

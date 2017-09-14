@@ -1,8 +1,8 @@
 % ----- calculate local density (frame) -----
 function result = calcLocalDensityMdFrame(x, y)
     xlen = length(x);
-    ewd = zeros(xlen,1);
-    ewd(:) = NaN;
+    mds = zeros(xlen,1);
+    mds(:) = NaN;
 
     % calc local_dencity
     pts = [x, y];
@@ -11,11 +11,11 @@ function result = calcLocalDensityMdFrame(x, y)
     dist1(dist1==0) = 9999; %dummy
     for i=1:xlen
         if isnan(x(i))
-            ewd(i) = NaN;
+            mds(i) = NaN;
         else
-            [md,i] = min(dist1(i,:));
-            ewd(i) = 1 / md;
+            [md,k] = min(dist1(i,:));
+            mds(i) = 1 / md;
         end
     end
-    result = nanmean(ewd);
+    result = nanmean(mds);
 end

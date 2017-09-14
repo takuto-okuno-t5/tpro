@@ -1,5 +1,5 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, ewdparam)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, ewdparam, mdparam)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
@@ -14,6 +14,9 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %    write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
     if ~isempty(ewdparam)
         write_file_ewd = fopen([dataFileName '_ewd.txt'], 'wt');
+    end
+    if ~isempty(mdparam)
+        write_file_md = fopen([dataFileName '_md.txt'], 'wt');
     end
 
     % cook raw data before saving
@@ -128,6 +131,16 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             fmtString = generatePrintFormatDString(roiFlyNum);
             fprintf(write_file_ewd, fmtString, ewdfly);
         end
+        if ~isempty(mdparam)
+            % calc min distances
+            [mdfly, mdidx] = calcMinDistanceFrame(fy',fx');
+            mdfly = mdfly * mdparam(1);
+
+            % make save string
+            roiFlyNum = length(mdfly);
+            fmtString = generatePrintFormatString(roiFlyNum);
+            fprintf(write_file_md, fmtString, mdfly);
+        end
     end
 
     fclose(write_file_x);
@@ -144,5 +157,8 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %    fclose(write_file_svxy);
     if ~isempty(ewdparam)
         fclose(write_file_ewd);
+    end
+    if ~isempty(mdparam)
+        fclose(write_file_md);
     end
 end

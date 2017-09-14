@@ -1250,6 +1250,7 @@ IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wis
 DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
 exportEwd = 0;
+exportMd = 0;
 ewdRadius = 5;
 
 tproConfig = 'etc/tproconfig.csv';
@@ -1266,6 +1267,10 @@ if exist(tproConfig, 'file')
     values = tproConfTable{'exportEwd',1};
     if size(values,1) > 0
         exportEwd = values(1);
+    end
+    values = tproConfTable{'exportMinDistance',1};
+    if size(values,1) > 0
+        exportMd = values(1);
     end
     values = tproConfTable{'ewdRadius',1};
     if size(values,1) > 0
@@ -1801,14 +1806,18 @@ for data_th = 1:size(records,1)
     for i=1:roiNum
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
-    
+
+        mdparam = [];
         ewdparam = [];
         if exportEwd
             ewdparam = [ewdRadius / mmPerPixel];
         end
+        if exportMd
+            mdparam = [mmPerPixel];
+        end
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, ewdparam, mdparam);
 
         % save input data used for generating this result
         record = {records{data_th,:}};
