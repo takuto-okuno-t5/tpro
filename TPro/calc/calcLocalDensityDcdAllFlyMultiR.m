@@ -1,5 +1,5 @@
 % calculate local density (DCD)
-function result = calcLocalDensityDwdAllFlyMultiR(X, Y, roiMask, multiR, cnR)
+function result = calcLocalDensityDcdAllFlyMultiR(X, Y, roiMask, multiR, cnR)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
     
@@ -15,12 +15,12 @@ function result = calcLocalDensityDwdAllFlyMultiR(X, Y, roiMask, multiR, cnR)
             fx(fx==0) = NaN;
             fy(fy==0) = NaN;
 
-            [m, frResult] = calcLocalDensityDwdFrame(fy,fx,r,cnR);
+            [m, frResult] = calcLocalDensityDcdFrame(fy,fx,r,cnR);
             [result(i,:,j)] = frResult;
         end
         maxScore = max(max(result(:,:,j)));
         result(:,:,j) = result(:,:,j) / maxScore;
     end
     time = toc;
-    disp(['calcLocalDensityDwdAllFly ... done : ' num2str(time) 's']);
+    disp(['calcLocalDensityDcdAllFly ... done : ' num2str(time) 's']);
 end

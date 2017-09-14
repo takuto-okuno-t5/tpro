@@ -219,7 +219,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.exportEwd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
-    sharedInst.dwdRadius = 10;
+    sharedInst.dcdRadius = 10;
     sharedInst.cnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
@@ -235,11 +235,11 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         if size(values,1) > 0
             sharedInst.pdbscanRadius = values(1);
         end
-        values = tproConfTable{'dwdRadius',1};
+        values = tproConfTable{'dcdRadius',1};
         if size(values,1) > 0
-            sharedInst.dwdRadius = values(1);
+            sharedInst.dcdRadius = values(1);
         end
-        values = tproConfTable{'dwdBodyRadius',1};
+        values = tproConfTable{'dcdBodyRadius',1};
         if size(values,1) > 0
             sharedInst.cnRadius = values(1);
         end
@@ -256,7 +256,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_dwd_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1003,7 +1003,7 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % get config value
-    radius = sharedInst.dwdRadius;
+    radius = sharedInst.dcdRadius;
     cnRadius = sharedInst.cnRadius;
 
     % calc local density of ewd
@@ -1012,7 +1012,7 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     for mm=radius:5:radius
         r = mm / sharedInst.mmPerPixel;
         cnr = cnRadius / sharedInst.mmPerPixel;
-        result = calcLocalDensityDwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, cnr);
+        result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
         if lastMax < max(result)
@@ -1022,7 +1022,7 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     end
 
     % add result to axes & show in axes
-    cname = 'aggr_dwd_result';
+    cname = 'aggr_dcd_result';
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)

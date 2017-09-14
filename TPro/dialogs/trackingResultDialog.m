@@ -186,7 +186,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.exportMd = 0;
     sharedInst.ewdRadius = 5;
     sharedInst.pdbscanRadius = 5;
-    sharedInst.dwdRadius = 10;
+    sharedInst.dcdRadius = 10;
     sharedInst.cnRadius = 2.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
@@ -206,11 +206,11 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         if size(values,1) > 0
             sharedInst.pdbscanRadius = values(1);
         end
-        values = tproConfTable{'dwdRadius',1};
+        values = tproConfTable{'dcdRadius',1};
         if size(values,1) > 0
-            sharedInst.dwdRadius = values(1);
+            sharedInst.dcdRadius = values(1);
         end
-        values = tproConfTable{'dwdBodyRadius',1};
+        values = tproConfTable{'dcdBodyRadius',1};
         if size(values,1) > 0
             sharedInst.cnRadius = values(1);
         end
@@ -295,7 +295,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
-        'aggr_ewd_result_tracking', 'aggr_dwd_result', 'aggr_dwd_result_tracking'};
+        'aggr_ewd_result_tracking', 'aggr_dcd_result', 'aggr_dcd_result_tracking'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1074,7 +1074,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
-    radius = sharedInst.dwdRadius;
+    radius = sharedInst.dcdRadius;
     cnRadius = sharedInst.cnRadius;
 
     % calc local density of ewd
@@ -1083,7 +1083,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
         cnr = cnRadius / sharedInst.mmPerPixel;
-        [means, results] = calcLocalDensityDwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, cnr);
+        [means, results] = calcLocalDensityDcdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
         if lastMax < max(max(results))
@@ -1110,7 +1110,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     disp(['ewd order index =' orderstr]);
 
     % add result to axes & show in axes
-    cname = 'aggr_dwd_result';
+    cname = 'aggr_dcd_result';
     addResult2Axes(handles, means, cname, handles.popupmenu8);
     addResult2Axes(handles, results, [cname '_tracking'], handles.popupmenu8);
     result = means;
@@ -1137,7 +1137,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     lastMax = 0;
     multiR = multiR / sharedInst.mmPerPixel;
     cnR = cnRadius / sharedInst.mmPerPixel;
-    results = calcLocalDensityDwdAllFlyMultiR(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, multiR, cnR);
+    results = calcLocalDensityDcdAllFlyMultiR(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, multiR, cnR);
 
     % show in plot
     lastMax = 0;
@@ -1151,7 +1151,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     end
 
     % add result to axes & show in axes
-    cname = 'aggr_dwd_result_mr';
+    cname = 'aggr_dcd_result_mr';
     addResult2Axes(handles, results, cname, handles.popupmenu8);
     result = results;
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
@@ -1440,8 +1440,8 @@ function showFrameInAxes(hObject, handles, frameNum)
     C_LIST = ['r' 'b' 'g' 'c' 'm' 'y'];
 
     hold on;
-    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dwd_result_tracking') || ...
-       strcmp(sharedInst.axesType1,'aggr_dwd_result_mr')
+    if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
+       strcmp(sharedInst.axesType1,'aggr_dcd_result_mr')
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
