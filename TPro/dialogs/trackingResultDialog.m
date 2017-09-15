@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 13-Sep-2017 18:38:23
+    % Last Modified by GUIDE v2.5 15-Sep-2017 16:38:47
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -295,7 +295,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
-        'aggr_ewd_result_tracking', 'aggr_dcd_result', 'aggr_dcd_result_tracking'};
+        'aggr_ewd_result_tracking', 'nn_cluster_result_tracking', 'aggr_dcd_result', 'aggr_dcd_result_tracking'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1361,6 +1361,88 @@ function Untitled_12_Callback(hObject, eventdata, handles)
 end
 
 
+% --------------------------------------------------------------------
+function Untitled_15_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_15 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    num = 10;
+
+    % calculate top num of distances and variance
+    [means, vars] = calcNumDistanceVarAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, num);
+
+    % add result to axes & show in axes
+    cname = 'aggr_topmeans_result_tracking';
+    addResult2Axes(handles, means, cname, handles.popupmenu8);
+    result = means;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+
+    cname = 'aggr_topvars_result_tracking';
+    addResult2Axes(handles, vars, cname, handles.popupmenu8);
+    result = vars;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_16_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_16 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    fx = Q_loc_estimateX(t,:);
+    fy = Q_loc_estimateY(t,:);
+    fx(fx==0) = NaN;
+    fy(fy==0) = NaN;
+
+    pts = [fx', fy'];
+    dist = pdist(pts);
+    ctype = {'average', 'ward', 'single'};
+    for i=1:length(ctype)
+        tree = linkage(dist,ctype{i});
+        %Y = inconsistent(tree)
+
+        % plot dendrogram
+        f = figure;
+        set(f, 'name', ['nn ' ctype{i} ' dendrogram']); % set window title
+        [h,clustered,outperm] = dendrogram(tree, 0);
+        ax = gca; % current axes
+        ax.FontSize = 6;
+    end
+
+    % plot colored points
+    col = cluster(tree,'cutoff',60,'criterion','distance');
+    axes(handles.axes1); % set drawing area
+    hold on;
+    scatter(fy,fx,60*60,col,'LineWidth',0.5); % the actual detecting
+    hold off;
+end
+
+% --------------------------------------------------------------------
+function Untitled_17_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_17 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    Q_loc_estimateX = sharedInst.keep_data{1};
+    Q_loc_estimateY = sharedInst.keep_data{2};
+    num = 10;
+
+    % calculate top num of distances and variance
+    result = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, 'single', 60);
+
+    % add result to axes & show in axes
+    cname = 'nn_cluster_result_tracking';
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1445,7 +1527,26 @@ function showFrameInAxes(hObject, handles, frameNum)
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
-        % get ewd result all fly
+        fy = Q_loc_estimateY(t,:);
+        fx = Q_loc_estimateX(t,:);
+        % get clustering result of all fly
+        data = getappdata(handles.figure1, 'nn_cluster_result_tracking');
+        if ~isempty(data)
+            col = data(t,:);
+            for i=1:max(col)
+                idxs = find(col==i);
+                if length(idxs)<=1
+                    col(idxs) = 0;
+                end
+            end
+            idxs = find(col==0);
+            fy2 = fy; fx2 = fx;
+            fy2(idxs) = [];
+            fx2(idxs) = [];
+            col(idxs) = [];
+            scatter(fy2,fx2,60*60,col,'filled','LineWidth',0.5); % the actual detecting
+        end
+        % get ewd/dcd result of all fly
         data = getappdata(handles.figure1, sharedInst.axesType1);
         if size(data,3) == 1
             ewdmin = min(min(data));
@@ -1455,8 +1556,6 @@ function showFrameInAxes(hObject, handles, frameNum)
             ewdmin = min(min(data(:,:,mrIdx)));
             ewdmax = max(max(data(:,:,mrIdx)));
         end
-        fy = Q_loc_estimateY(t,:);
-        fx = Q_loc_estimateX(t,:);
         for i=1:length(fx)
             if ~isnan(fy(i)) && ~isnan(fx(i))
                 if size(data,3) == 1
