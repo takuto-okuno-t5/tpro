@@ -188,6 +188,8 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.pdbscanRadius = 5;
     sharedInst.dcdRadius = 7.5;
     sharedInst.dcdCnRadius = 2.5;
+    sharedInst.nnAlgorithm = 'single'; %'single', 'average', 'ward';
+    sharedInst.nnHeight = 7.5;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
         values = tproConfTable{'exportDcd',1};
@@ -1395,6 +1397,9 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
+    height = sharedInst.nnHeight / sharedInst.mmPerPixel;
+    algorithm = sharedInst.nnAlgorithm; %'single', 'average', 'ward';
+
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     fx = Q_loc_estimateX(t,:);
     fy = Q_loc_estimateY(t,:);
@@ -1403,7 +1408,7 @@ function Untitled_16_Callback(hObject, eventdata, handles)
 
     pts = [fx', fy'];
     dist = pdist(pts);
-    ctype = {'average', 'ward', 'single'};
+    ctype = {'average', 'ward', 'single', 'complete'};
     for i=1:length(ctype)
         tree = linkage(dist,ctype{i});
         %Y = inconsistent(tree)
@@ -1415,12 +1420,13 @@ function Untitled_16_Callback(hObject, eventdata, handles)
         ax = gca; % current axes
         ax.FontSize = 6;
     end
+    tree = linkage(dist, algorithm);
 
     % plot colored points
-    col = cluster(tree,'cutoff',60,'criterion','distance');
+    col = cluster(tree,'cutoff',height,'criterion','distance');
     axes(handles.axes1); % set drawing area
     hold on;
-    scatter(fy,fx,60*60,col,'LineWidth',0.5); % the actual detecting
+    scatter(fy,fx,height*height,col,'LineWidth',0.5); % the actual detecting
     hold off;
 end
 
@@ -1432,10 +1438,11 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
-    num = 10;
+    height = sharedInst.nnHeight / sharedInst.mmPerPixel;
+    algorithm = sharedInst.nnAlgorithm;
 
     % calculate top num of distances and variance
-    result = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, 'single', 60);
+    result = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, algorithm, height);
 
     % add result to axes & show in axes
     cname = 'nn_cluster_result_tracking';
@@ -1526,6 +1533,7 @@ function showFrameInAxes(hObject, handles, frameNum)
        strcmp(sharedInst.axesType1,'aggr_dcd_result_mr')
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
+        height = sharedInst.nnHeight / sharedInst.mmPerPixel;
         pos = [-major/2 -minor/2 major minor];
         fy = Q_loc_estimateY(t,:);
         fx = Q_loc_estimateX(t,:);
@@ -1544,7 +1552,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             fy2(idxs) = [];
             fx2(idxs) = [];
             col(idxs) = [];
-            scatter(fy2,fx2,60*60,col,'filled','LineWidth',0.5); % the actual detecting
+            scatter(fy2,fx2,height*height,col,'filled','LineWidth',0.5); % the actual detecting
         end
         % get ewd/dcd result of all fly
         data = getappdata(handles.figure1, sharedInst.axesType1);
