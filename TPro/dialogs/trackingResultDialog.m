@@ -161,7 +161,6 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
 
     % load mat or config 
-    tproConfig = 'etc/tproconfig.csv';
     sharedInst.mean_blobmajor = 20;
     sharedInst.mean_blobminor = 10;
     if exist('keep_mean_blobmajor', 'var')

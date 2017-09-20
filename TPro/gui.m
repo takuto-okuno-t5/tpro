@@ -706,25 +706,9 @@ for i = 1:videoFileNum
     records = [records; C];
 end
 
-tproConfig = 'etc/tproconfig.csv';
-exportDcd = 0;
-dcdRadius = 7.5;
-dcdCnRadius = 2.5;
-if exist(tproConfig, 'file')
-    tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-    values = tproConfTable{'dcdRadius',1};
-    if size(values,1) > 0
-        dcdRadius = values(1);
-    end
-    values = tproConfTable{'dcdCnRadius',1};
-    if size(values,1) > 0
-        dcdCnRadius = values(1);
-    end
-    values = tproConfTable{'exportDcd',1};
-    if size(values,1) > 0
-        exportDcd = values(1);
-    end
-end
+exportDcd = readTproConfig('exportDcd', 0);
+dcdRadius = readTproConfig('dcdRadius', 7.5);
+dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -1254,39 +1238,10 @@ RECURSION_LIMIT = 500; % maxmum number of recursion limit
 IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
-exportDcd = 0;
-exportMd = 0;
-dcdRadius = 7.5;
-dcdCnRadius = 2.5;
-
-tproConfig = 'etc/tproconfig.csv';
-if exist(tproConfig, 'file')
-    tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-    values = tproConfTable{'trackingFlyMax',1};
-    if size(values,1) > 0
-        MAX_FLIES = values(1);
-    end
-    values = tproConfTable{'recursionLimit',1};
-    if size(values,1) > 0
-        RECURSION_LIMIT = values(1);
-    end
-    values = tproConfTable{'exportDcd',1};
-    if size(values,1) > 0
-        exportDcd = values(1);
-    end
-    values = tproConfTable{'exportMinDistance',1};
-    if size(values,1) > 0
-        exportMd = values(1);
-    end
-    values = tproConfTable{'dcdRadius',1};
-    if size(values,1) > 0
-        dcdRadius = values(1);
-    end
-    values = tproConfTable{'dcdCnRadius',1};
-    if size(values,1) > 0
-        dcdCnRadius = values(1);
-    end
-end
+exportDcd = readTproConfig('exportDcd', 0);
+exportMd = readTproConfig('exportMinDistance', 0);
+dcdRadius = readTproConfig('dcdRadius', 7.5);
+dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
 % set recursion limit
 set(0,'RecursionLimit',RECURSION_LIMIT);

@@ -10,20 +10,8 @@ function cmdCalcDcdAndExportResult(handles)
     videoFiles = vl.videoFiles;
 
     % read tpro configuration
-    dcdRadius = 7.5;
-    dcdCnRadius = 2.5;
-    tproConfig = 'etc/tproconfig.csv';
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'dcdRadius',1};
-        if size(values,1) > 0
-            dcdRadius = values(1);
-        end
-        values = tproConfTable{'dcdCnRadius',1};
-        if size(values,1) > 0
-            dcdCnRadius = values(1);
-        end
-    end
+    dcdRadius = readTproConfig('dcdRadius', 7.5);
+    dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
     % load configuration files
     videoFileNum = size(videoFiles,1);

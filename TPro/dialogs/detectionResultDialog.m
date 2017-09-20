@@ -215,35 +215,11 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.roiY = roiY;
 
     % load config 
-    tproConfig = 'etc/tproconfig.csv';
-    sharedInst.exportDcd = 0;
-    sharedInst.ewdRadius = 5;
-    sharedInst.pdbscanRadius = 5;
-    sharedInst.dcdRadius = 7.5;
-    sharedInst.dcdCnRadius = 2.5;
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'exportDcd',1};
-        if size(values,1) > 0
-            sharedInst.exportDcd = values(1);
-        end
-        values = tproConfTable{'ewdRadius',1};
-        if size(values,1) > 0
-            sharedInst.ewdRadius = values(1);
-        end
-        values = tproConfTable{'pdbscanRadius',1};
-        if size(values,1) > 0
-            sharedInst.pdbscanRadius = values(1);
-        end
-        values = tproConfTable{'dcdRadius',1};
-        if size(values,1) > 0
-            sharedInst.dcdRadius = values(1);
-        end
-        values = tproConfTable{'dcdCnRadius',1};
-        if size(values,1) > 0
-            sharedInst.dcdCnRadius = values(1);
-        end
-    end
+    sharedInst.exportDcd = readTproConfig('exportDcd', 0);
+    sharedInst.ewdRadius = readTproConfig('ewdRadius', 5);
+    sharedInst.pdbscanRadius = readTproConfig('pdbscanRadius', 5);
+    sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
+    sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
     % set ROI list box
     listItem = {'all'};
@@ -1082,16 +1058,8 @@ function Untitled_10_Callback(hObject, eventdata, handles)
 %}
     areaMap = sharedInst.roiMaskImage;
 
-    % get config value
-    radius = 5;
-    tproConfig = 'etc/tproconfig.csv';
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'pdbscanRadius',1};
-        if size(values,1) > 0
-            radius = values(1);
-        end
-    end
+    % get latest config value
+    radius = readTproConfig('pdbscanRadius', 5);
 
     % calc local density of pixel density-based scan
     hFig = [];
