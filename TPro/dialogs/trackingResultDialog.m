@@ -168,55 +168,19 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.mean_blobmajor = nanmean(keep_mean_blobmajor);
         sharedInst.mean_blobminor = nanmean(keep_mean_blobminor);
     else
-        if exist(tproConfig, 'file')
-            tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-            values = tproConfTable{'meanBlobMajor',1};
-            if size(values,1) > 0
-                sharedInst.mean_blobmajor = values(1);
-            end
-            values = tproConfTable{'meanBlobMinor',1};
-            if size(values,1) > 0
-                sharedInst.mean_blobminor = values(1);
-            end
-        end
+        sharedInst.mean_blobmajor = readTproConfig('meanBlobMajor', 20);
+        sharedInst.mean_blobminor = readTproConfig('meanBlobMinor', 10);
     end
 
     % load config 
-    sharedInst.exportDcd = 0;
-    sharedInst.exportMd = 0;
-    sharedInst.ewdRadius = 5;
-    sharedInst.pdbscanRadius = 5;
-    sharedInst.dcdRadius = 7.5;
-    sharedInst.dcdCnRadius = 2.5;
-    sharedInst.nnAlgorithm = 'single'; %'single', 'average', 'ward';
-    sharedInst.nnHeight = 7.5;
-    if exist(tproConfig, 'file')
-        tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{'exportDcd',1};
-        if size(values,1) > 0
-            sharedInst.exportDcd = values(1);
-        end
-        values = tproConfTable{'exportMinDistance',1};
-        if size(values,1) > 0
-            sharedInst.exportMd = values(1);
-        end
-        values = tproConfTable{'ewdRadius',1};
-        if size(values,1) > 0
-            sharedInst.ewdRadius = values(1);
-        end
-        values = tproConfTable{'pdbscanRadius',1};
-        if size(values,1) > 0
-            sharedInst.pdbscanRadius = values(1);
-        end
-        values = tproConfTable{'dcdRadius',1};
-        if size(values,1) > 0
-            sharedInst.dcdRadius = values(1);
-        end
-        values = tproConfTable{'dcdCnRadius',1};
-        if size(values,1) > 0
-            sharedInst.dcdCnRadius = values(1);
-        end
-    end
+    sharedInst.exportDcd = readTproConfig('exportDcd', 0);
+    sharedInst.exportMd = readTproConfig('exportMinDistance', 0);
+    sharedInst.ewdRadius = readTproConfig('ewdRadius', 5);
+    sharedInst.pdbscanRadius = readTproConfig('pdbscanRadius', 5);
+    sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
+    sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+    sharedInst.nnAlgorithm = readTproConfig('nnAlgorithm', 'single'); %'single', 'average', 'ward';
+    sharedInst.nnHeight = readTproConfig('nnHeight', 5);
 
     % calc color map for ewd
     sharedInst.ewdColors = expandColor({[0 0 .45], [0 0 1], [1 0 0], [1 .7 .7]}, 100);
@@ -925,6 +889,10 @@ function popupmenu8_Callback(hObject, eventdata, handles)
     sharedInst.axesType1 = contents{get(hObject,'Value')};
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
+    if strcmp(sharedInst.axesType1, 'nn_cluster_result_tracking')
+        sharedInst.axesType1 = 'aggr_dcd_result_tracking';
+    end
+
     showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -1076,6 +1044,11 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
+
+    % load latest config
+    sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
+    sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     radius = sharedInst.dcdRadius;
     dcdCnRadius = sharedInst.dcdCnRadius;
 
@@ -1102,7 +1075,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
         num = cell2mat(cells(i,2));
         disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
     end
-    tbl = cell2table(cells)
+    tbl = cell2table(cells);
     outtbl = sortrows(tbl, 2, 'descend');
     out = table2cell(outtbl);
     orderstr = [];
@@ -1192,7 +1165,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
         num = cell2mat(cells(i,2));
         disp(['id=' num2str(i) ' max=' num2str(max(results(:,i)))  ' min=' num2str(min(results(:,i)))  ' mean=' num2str(num)]);
     end
-    tbl = cell2table(cells)
+    tbl = cell2table(cells);
     outtbl = sortrows(tbl, 2, 'descend');
     out = table2cell(outtbl);
     orderstr = [];
@@ -1397,6 +1370,12 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
+
+    % load latest config
+    sharedInst.nnHeight = readTproConfig('nnHeight', 5);
+    sharedInst.nnAlgorithm = readTproConfig('nnAlgorithm', 'single');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
     height = sharedInst.nnHeight / sharedInst.mmPerPixel;
     algorithm = sharedInst.nnAlgorithm; %'single', 'average', 'ward';
 
@@ -1438,6 +1417,12 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     Q_loc_estimateX = sharedInst.keep_data{1};
     Q_loc_estimateY = sharedInst.keep_data{2};
+
+    % load latest config
+    sharedInst.nnHeight = readTproConfig('nnHeight', 5);
+    sharedInst.nnAlgorithm = readTproConfig('nnAlgorithm', 'single');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
     height = sharedInst.nnHeight / sharedInst.mmPerPixel;
     algorithm = sharedInst.nnAlgorithm;
 
@@ -1448,6 +1433,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     cname = 'nn_cluster_result_tracking';
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1530,29 +1516,33 @@ function showFrameInAxes(hObject, handles, frameNum)
 
     hold on;
     if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
-       strcmp(sharedInst.axesType1,'aggr_dcd_result_mr')
+       strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking')
         major = sharedInst.mean_blobmajor;
         minor = major / 5 * 2;
-        height = sharedInst.nnHeight / sharedInst.mmPerPixel;
         pos = [-major/2 -minor/2 major minor];
         fy = Q_loc_estimateY(t,:);
         fx = Q_loc_estimateX(t,:);
         % get clustering result of all fly
         data = getappdata(handles.figure1, 'nn_cluster_result_tracking');
-        if ~isempty(data)
-            col = data(t,:);
-            for i=1:max(col)
-                idxs = find(col==i);
+        if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_cluster_result_tracking')
+            height = sharedInst.nnHeight;
+            if height > 10, height = 10; end
+            height = height / sharedInst.mmPerPixel;
+            sharedInst.axesType1 = 'aggr_dcd_result_tracking';
+
+            culster = data(t,:);
+            for i=1:max(culster)
+                idxs = find(culster==i);
                 if length(idxs)<=1
-                    col(idxs) = 0;
+                    culster(idxs) = 0;
                 end
             end
-            idxs = find(col==0);
+            idxs = find(culster==0);
             fy2 = fy; fx2 = fx;
             fy2(idxs) = [];
             fx2(idxs) = [];
-            col(idxs) = [];
-            scatter(fy2,fx2,height*height,col,'filled','LineWidth',0.5); % the actual detecting
+            culster(idxs) = [];
+            scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
         end
         % get ewd/dcd result of all fly
         data = getappdata(handles.figure1, sharedInst.axesType1);

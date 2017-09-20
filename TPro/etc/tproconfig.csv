@@ -9,3 +9,5 @@ exportDcd,1
 dcdRadius,7.5
 dcdCnRadius,2.5
 exportMinDistance,1
+nnAlgorithm,single
+nnHeight,5
