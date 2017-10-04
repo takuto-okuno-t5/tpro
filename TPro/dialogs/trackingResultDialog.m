@@ -1438,7 +1438,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     cname = 'nn_cluster_result_tracking';
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
-    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
