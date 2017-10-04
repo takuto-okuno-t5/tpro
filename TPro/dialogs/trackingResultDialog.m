@@ -161,14 +161,14 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(hObject, 'name', ['Tracking result for ', sharedInst.shuttleVideo.name]); % set window title
 
     % load mat or config 
-    sharedInst.mean_blobmajor = 20;
-    sharedInst.mean_blobminor = 10;
+    sharedInst.mean_blobmajor = 3.56 / sharedInst.mmPerPixel;
+    sharedInst.mean_blobminor = 1.07 / sharedInst.mmPerPixel;
     if exist('keep_mean_blobmajor', 'var')
         sharedInst.mean_blobmajor = nanmean(keep_mean_blobmajor);
         sharedInst.mean_blobminor = nanmean(keep_mean_blobminor);
     else
-        sharedInst.mean_blobmajor = readTproConfig('meanBlobMajor', 20);
-        sharedInst.mean_blobminor = readTproConfig('meanBlobMinor', 10);
+        sharedInst.mean_blobmajor = readTproConfig('meanBlobMajor', 3.56) / sharedInst.mmPerPixel;
+        sharedInst.mean_blobminor = readTproConfig('meanBlobMinor', 1.07) / sharedInst.mmPerPixel;
     end
 
     % load config 
@@ -1273,7 +1273,7 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     id2 = size(sharedInst.keep_data{1},2);
     [dlg, id1, id2, startFrame, endFrame] = inputSwapIdsDialog({num2str(id1), num2str(id2), num2str(sharedInst.startFrame), num2str(sharedInst.endFrame)});
     delete(dlg);
-    if id1 <= 0
+    if id1 < 0
         return;
     end
 
@@ -1282,9 +1282,15 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     endRow = (endFrame - sharedInst.startFrame) / sharedInst.frameSteps + 1;
 
     for i=1:8
-        tmp = sharedInst.keep_data{i}(startRow:endRow,id1);
-        sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
-        sharedInst.keep_data{i}(startRow:endRow,id2) = tmp;
+        if id1 == 0
+            sharedInst.keep_data{i}(startRow:endRow,id2) = NaN;
+        elseif id2 == 0
+            sharedInst.keep_data{i}(startRow:endRow,id1) = NaN;
+        else
+            tmp = sharedInst.keep_data{i}(startRow:endRow,id1);
+            sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
+            sharedInst.keep_data{i}(startRow:endRow,id2) = tmp;
+        end
     end
 
     sharedInst.isModified = true;
@@ -1516,7 +1522,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold on;
     if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
        strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking')
-        major = sharedInst.mean_blobmajor;
+        major = sharedInst.mean_blobmajor * 0.9;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
         fy = Q_loc_estimateY(t,:);
@@ -1567,7 +1573,11 @@ function showFrameInAxes(hObject, handles, frameNum)
                     col = sharedInst.ewdColors(idx,:);
                     g = hgtransform();
                     r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
-                    g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-angle(t,i)/180*pi);
+                    ang = angle(t,i);
+                    if isnan(ang)
+                        ang = 0;
+                    end
+                    g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-ang/180*pi);
                 end
             end
         end

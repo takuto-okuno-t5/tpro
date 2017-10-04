@@ -94,7 +94,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    handles.id1 = 0;
+    handles.id1 = -1;
     guidata(hObject, handles);  % Update handles structure
     uiresume(handles.figure1);
 end
@@ -104,7 +104,7 @@ function pushbutton1_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    handles.id1 = 0;
+    handles.id1 = -1;
     guidata(hObject, handles);  % Update handles structure
     uiresume(handles.figure1);
 end
@@ -187,7 +187,7 @@ function edit3_Callback(hObject, eventdata, handles)
     if isempty(num)
         set(handles.edit3, 'String', 1);
     else
-        if num < 1 || num == handles.id2
+        if num < 0 || num == handles.id2
             set(handles.edit3, 'String', handles.id1);
         else
             handles.id1 = num;
@@ -218,7 +218,7 @@ function edit4_Callback(hObject, eventdata, handles)
     if isempty(num)
         set(handles.edit4, 'String', 1);
     else
-        if num < 1 || num == handles.id1 || num > handles.maxId
+        if num < 0 || num == handles.id1 || num > handles.maxId
             set(handles.edit4, 'String', handles.id2);
         else
             handles.id2 = num;
