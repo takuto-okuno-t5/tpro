@@ -108,6 +108,9 @@ while true
             i = i + 1;
         case {'--dcd'}
             handles.autodcd = 1;
+        case {'--dcdp'}
+            handles.dcdpfile = varargin{i+1};
+            i = i + 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
             disp('  -b, --batch file    batch csv [file]');
@@ -119,6 +122,7 @@ while true
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
             disp('  --dcd               force to start dcd calculation');
+            disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
@@ -347,7 +351,6 @@ end
 if handles.autofinish
     delete(hObject);
 end
-
 
 %% --- Outputs from this function are returned to the command line.
 function varargout = gui_OutputFcn(hObject, eventdata, handles)
@@ -1148,7 +1151,11 @@ for data_th = 1:size(records,1)
         
         dcdparam = {};
         if exportDcd
-            dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel, [confPath 'multi/aggr_dcd_percent.mat']];
+            dcdpfile = [confPath 'multi/aggr_dcd_percent.mat'];
+            if isfield(handles, 'dcdpfile')
+                dcdpfile = handles.dcdpfile;
+            end
+            dcdparam = {dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel, dcdpfile};
         end
         saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdparam);
         %saveDetectionEccAxesResultText(dataFileName, X, Y, i, img_h, roiMasks, keep_ecc_sorted, keep_major_axis, keep_minor_axis);
