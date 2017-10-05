@@ -232,7 +232,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -857,9 +857,9 @@ function pushbutton6_Callback(hObject, eventdata, handles)
         outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
         
-        dcdparam = [];
+        dcdparam = {};
         if sharedInst.exportDcd
-            dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
+            dcdparam = {sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel, [sharedInst.confPath 'multi/aggr_dcd_percent.mat']};
         end
         saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, dcdparam);
     end
@@ -1001,7 +1001,29 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     cname = 'aggr_dcd_result';
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
-    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles);
+
+    % calc percentile values
+    pfileName = [sharedInst.confPath 'multi/aggr_dcd_percent.mat'];
+    if exist(pfileName,'file')
+        % load percentile file
+        load(pfileName);
+        % count flynums
+        flyCounts = zeros(length(result),1);
+        for i=1:length(result)
+            flyCounts(i) = length(sharedInst.X{i});
+        end
+
+        % calc 
+        result = calcLocalDensityDcdPercentile(result, flyCounts, numValues, edges, values);
+        hFig = plotWithNewFigure(handles, result, 1, 0, []);
+        
+        % add result to axes & show in axes
+        cname = 'aggr_dcd_p_result';
+        addResult2Axes(handles, result, cname, handles.popupmenu4);
+        save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+        popupmenu4_Callback(handles.popupmenu4, eventdata, handles);
+    end
 end
 
 % --------------------------------------------------------------------
@@ -1441,47 +1463,70 @@ function Untitled_21_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    mm = 10;
 
-    for i=2:50
+    % load latest config
+    sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
+    sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    r = sharedInst.dcdRadius / sharedInst.mmPerPixel;
+    cnr = sharedInst.dcdCnRadius / sharedInst.mmPerPixel;
+    minV = 1.0062912 / (r*r*pi);
+    maxTest = 100000;
+    maxFly = 50;
+    %%minVRate = zeros(maxFly,1);
+    numValues = zeros(maxFly,1);
+    values = cell(maxFly,1);
+    edges = cell(maxFly,1);
+
+    for i=2:maxFly
         % calc rand dot
-        [X, Y] = calcRandomDots(sharedInst.roiMaskImage, sharedInst.startFrame, sharedInst.endFrame, i);
-        sharedInst.X = X;
-        sharedInst.Y = Y;
+        [X, Y] = calcRandomDots(sharedInst.roiMasks{1}, 1, maxTest, i);
 
-        % calc EWD
-        r = mm / sharedInst.mmPerPixel;
-        result = calcLocalDensityEwd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r);
-
-        % add result to axes & show in axes
-        cname = 'aggr_ewd_result';
-        addResult2Axes(handles, result, cname, handles.popupmenu4);
-        save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
-        popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+        % calc DCD
+        result = calcLocalDensityDcd(X, Y, sharedInst.roiMaskImage, r, cnr);
+        %%minIdx = find(result < minV);
+        %%minVRate(i) = length(minIdx) / maxTest;
+        %%result(minIdx) = [];
 
         % calc & show histgram
         x_pdf = [1:0.1:200];
         d2 = result' * 1000000;
-        pd = fitdist(d2,'Gamma');
-        y = pdf(pd,x_pdf);
-        [phat, pci] = gamfit(d2);
+        %%pd = fitdist(d2,'Gamma');
+        %%y = pdf(pd,x_pdf);
+        %%[phat, pci] = gamfit(d2);
 
-        figure;
+        f = figure();
+        set(f, 'name', ['histgram of fly num(', num2str(i), ')']); % set window title
         h = histogram(d2);
         hold on;
-        scale = max(h.Values)/max(y);
-        plot((x_pdf),(y.*scale));
+    %    scale = max(h.Values)/max(y);
+    %    plot((x_pdf),(y.*scale));
+        plot((x_pdf),0);
 
     %    x3 = gaminv((0:0.01:100),phat(1),phat(2));
     %    y3 = gampdf(x3,phat(1),phat(2));
     %    plot((x3),(y3.*scale));
         hold off;
 
-        disp(['fly=' num2str(i) ' a=' num2str(phat(1)) ' b=' num2str(phat(2))]);
-        pd = makedist('Gamma',phat(1),phat(2));
-        p2 = cdf(pd,d2(1:5));
+        %%disp(['fly=' num2str(i) ' a=' num2str(phat(1)) ' b=' num2str(phat(2))]);
+        %pd = makedist('Gamma',phat(1),phat(2));
+        %p2 = cdf(pd,d2(1:5));
+        %%fitParam{i} = phat;
+        
+        % set output values
+        numValues(i) = h.NumBins;
+        edges{i} = h.BinEdges;
+        vals = h.Values;
+        total = 0;
+        for j=1:h.NumBins
+            vals(j) = total / maxTest;
+            total = total + h.Values(j);
+        end
+        values{i} = vals;
     end
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    %%save([sharedInst.confPath 'multi/aggr_dcd_percent.mat'], 'minV', 'minVRate', 'fitParam');
+    save([sharedInst.confPath 'multi/aggr_dcd_percent.mat'], 'numValues', 'edges', 'values');
 end
 
 

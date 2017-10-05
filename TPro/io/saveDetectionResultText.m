@@ -5,6 +5,10 @@ function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdpara
     write_file_y = fopen([dataFileName '_y.txt'], 'wt');
     if ~isempty(dcdparam)
         write_file_dcd = fopen([dataFileName '_dcd.txt'], 'wt');
+        if exist(dcdparam{3},'file')
+            write_file_dcdp = fopen([dataFileName '_dcdp.txt'], 'wt');
+            load(dcdparam{3}); % load percentile file
+        end
     end
 
     % cook raw data before saving
@@ -30,8 +34,16 @@ function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdpara
         fprintf(write_file_y, fmtString, img_h - fy);
 
         if ~isempty(dcdparam)
-            [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,dcdparam(1),dcdparam(2));
+            [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,dcdparam{1},dcdparam{2});
             fprintf(write_file_dcd, '%d\n', dcd);
+            
+            % output percentile value
+            if exist(dcdparam{3},'file')
+                % count flynums
+                flyCounts = length(fx);
+                dcdp = calcLocalDensityDcdPercentile(dcd, flyCounts, numValues, edges, values);
+                fprintf(write_file_dcdp, '%d\n', dcdp);
+            end
         end
     end
 
@@ -40,5 +52,8 @@ function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdpara
     fclose(write_file_y);
     if ~isempty(dcdparam)
         fclose(write_file_dcd);
+        if exist(dcdparam{3},'file')
+            fclose(write_file_dcdp);
+        end
     end
 end

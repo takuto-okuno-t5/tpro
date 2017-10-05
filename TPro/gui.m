@@ -1146,9 +1146,9 @@ for data_th = 1:size(records,1)
         outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
         dataFileName = [outputPath shuttleVideo.name '_' filename];
         
-        dcdparam = [];
+        dcdparam = {};
         if exportDcd
-            dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
+            dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel, [confPath 'multi/aggr_dcd_percent.mat']];
         end
         saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdparam);
         %saveDetectionEccAxesResultText(dataFileName, X, Y, i, img_h, roiMasks, keep_ecc_sorted, keep_major_axis, keep_minor_axis);
