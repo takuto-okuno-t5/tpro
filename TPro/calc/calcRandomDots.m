@@ -1,5 +1,5 @@
 %%
-function [X, Y] = calcRandomDots(roiMask, startFrame, endFrame, dotNum)
+function [Y, X] = calcRandomDots(roiMask, startFrame, endFrame, dotNum)
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
     xsize = endFrame - startFrame + 1;
@@ -8,20 +8,20 @@ function [X, Y] = calcRandomDots(roiMask, startFrame, endFrame, dotNum)
     rng('shuffle');
 
     for i = 1:xsize
-        fx = rand(dotNum,1) * img_h;
-        fy = rand(dotNum,1) * img_w;
+        fy = rand(dotNum,1) * img_h;
+        fx = rand(dotNum,1) * img_w;
         j = 1;
         while j <= dotNum
-            x = round(fx(j));
             y = round(fy(j));
-            if (y <= img_h) && (x <= img_w) && x >= 1 && y >= 1 && roiMask(x,y) > 0
+            x = round(fx(j));
+            if (y <= img_h) && (x <= img_w) && x >= 1 && y >= 1 && roiMask(y,x) > 0
                 j = j + 1;
             else
-                fx(j) = rand() * img_h;
-                fy(j) = rand() * img_w;
+                fy(j) = rand() * img_h;
+                fx(j) = rand() * img_w;
             end
         end
-        X{i} = fx;
         Y{i} = fy;
+        X{i} = fx;
     end
 end
