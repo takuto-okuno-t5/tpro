@@ -1392,7 +1392,7 @@ function Untitled_15_Callback(hObject, eventdata, handles)
         return;
     end
 
-    [X, Y] = calcRandomDots(sharedInst.roiMaskImage, sharedInst.startFrame, sharedInst.endFrame, dotNum);
+    [X, Y] = calcRandomDots(sharedInst.roiMasks{1}, sharedInst.startFrame, sharedInst.endFrame, dotNum);
     sharedInst.X = X;
     sharedInst.Y = Y;
 
