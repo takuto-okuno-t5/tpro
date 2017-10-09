@@ -18,7 +18,8 @@ function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, b
 
         angle = -blobOrient(i)*180 / pi;
 
-        boxSize = int64((blobMajorAxis(i) * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
+%        boxSize = int64((blobMajorAxis(i) * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
+        boxSize = 64;
 
         trimmedImage = getOneFlyBoxImage_(glayImage, cx, cy, vec, boxSize);
         img = readAndPreprocessImage(trimmedImage);

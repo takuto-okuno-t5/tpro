@@ -22,7 +22,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 15-Jul-2017 15:07:54
+    % Last Modified by GUIDE v2.5 07-Oct-2017 01:05:09
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -838,39 +838,6 @@ function edit4_CreateFcn(hObject, eventdata, handles)
     end
 end
 
-
-%% --- Executes on button press in pushbutton6.
-function pushbutton6_Callback(hObject, eventdata, handles)
-    % hObject    handle to pushbutton6 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    boxSize = findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
-    
-%outputFlyImageFiles(200,300,boxSize);
-%return;
-
-    figure;
-    blobNumber = size(sharedInst.detectedPointY,1);
-    for i = 1:blobNumber
-        switch sharedInst.imageMode
-            case 1
-                image = sharedInst.originalImage;
-            case 2
-                image = sharedInst.step2Image;
-            case 3
-                image = sharedInst.step3Image;
-            case 4
-                image = sharedInst.step4Image;
-        end
-        trimmedImage = getOneFlyBoxImage(image, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.detectedDirection, boxSize, i);
-
-        subplot(8, 8, i);
-        imshow(trimmedImage);
-    end
-end
-
-
 function edit5_Callback(hObject, eventdata, handles)
     % hObject    handle to edit5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
@@ -902,6 +869,56 @@ function edit5_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% menus
+
+% --------------------------------------------------------------------
+function Untitled_1_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_2_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_2 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    boxSize = findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
+    
+    figure;
+    blobNumber = size(sharedInst.detectedPointY,1);
+    for i = 1:blobNumber
+        switch sharedInst.imageMode
+            case 1
+                image = sharedInst.originalImage;
+            case 2
+                image = sharedInst.step2Image;
+            case 3
+                image = sharedInst.step3Image;
+            case 4
+                image = sharedInst.step4Image;
+        end
+        trimmedImage = getOneFlyBoxImage(image, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.detectedDirection, boxSize, i);
+
+        subplot(8, 8, i);
+        imshow(trimmedImage);
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_3_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    boxSize = 64; %findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
+
+    outputFlyImageFiles(handles, sharedInst.startFrame, sharedInst.endFrame, boxSize);
+    return;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
