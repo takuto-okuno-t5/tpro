@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 15-Sep-2017 16:38:47
+    % Last Modified by GUIDE v2.5 11-Oct-2017 16:52:07
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -119,6 +119,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.backMode = 1; % movie
     sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
+    sharedInst.isInvert = records{12};
     sharedInst.currentROI = 0;
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
@@ -1439,6 +1440,84 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_18_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_18 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{1};
+    Y = sharedInst.keep_data{2};
+    dirX = sharedInst.keep_data{5};
+    dirY = sharedInst.keep_data{6};
+
+    boxSize = 64;
+    checkNums = 101;
+
+    % deep learning data
+    if ~exist('./deeplearningMaleFemale.mat', 'file')
+        errordlg('deeplearningMaleFemale.mat is not found.', 'Error');
+        return;
+    end
+
+    % load
+    load('./deeplearningMaleFemale.mat');
+    load('./deeplearningFrontBack2.mat');
+    
+    % generate random
+    r = randperm(sharedInst.endFrame - sharedInst.startFrame + 1);
+    r = r(1:checkNums);
+
+    % check male and female
+    blobNumber = size(Y,2);
+    flySexes = zeros(blobNumber,1);
+    for j = 1 : checkNums
+        frameNum =  r(j) + sharedInst.startFrame - 1;
+        img = TProRead(sharedInst.shuttleVideo, frameNum);
+        step2Image = applyBackgroundSub(handles, img);
+        
+        glayImages = cell(blobNumber,1);
+        for i = 1:blobNumber
+            % pre calculation
+            cx = X(frameNum,i);
+            cy = Y(frameNum,i);
+            vec = [dirX(frameNum,i); dirY(frameNum,i)];
+
+            trimmedImage = getOneFlyBoxImage_(step2Image, cy, cx, vec, boxSize);
+            img = resizeImage64ForDL(trimmedImage);
+            % Extract image features using the CNN
+            imageFeatures = activations(netForFrontBack, img, 11);
+
+            % Make a prediction using the classifier
+            label = predict(classifierFrontBack, imageFeatures);
+            if label == 'fly_back'
+                vec = -vec;
+                img = imrotate(img, 180, 'crop', 'bilinear');
+            end
+            glayImages{i} = img;
+        end
+        
+        labels = distinguishMaleFemale_deepLearning(glayImages, netForMaleFemale, classifierMaleFemale);
+        for i = 1:blobNumber
+            if labels{i} == 'fly_male'
+                flySexes(i) = flySexes(i) + 1;
+            end
+        end
+        disp([num2str(j) ') checking frame : ' num2str(frameNum)]);
+    end
+
+    % show result
+    flySexes = flySexes ./ checkNums;
+    for i = 1:blobNumber
+        if flySexes(i) > 0.5
+            sex = 'male';
+        else
+            sex = 'female';
+        end
+        disp([num2str(i) ') ' sex ' (' num2str(flySexes(i)) ')']);
+    end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

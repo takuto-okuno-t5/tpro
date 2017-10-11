@@ -22,7 +22,7 @@ function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, b
         boxSize = 64;
 
         trimmedImage = getOneFlyBoxImage_(glayImage, cx, cy, vec, boxSize);
-        img = readAndPreprocessImage(trimmedImage);
+        img = resizeImage64ForDL(trimmedImage);
 
         % Extract image features using the CNN
         imageFeatures = activations(netForFrontBack, img, 11);
@@ -40,21 +40,5 @@ function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, b
 
         keep_direction(:,i) = vec;
         keep_angle(:,i) = angle;
-    end
-end
-
-%%
-function Iout = readAndPreprocessImage(I)
-    % Some images may be grayscale. Replicate the image 3 times to
-    % create an RGB image. 
-    %    if ismatrix(I)
-    %        I = cat(3,I,I,I);
-    %    end
-
-    % Resize the image as required for the CNN. 
-    if size(I,1) ~= 64 || size(I,2) ~= 64
-        Iout = imresize(I, [64 64]);  
-    else
-        Iout = I;
     end
 end
