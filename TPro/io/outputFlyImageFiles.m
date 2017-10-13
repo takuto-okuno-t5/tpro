@@ -1,5 +1,5 @@
 %%
-function outputFlyImageFiles(handles, startFrame, endFrame, boxSize)
+function outputFlyImageFiles(handles, startFrame, endFrame, boxSize, meanBlobmajor, mmPerPixel)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % create output directory
@@ -19,7 +19,7 @@ function outputFlyImageFiles(handles, startFrame, endFrame, boxSize)
               sharedInst.keepNear);
         
         if sharedInst.useDeepLearning
-            [flyDirection, flyAngle] = PD_direction_deepLearning(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, ...
+            [flyDirection, flyAngle] = PD_direction_deepLearning(step2Image, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
         else
             [flyDirection, flyAngle] = PD_direction2(step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);

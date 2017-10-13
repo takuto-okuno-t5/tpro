@@ -14,5 +14,8 @@ function outimage = applyBackgroundSub(handles, img)
     else
         img = grayImg;
     end
+    % sharp and consrast filters
+    img = imadjust(img,[0.15;0.94]);
+    img = imsharpen(img,'Radius',2,'Amount',1);
     outimage = img;
 end

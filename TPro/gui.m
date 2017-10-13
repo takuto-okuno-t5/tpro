@@ -712,6 +712,7 @@ end
 exportDcd = readTproConfig('exportDcd', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -1042,7 +1043,7 @@ for data_th = 1:size(records,1)
 
         %%
         if size(netForFrontBack, 1) > 0
-            [ keep_direction, keep_angle ] = PD_direction_deepLearning(grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, netForFrontBack, classifierFrontBack);
+            [ keep_direction, keep_angle ] = PD_direction_deepLearning(grayImg, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
         else
             [ keep_direction, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end

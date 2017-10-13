@@ -198,6 +198,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.classifierFrontBack = classifierFrontBack;
     end
 
+    % fly image box size for deep learning
+    sharedInst.meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
+    sharedInst.boxSize = findFlyImageBoxSize(sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
+
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
@@ -887,26 +891,30 @@ function Untitled_2_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    boxSize = findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
-    
-    figure;
-    blobNumber = size(sharedInst.detectedPointY,1);
-    for i = 1:blobNumber
-        switch sharedInst.imageMode
-            case 1
-                image = sharedInst.originalImage;
-            case 2
-                image = sharedInst.step2Image;
-            case 3
-                image = sharedInst.step3Image;
-            case 4
-                image = sharedInst.step4Image;
-        end
-        trimmedImage = getOneFlyBoxImage(image, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.detectedDirection, boxSize, i);
+    bsize = sharedInst.boxSize;
 
-        subplot(8, 8, i);
-        imshow(trimmedImage);
+    blobNumber = size(sharedInst.detectedPointY,1);
+    switch sharedInst.imageMode
+        case 1
+            image = sharedInst.originalImage;
+            color = 3;
+        case 2
+            image = sharedInst.step2Image;
+            color = 1;
+        case 3
+            image = im2uint8(sharedInst.step3Image);
+            color = 1;
+        case 4
+            image = im2uint8(sharedInst.step4Image);
+            color = 1;
     end
+    images = uint8(zeros(bsize,bsize,color,blobNumber));
+    % get fly images
+    for i = 1:blobNumber
+        images(:,:,:,i) = getOneFlyBoxImage(image, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.detectedDirection, bsize, i);
+    end
+    figure;
+    montage(images);
 end
 
 % --------------------------------------------------------------------
@@ -915,10 +923,8 @@ function Untitled_3_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    boxSize = 64; %findFlyImageBoxSize(handles, sharedInst.startFrame, sharedInst.endFrame);
 
-    outputFlyImageFiles(handles, sharedInst.startFrame, sharedInst.endFrame, boxSize);
-    return;
+    outputFlyImageFiles(handles, sharedInst.startFrame, sharedInst.endFrame, sharedInst.boxSize, sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1087,7 +1093,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     % calc and draw direction
     if sharedInst.showDirection
         if sharedInst.useDeepLearning
-            [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, ...
+            [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
         else
             [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);

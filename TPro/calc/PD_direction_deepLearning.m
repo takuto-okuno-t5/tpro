@@ -1,5 +1,5 @@
 %%
-function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient, netForFrontBack, classifierFrontBack)
+function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack)
     % init
     areaNumber = size(blobAreas, 1);
     keep_direction = zeros(2, areaNumber); % allocate memory
@@ -13,13 +13,12 @@ function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, b
         ph = -blobOrient(i);
         cosph =  cos(ph);
         sinph =  sin(ph);
-        len = blobMajorAxis(i) * 0.35;
+        len = meanBlobmajor / mmPerPixel * 0.35;
         vec = [len*cosph; len*sinph];
 
         angle = -blobOrient(i)*180 / pi;
 
-%        boxSize = int64((blobMajorAxis(i) * 1.25 * 1.5) / 16) * 16; % wing may not in blob so body*1.25
-        boxSize = 64;
+        boxSize = findFlyImageBoxSize(meanBlobmajor, mmPerPixel);
 
         trimmedImage = getOneFlyBoxImage_(glayImage, cx, cy, vec, boxSize);
         img = resizeImage64ForDL(trimmedImage);

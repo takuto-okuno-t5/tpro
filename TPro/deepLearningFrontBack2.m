@@ -477,7 +477,7 @@ function trainingFlyFrontBack(isGrayScale, width, height, netForFrontBack)
 
     %% Try the Newly Trained Classifier on Test Images
     % You can now apply the newly trained classifier to categorize new images.
-    newImage = fullfile(rootFolder, 'fly_question', '00004_01.png');
+    newImage = fullfile(rootFolder, 'fly_question', '00002_06.png');
     figure;
     imshow(newImage);
 

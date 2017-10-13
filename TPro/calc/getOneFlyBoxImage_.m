@@ -23,13 +23,20 @@ function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
     rect = [(trimSize-boxSize)/2 (trimSize-boxSize)/2 boxSize boxSize];
     trimmedImage = imcrop(rotatedImage, rect);
     [x,y,col] = size(trimmedImage);
-    if x > boxSize
+    if x > boxSize || y > boxSize
         if col == 3
-            trimmedImage(:,boxSize+1,:) = [];
-            trimmedImage(boxSize+1,:,:) = [];
+            trimmedImage(:,(boxSize+1):end,:) = [];
+            trimmedImage((boxSize+1):end,:,:) = [];
         else
-            trimmedImage(:,boxSize+1) = [];
-            trimmedImage(boxSize+1,:) = [];
+            trimmedImage(:,(boxSize+1):end) = [];
+            trimmedImage((boxSize+1):end,:) = [];
+        end
+    end
+    if x < boxSize || y < boxSize
+        if col == 3
+            trimmedImage(boxSize,boxSize,:) = 0;
+        else
+            trimmedImage(boxSize,boxSize) = 0;
         end
     end
 end

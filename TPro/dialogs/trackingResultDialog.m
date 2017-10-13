@@ -193,6 +193,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     set(handles.popupmenu5,'String',listItem);
 
+    % fly image box size for deep learning
+    sharedInst.meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
+    sharedInst.boxSize = findFlyImageBoxSize(sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
+
     % load background image
     videoName = sharedInst.shuttleVideo.name;
     bgImageFile = strcat(sharedInst.confPath,'background.png');
@@ -1453,7 +1457,6 @@ function Untitled_18_Callback(hObject, eventdata, handles)
     dirX = sharedInst.keep_data{5};
     dirY = sharedInst.keep_data{6};
 
-    boxSize = 64;
     checkNums = 101;
 
     % deep learning data
@@ -1485,7 +1488,7 @@ function Untitled_18_Callback(hObject, eventdata, handles)
             cy = Y(frameNum,i);
             vec = [dirX(frameNum,i); dirY(frameNum,i)];
 
-            trimmedImage = getOneFlyBoxImage_(step2Image, cy, cx, vec, boxSize);
+            trimmedImage = getOneFlyBoxImage_(step2Image, cy, cx, vec, sharedInst.boxSize);
             img = resizeImage64ForDL(trimmedImage);
             % Extract image features using the CNN
             imageFeatures = activations(netForFrontBack, img, 11);
