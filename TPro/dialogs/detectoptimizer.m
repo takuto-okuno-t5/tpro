@@ -159,6 +159,17 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.fixedTrackNum = records{27};
         sharedInst.fixedTrackDir = records{28};
     end
+    if length(records) < 29
+        sharedInst.contMin = 0;
+        sharedInst.contMax = 0;
+        sharedInst.sharpRadius = 0;
+        sharedInst.sharpAmount = 0;
+    else
+        sharedInst.contMin = records{29};
+        sharedInst.contMax = records{30};
+        sharedInst.sharpRadius = records{31};
+        sharedInst.sharpAmount = records{32};
+    end
     
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
@@ -185,6 +196,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.keepNear = cf.keepNear;
         sharedInst.fixedTrackNum = cf.fixedTrackNum;
         sharedInst.fixedTrackDir = cf.fixedTrackDir;
+        sharedInst.contMin = cf.contMin;
+        sharedInst.contMax = cf.contMax;
+        sharedInst.sharpRadius = cf.sharpRadius;
+        sharedInst.sharpAmount = cf.sharpAmount;
     end
 
     % deep learning data

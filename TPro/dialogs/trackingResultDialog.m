@@ -124,6 +124,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
     sharedInst.editMode = 1; % select / add mode
+    sharedInst.contMin = records{29};
+    sharedInst.contMax = records{30};
+    sharedInst.sharpRadius = records{31};
+    sharedInst.sharpAmount = records{32};
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0

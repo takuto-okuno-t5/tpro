@@ -771,7 +771,7 @@ for data_th = 1:size(records,1)
         maxBlobs = records{data_th, 21};
         delRectOverlap = records{data_th, 22};
     end
-    if length(records) < 23
+    if size(records,2) < 23
         rRate = 1;
         gRate = 1;
         bRate = 1;
@@ -781,6 +781,17 @@ for data_th = 1:size(records,1)
         gRate = records{data_th, 24};
         bRate = records{data_th, 25};
         keepNear = records{data_th, 26};
+    end
+    if size(records,2) < 29
+        contMin = 0;
+        contMax = 0;
+        sharpRadius = 0;
+        sharpAmount = 0;
+    else
+        contMin = records{data_th, 29};
+        contMax = records{data_th, 30};
+        sharpRadius = records{data_th, 31};
+        sharpAmount = records{data_th, 32};
     end
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
@@ -895,6 +906,13 @@ for data_th = 1:size(records,1)
             img = imcomplement(img);
         else
             img = grayImg;
+        end
+        % sharp and consrast filters
+        if contMin > 0 && contMax > 0
+            img = imadjust(img, [contMin; contMax]);
+        end
+        if sharpRadius > 0 && sharpAmount > 0
+            img = imsharpen(img, 'Radius',sharpRadius, 'Amount',sharpAmount);
         end
 
         %do the blob filter

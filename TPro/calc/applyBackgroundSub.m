@@ -15,7 +15,11 @@ function outimage = applyBackgroundSub(handles, img)
         img = grayImg;
     end
     % sharp and consrast filters
-    img = imadjust(img,[0.15;0.94]);
-    img = imsharpen(img,'Radius',2,'Amount',1);
+    if sharedInst.contMin > 0 && sharedInst.contMax > 0
+        img = imadjust(img, [sharedInst.contMin; sharedInst.contMax]);
+    end
+    if sharedInst.sharpRadius > 0 && sharedInst.sharpAmount > 0
+        img = imsharpen(img, 'Radius',sharedInst.sharpRadius, 'Amount',sharedInst.sharpAmount);
+    end
     outimage = img;
 end
