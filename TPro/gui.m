@@ -745,54 +745,32 @@ for data_th = 1:size(records,1)
     if ~records{data_th, 1}
         continue;
     end
-    
-    blob_threshold = records{data_th, 8};
-    start_frame = records{data_th, 4};
-    end_frame = records{data_th, 5};
-    frame_steps = records{data_th, 16};
-    h = records{data_th, 13};
-    sigma = records{data_th, 14};
-    area_pixel = records{data_th, 15};
-    blobSeparateRate = records{data_th, 17};
-    roiNum = records{data_th, 10};
-    isInvert = records{data_th, 12};
-    mmPerPixel = records{data_th, 9};
+    record = records(data_th,:);
+    blob_threshold = record{8};
+    start_frame = record{4};
+    end_frame = record{5};
+    frame_steps = record{16};
+    h = record{13};
+    sigma = record{14};
+    area_pixel = record{15};
+    blobSeparateRate = record{17};
+    roiNum = record{10};
+    isInvert = record{12};
+    mmPerPixel = record{9};
     % check compatibility
-    if size(records,2) < 18
-        filterType = 'log';
-        maxSeparate = 4;
-        isSeparate = 1;
-        maxBlobs = 0;
-        delRectOverlap = 0;
-    else
-        filterType = records{data_th, 18};
-        maxSeparate = records{data_th, 19};
-        isSeparate = records{data_th, 20};
-        maxBlobs = records{data_th, 21};
-        delRectOverlap = records{data_th, 22};
-    end
-    if size(records,2) < 23
-        rRate = 1;
-        gRate = 1;
-        bRate = 1;
-        keepNear = 0;
-    else
-        rRate = records{data_th, 23};
-        gRate = records{data_th, 24};
-        bRate = records{data_th, 25};
-        keepNear = records{data_th, 26};
-    end
-    if size(records,2) < 29
-        contMin = 0;
-        contMax = 0;
-        sharpRadius = 0;
-        sharpAmount = 0;
-    else
-        contMin = records{data_th, 29};
-        contMax = records{data_th, 30};
-        sharpRadius = records{data_th, 31};
-        sharpAmount = records{data_th, 32};
-    end
+    filterType = getVideoConfigValue(record, 18, 'log');
+    maxSeparate = getVideoConfigValue(record, 19, 4);
+    isSeparate = getVideoConfigValue(record, 20, 1);
+    maxBlobs = getVideoConfigValue(record, 21, 0);
+    delRectOverlap = getVideoConfigValue(record, 22, 0);
+    rRate = getVideoConfigValue(record, 23, 1);
+    gRate = getVideoConfigValue(record, 24, 1);
+    bRate = getVideoConfigValue(record, 25, 1);
+    keepNear = getVideoConfigValue(record, 26, 0);
+    contMin = getVideoConfigValue(record, 29, 0);
+    contMax = getVideoConfigValue(record, 30, 0);
+    sharpRadius = getVideoConfigValue(record, 31, 0);
+    sharpAmount = getVideoConfigValue(record, 32, 0);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1293,20 +1271,16 @@ for data_th = 1:size(records,1)
     if ~records{data_th, 1}
         continue;
     end
-    
-    reject_dist = records{data_th, 11};
-    start_frame = records{data_th, 4};
-    end_frame = records{data_th, 5};
-    frame_steps = records{data_th, 16};
-    roiNum = records{data_th, 10};
-    mmPerPixel = records{data_th, 9};
-    if size(records,2) < 23
-        fixedTrackNum = 0;
-        fixedTrackDir = 0;
-    else
-        fixedTrackNum = records{data_th, 27};
-        fixedTrackDir = records{data_th, 28};
-    end
+    record = records(data_th,:);
+    reject_dist = record{11};
+    start_frame = record{4};
+    end_frame = record{5};
+    frame_steps = record{16};
+    roiNum = record{10};
+    mmPerPixel = record{9};
+    fixedTrackNum = getVideoConfigValue(record, 27, 0);
+    fixedTrackDir = getVideoConfigValue(record, 28, 0);
+
     shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
     % make output folder

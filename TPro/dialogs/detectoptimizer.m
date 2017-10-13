@@ -131,45 +131,21 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     if sharedInst.mmPerPixel <= 0
         sharedInst.mmPerPixel = 0.1;
     end
-    if length(records) < 18
-        sharedInst.filterType = 'log';
-        sharedInst.maxSeparate = 4;
-        sharedInst.isSeparate = 1;
-        sharedInst.maxBlobs = 0;
-        sharedInst.delRectOverlap = 0;
-    else
-        sharedInst.filterType = records{18};
-        sharedInst.maxSeparate = records{19};
-        sharedInst.isSeparate = records{20};
-        sharedInst.maxBlobs = records{21};
-        sharedInst.delRectOverlap = records{22};
-    end
-    if length(records) < 23
-        sharedInst.rRate = 1;
-        sharedInst.gRate = 1;
-        sharedInst.bRate = 1;
-        sharedInst.keepNear = 0;
-        sharedInst.fixedTrackNum = 0;
-        sharedInst.fixedTrackDir = 0;
-    else
-        sharedInst.rRate = records{23};
-        sharedInst.gRate = records{24};
-        sharedInst.bRate = records{25};
-        sharedInst.keepNear = records{26};
-        sharedInst.fixedTrackNum = records{27};
-        sharedInst.fixedTrackDir = records{28};
-    end
-    if length(records) < 29
-        sharedInst.contMin = 0;
-        sharedInst.contMax = 0;
-        sharedInst.sharpRadius = 0;
-        sharedInst.sharpAmount = 0;
-    else
-        sharedInst.contMin = records{29};
-        sharedInst.contMax = records{30};
-        sharedInst.sharpRadius = records{31};
-        sharedInst.sharpAmount = records{32};
-    end
+    sharedInst.filterType = getVideoConfigValue(records, 18, 'log');
+    sharedInst.maxSeparate = getVideoConfigValue(records, 19, 4);
+    sharedInst.isSeparate = getVideoConfigValue(records, 20, 1);
+    sharedInst.maxBlobs = getVideoConfigValue(records, 21, 0);
+    sharedInst.delRectOverlap = getVideoConfigValue(records, 22, 0);
+    sharedInst.rRate = getVideoConfigValue(records, 23, 1);
+    sharedInst.gRate = getVideoConfigValue(records, 24, 1);
+    sharedInst.bRate = getVideoConfigValue(records, 25, 1);
+    sharedInst.keepNear = getVideoConfigValue(records, 26, 0);
+    sharedInst.fixedTrackNum = getVideoConfigValue(records, 27, 0);
+    sharedInst.fixedTrackDir = getVideoConfigValue(records, 28, 0);
+    sharedInst.contMin = getVideoConfigValue(records, 29, 0);
+    sharedInst.contMax = getVideoConfigValue(records, 30, 0);
+    sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
+    sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
     
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';

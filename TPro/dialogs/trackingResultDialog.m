@@ -124,15 +124,15 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
     sharedInst.editMode = 1; % select / add mode
-    sharedInst.contMin = records{29};
-    sharedInst.contMax = records{30};
-    sharedInst.sharpRadius = records{31};
-    sharedInst.sharpAmount = records{32};
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
         sharedInst.mmPerPixel = 0.1;
     end
+    sharedInst.contMin = getVideoConfigValue(records, 29, 0);
+    sharedInst.contMax = getVideoConfigValue(records, 30, 0);
+    sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
+    sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
 
     sharedInst.X = X;
     sharedInst.Y = Y;
