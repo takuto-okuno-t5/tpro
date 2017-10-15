@@ -4,12 +4,13 @@ function result = readTproConfig(itemName, defaultValue)
     result = defaultValue;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);
-        values = tproConfTable{itemName,1};
-        if size(values,1) > 0
+        try
+            values = tproConfTable{itemName,1};
             result = values{1};
             if ~isempty(str2num(result))
                 result = str2num(result);
             end
+        catch
         end
     end
 end

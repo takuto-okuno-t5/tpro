@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 08-Aug-2017 19:13:06
+% Last Modified by GUIDE v2.5 16-Oct-2017 00:23:59
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -1125,9 +1125,39 @@ function Untitled_15_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_15 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    trapezoidNNCluster(handles);
+    trapezoidNNCluster(handles, @addClusteringResult2Axes);
 end
 
+% --------------------------------------------------------------------
+function Untitled_20_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_20 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.annotation = trapezoidBehaviorClassifier(handles);
+    sharedInst.isModified = 1;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.pushbutton6, 'Enable', 'on');
+    % update short axes
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_21_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_21 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    frameNum = size(sharedInst.annotation,1);
+    flyNum = size(sharedInst.annotation,2);
+    
+    sharedInst.annotation = zeros(frameNum, flyNum);
+    sharedInst.isModified = 1;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.pushbutton6, 'Enable', 'on');
+    % update short axes
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -1676,189 +1706,7 @@ function annoNum = getAnnotationNum(handles)
     end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% behavior classifiers
-
-function result = trapezoidThBehaviorClassifier(handles)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    frame_num = size(sharedInst.vxy, 1);
-    fly_num = size(sharedInst.vxy, 2);
-    result = zeros(frame_num,fly_num);
-end
-
-function result = trapezoidNNCluster(handles)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    % show nnClusteringStartDialog
-    [dlg, flyIDs, numClusters, type1, type2] = nnClusteringStartDialog({});
-    delete(dlg);
-    if numClusters < 0
-        return;
-    end
-    type3 = 'none'; % TODO: currently dummy
-    
-    % ----- clustering loop -----
-    i = 0;
-    while true
-        switch type1
-        case 'velocity'
-            v1str = 'v';
-        end
-        switch type2
-        case 'acceralation'
-            v2str = 'acc';
-        case 'circularity'
-            v2str = 'cir';
-        case 'angle_velocity'
-            v2str = 'av';
-        case 'sideways'
-            v2str = 'side';
-        case 'sideways_velocity'
-            v2str = 'sv';
-        end
-            
-        i = i + 1;
-        cname = [v1str '_' v2str '_nn_clustering' num2str(i)];
-        % show wait dialog
-        hWaitBar = waitbar(0,'processing ...','Name',['clustering ', sharedInst.shuttleVideo.name]);
-        if i==1
-            % get cells of TrapezoidList {flynum, beginframe, endframe, 0, maxvalue, slope}
-            t = getTrapezoidList(handles, type1, type2, type3, flyIDs);
-        else
-            t = getTrapezoidListInCluster(handles, t, clustered, type1, type2, type3, clusterIDs);
-        end
-        updateWaitbar(0.2, hWaitBar);
-        
-        clustered = calcClasteringAndPlot(handles, t, numClusters, type1, type2, type3, cname);
-        updateWaitbar(0.5, hWaitBar);
-
-        result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, type3, [cname '.txt']);
-        updateWaitbar(0.8, hWaitBar);
-
-        % add clustering result to axes
-        addClusteringResult2Axes(handles, result, [cname '_result']);
-
-        % delete dialog bar
-        delete(hWaitBar);
-        
-        % show nnClusteringContinueDialog
-        [dlg, clusterIDs, numClusters, type1, type2] = nnClusteringContinueDialog({});
-        delete(dlg);
-        if numClusters < 0
-            break;
-        end
-    end
-end
-
-function updateWaitbar(rate, handle)
-    waitbar(rate, handle, [num2str(int64(100*rate)) ' %']);
-end
-
-function t2 = getTrapezoidListInCluster(handles, t, clustered, type1, type2, type3, indexes)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    spikeNum = 0;
-    for j = 1:size(indexes,2)
-        spikeNum = spikeNum + sum(clustered==indexes(j));
-    end
-    
-    t2 = cell(spikeNum,1);
-    k = 1;
-    for j = 1:size(clustered,1)
-        c = clustered(j);
-        if sum(c==indexes) > 0
-            t5 = t{j}(1,:);
-            fn = t5(1);
-            fstart = t5(2);
-            fend = t5(3);
-            % clustering value 1
-            switch type1
-            case 'velocity'
-                vxy = sharedInst.vxy(fstart:fend, fn);
-                f2 = max(vxy);
-                f1 = min(vxy);
-                v1 = f2;
-            end
-            % clustering value 2
-            switch type2
-            case 'acceralation'
-                v2 = abs((f2 - f1) / (fend - fstart));
-            case 'circularity'
-                v2 = (1 - min(sharedInst.ecc(fstart:fend, fn))) * 100;
-            case 'angle_velocity'
-                v2 = max(sharedInst.av(fstart:fend, fn));
-            case 'sideways'
-                v2 = max(sharedInst.sideways(fstart:fend, fn)) * 100;
-            case 'sideways_velocity'
-                v2 = max(sharedInst.sidewaysVelocity(fstart:fend, fn));
-            end
-            % clustering value 3
-            v3 = 0;
-
-            t2{k} = [fn fstart fend t5(4) v1 v2 v3];
-            k = k + 1;
-        end
-    end    
-end
-
-function clustered = calcClasteringAndPlot(handles, t, numCluster, type1, type2, type3, cname)
-    % clastering
-    tsize = size(t,1);
-    points = zeros(tsize,3);
-    x = zeros(tsize,1);
-    y = zeros(tsize,1);
-    z = zeros(tsize,1);
-    for j = 1:tsize
-        points(j,:) = [t{j}(1,5) t{j}(1,6) t{j}(1,7)];
-        x(j) = t{j}(1,5);
-        y(j) = t{j}(1,6);
-        z(j) = t{j}(1,7);
-    end
-    try
-        dist = pdist(points);
-        tree = linkage(dist,'average');
-        c = cophenet(tree,dist)
-    catch e
-        errordlg(e.message, 'Error');
-        throw(e);
-    end
-%    clustered = cluster(tree,'cutoff',1.2);
-%    clustered = cluster(tree,'maxclust',50);
-
-    % plot Scatter
-    f = figure;
-    set(f, 'name', [cname, ' scatter']); % set window title
-    scatter(x,y);
-
-    % plot dendrogram
-    f = figure;
-    set(f, 'name', [cname, ' dendrogram']); % set window title
-    [h,clustered,outperm] = dendrogram(tree, numCluster);
-    ax = gca; % current axes
-    ax.FontSize = 6;
-end
-
-function result = saveClusteredCsvAndShow(handles, t, clustered, type1, type2, type3, filename)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    frame_num = size(sharedInst.vxy, 1);
-    fly_num = size(sharedInst.vxy, 2);
-    tsize = size(t,1);
-
-    result = zeros(frame_num,fly_num);
-    t2 = cell(tsize,8);
-    for j = 1:tsize
-        t3 = t{j}(1,:);
-        t2(j,:) = {t3(1) t3(2) t3(3) t3(4) t3(5) t3(6) t3(7) clustered(j)};
-        result(t3(2):t3(3), t3(1)) = clustered(j);
-    end
-    T = cell2table(t2);
-    header = {'FlyNo', 'StartFrame', 'EndFrame', 'Dmy', type1, type2, type3, 'Cluster'};
-    T.Properties.VariableNames = header;
-
-    clusterFileName = [sharedInst.confPath 'output/' filename];
-    writetable(T,clusterFileName, 'delimiter', '\t');
-    winopen(clusterFileName);
-end
-
+%% show clustering result
 function addClusteringResult2Axes(handles, result, itemName)
     listItems = cellstr(get(handles.popupmenu4,'String'));
     added = sum(strcmp(itemName, listItems));
@@ -1882,100 +1730,3 @@ function addClusteringResult2Axes(handles, result, itemName)
     end
 end
 
-function list = getTrapezoidList(handles, type1, type2, type3, flyIDs)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    frame_num = size(sharedInst.vxy, 1);
-    fly_num = size(sharedInst.vxy, 2);
-    
-    % count spike number
-    spikeNum = sum(sum(sharedInst.updownVxy~=0)) - fly_num;
-%    spikeNum = sum(updown(:,1)~=0) - 1;
-    list = cell(spikeNum,1);
-    
-    j = 1;
-    for fn = 1:fly_num
-        if length(flyIDs) > 0 && sum(flyIDs==fn) == 0
-            continue;
-        end
-        spikes = find(sharedInst.updownVxy(:,fn) ~= 0);
-        for i = 1:(length(spikes)-1)
-            % clustering value 1
-            switch type1
-            case 'velocity'
-                f1 = sharedInst.vxy(spikes(i), fn);
-                f2 = sharedInst.vxy(spikes(i+1), fn);
-                v1 = max([f1 f2]);
-            end
-            % clustering value 2
-            switch type2
-            case 'acceralation'
-                v2 = abs((f2 - f1) / (spikes(i+1) - spikes(i)));
-            case 'circularity'
-                v2 = (1 - min(sharedInst.ecc(spikes(i):spikes(i+1), fn))) * 100;
-            case 'angle_velocity'
-                v2 = max(sharedInst.av(spikes(i):spikes(i+1), fn));
-            case 'sideways'
-                v2 = max(sharedInst.sideways(spikes(i):spikes(i+1), fn)) * 100;
-            case 'sideways_velocity'
-                v2 = max(sharedInst.sidewaysVelocity(spikes(i):spikes(i+1), fn));
-            end
-            % clustering value 3
-            v3 = 0;
-            
-            if ~isnan(v2)
-                list{j} = [fn, spikes(i), spikes(i+1), 0, v1, v2, v3];
-                j = j + 1;
-            end
-        end
-    end
-    if j < spikeNum
-        list(j:spikeNum) = [];
-    end
-end
-
-function list = getNearestNeighbor(trapezoids, hierarchy)
-    MAX_DIST = 9999;
-    sz = length(trapezoids);
-    mat = zeros(sz,sz) + MAX_DIST;
-    list = cell(floor(sz/2),1);
-    x = zeros(floor(sz/2),1);
-    y = zeros(floor(sz/2),1);
-
-    % get distance matrix
-    for i=1:(sz-1)
-        for j=(i+1):sz
-            dx = trapezoids{i}(1,5) - trapezoids{j}(1,5);
-            dy = trapezoids{i}(1,6) - trapezoids{j}(1,6);
-            mat(i,j) = sqrt(dx*dx + dy*dy);
-        end
-    end
-    % get pairs
-    for j = 1:floor(sz/2)
-        mat_min = min(min(mat));
-        if mat_min == MAX_DIST 
-          break;
-        end
-        min_pair = find(mat==mat_min);
-        p = rem(min_pair(1), sz);
-        q = floor(min_pair(1) / sz) + 1;
-        if trapezoids{p}(1,5) > trapezoids{q}(1,5)
-            maxvalue = trapezoids{p}(1,5);
-            slope = trapezoids{p}(1,6);
-        else
-            maxvalue = trapezoids{q}(1,5);
-            slope = trapezoids{q}(1,6);
-        end
-        list{j} = [trapezoids{p}(1,1), p, q, mat(min_pair(1)), maxvalue, slope];
-        x(j) = maxvalue;
-        y(j) = slope;
-        mat(p,:) = MAX_DIST;
-        mat(q,:) = MAX_DIST;
-        mat(:,p) = MAX_DIST;
-        mat(:,q) = MAX_DIST;
-    end
-    if j < floor(sz/2)
-        list(j:spikeNum) = [];
-    end
-%    T = cell2table(list);
-%    writetable(T,['testout' num2str(hierarchy) '.csv'],'WriteVariableNames',false);
-end
