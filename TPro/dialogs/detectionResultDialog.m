@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 07-Sep-2017 18:39:19
+% Last Modified by GUIDE v2.5 15-Oct-2017 17:34:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -232,7 +232,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_ssi_result', 'aggr_grid_result'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1529,6 +1529,66 @@ function Untitled_21_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/aggr_dcd_percent.mat'], 'numValues', 'edges', 'values');
 end
 
+% --------------------------------------------------------------------
+function Untitled_23_Callback(hObject, eventdata, handles) %% sub menu
+end
+
+% --------------------------------------------------------------------
+function Untitled_25_Callback(hObject, eventdata, handles) %% sub menu
+end
+
+% --------------------------------------------------------------------
+function Untitled_24_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_24 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.ssiBinSize = readTproConfig('ssiBinSize', 5);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    binsize = sharedInst.ssiBinSize / sharedInst.mmPerPixel;
+
+    % calc local density of SSI
+    result = calcLocalDensitySsi(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, binsize, 20);
+    % show in plot
+    plotWithNewFigure(handles, result, max(result), min(result), []);
+    
+    % add result to axes & show in axes
+    cname = 'aggr_ssi_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+% --------------------------------------------------------------------
+function Untitled_26_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_26 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.ssiBinSize = readTproConfig('ssiBinSize', 5);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    binSize = sharedInst.ssiBinSize / sharedInst.mmPerPixel;
+    binNum = 20;
+
+    frameNum = sharedInst.frameNum;
+    t = round((frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    % get detected points and roi points
+    fx = sharedInst.X{t}(:);
+    fy = sharedInst.Y{t}(:);
+    fx(fx==0) = NaN;
+    fy(fy==0) = NaN;
+
+    histgram = calcLocalDensitySsiFrame(fy,fx,binSize,binNum);
+    score = (histgram(1) - histgram(2)) / sum(histgram);
+
+    % show in plot
+    barWithNewFigure(handles, histgram, max(histgram), 0, 1, binNum);
+    
+    % show score
+    set(handles.text9, 'String', score);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -1735,3 +1795,5 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
+
+

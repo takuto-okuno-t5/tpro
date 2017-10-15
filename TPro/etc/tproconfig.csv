@@ -11,3 +11,4 @@ dcdCnRadius,2.5
 exportMinDistance,1
 nnAlgorithm,single
 nnHeight,7.5
+ssiBinSize,5
