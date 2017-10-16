@@ -232,7 +232,9 @@ function calcVelocitys(handles, keep_data)
     sharedInst.vxy = calcVxy(keep_data{3}, keep_data{4}) * sharedInst.fpsNum * sharedInst.mmPerPixel;
     sharedInst.accVxy = calcDifferential2(sharedInst.vxy);
     bin = calcBinarize(sharedInst.accVxy, 0);
-    sharedInst.updownVxy = calcDifferential(bin);
+    updownVxy = calcDifferential(bin);
+    updownVxy(isnan(updownVxy)) = 0;
+    sharedInst.updownVxy = updownVxy;
     sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
     sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
     sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
@@ -1412,6 +1414,7 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
     hold off;
 end
 
+%%
 function showLongAxesTimeLine(hObject, handles, t, listFly)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     yval = sharedInst.vxy(:,listFly);

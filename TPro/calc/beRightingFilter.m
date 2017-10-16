@@ -1,5 +1,5 @@
 %%
-function be_mat = beJumpFilter(lv, updown, threshold, acc_threshold)
+function be_mat = beRightingFilter(side, updown, lv, max_side, min_side, min_lv)
     frame_num = size(lv, 1);
     fly_num = size(lv, 2);
     be_mat = zeros(frame_num,fly_num);
@@ -8,16 +8,14 @@ function be_mat = beJumpFilter(lv, updown, threshold, acc_threshold)
         lp = 1;
         for i = 1:(frame_num - 1)
             if updown(i,fn) ~= 0
-                l1 = lv(i,fn);
-                l2 = lv(lp,fn);
-                lvmax = max([l1, l2]);
-                width = abs(i - lp);
-                slope = abs((l2 - l1)/width);
-                if(lvmax>=threshold || slope>=acc_threshold)
+                s1 = side(i,fn);
+                s2 = side(lp,fn);
+                if (max_side>s1 && s1>=min_side) || (max_side>s2 && s2>=min_side)
                     be_mat(lp:i,fn) = 1;
                 end
                 lp = i;
             end
         end
     end
+    be_mat(lv<min_lv) = 0;
 end
