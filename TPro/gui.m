@@ -1237,8 +1237,8 @@ kalman_only_enable = 0;
 
 dt = 1;  % sampling rate
 frame_start = 1; % starting frame
-MAX_FLIES = 800; % maxmum number of flies
-RECURSION_LIMIT = 500; % maxmum number of recursion limit
+MAX_FLIES = readTproConfig('trackingFlyMax', 800); % maxmum number of flies
+RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recursion limit
 IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
 
@@ -1726,7 +1726,7 @@ for data_th = 1:size(records,1)
         end
 
         rate = (t_count-start_frame+1)/(end_frame-start_frame+1);
-        disp(['processing : ' shuttleVideo.name ' ' num2str(100*rate) '%     t : ' num2str(t)]);
+        disp(['processing : ' shuttleVideo.name ' ' num2str(100*rate) '%  fn : ' num2str(flyNum) '  t : ' num2str(t)]);
         % Report current estimate in the waitbar's message field
         waitbar(rate, hWaitBar, [num2str(int64(100*rate)) ' %']);
         pause(0.01);
