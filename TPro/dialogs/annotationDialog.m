@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 16-Oct-2017 00:23:59
+% Last Modified by GUIDE v2.5 22-Oct-2017 21:33:27
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -1161,6 +1161,14 @@ function Untitled_21_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
+% --------------------------------------------------------------------
+function Untitled_22_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_22 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    trapezoidFindChase(handles, @addClusteringResult2Axes);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1732,4 +1740,3 @@ function addClusteringResult2Axes(handles, result, itemName)
         popupmenu5_Callback(handles.popupmenu5,0,handles);
     end
 end
-

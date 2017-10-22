@@ -7,11 +7,12 @@ function be_mat = beGapFilter(mat, gap_len)
     for fn = 1:fly_num
         i = 1;
         while i <= (frame_num - gap_len)
-            if((mat(i,fn) == 1) && mat(i+1,fn) == 0)
+            if((mat(i,fn) ~= 0) && mat(i+1,fn) == 0)
+                val  = mat(i,fn);
                 active = find(mat((i+1):(i+gap_len),fn) > 0);
                 cnt1 = length(active);
                 if(cnt1 > 0)
-                    mat((i+1):(i+active(1)),fn) = 1;
+                    mat((i+1):(i+active(1)),fn) = val;
                     i = i+active(1)-1;
                 else
                     i = i+gap_len-1;
