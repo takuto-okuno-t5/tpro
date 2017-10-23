@@ -1,5 +1,5 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam, chaseparam)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
@@ -17,6 +17,9 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     end
     if ~isempty(mdparam)
         write_file_md = fopen([dataFileName '_md.txt'], 'wt');
+    end
+    if ~isempty(chaseparam)
+        write_file_cha = fopen([dataFileName '_chase.txt'], 'wt');
     end
 
     % cook raw data before saving
@@ -142,6 +145,13 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             fmtString = generatePrintFormatString(roiFlyNum);
             fprintf(write_file_md, fmtString, mdfly);
         end
+        if ~isempty(chaseparam)
+            % make save string
+            chaseRow = chaseparam(row_count, :);
+            roiFlyNum = length(chaseRow);
+            fmtString = generatePrintFormatDString(roiFlyNum);
+            fprintf(write_file_cha, fmtString, chaseRow);
+        end
     end
 
     fclose(write_file_x);
@@ -161,5 +171,8 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     end
     if ~isempty(mdparam)
         fclose(write_file_md);
+    end
+    if ~isempty(chaseparam)
+        fclose(write_file_cha);
     end
 end

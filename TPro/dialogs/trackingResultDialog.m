@@ -829,6 +829,16 @@ function pushbutton15_Callback(hObject, eventdata, handles)
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
 
+    % optional data export
+    mdparam = [];
+    dcdparam = [];
+    if sharedInst.exportDcd
+        dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
+    end
+    if sharedInst.exportMd
+        mdparam = [sharedInst.mmPerPixel];
+    end
+
     % save data as text
     flyNum = size(keep_data{1}, 2);
     end_row = size(keep_data{1}, 1) - 2;
@@ -838,18 +848,9 @@ function pushbutton15_Callback(hObject, eventdata, handles)
     for i=1:roiNum
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
-    
-        mdparam = [];
-        dcdparam = [];
-        if sharedInst.exportDcd
-            dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
-        end
-        if sharedInst.exportMd
-            mdparam = [sharedInst.mmPerPixel];
-        end
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, []);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);

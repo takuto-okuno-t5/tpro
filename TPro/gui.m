@@ -111,6 +111,8 @@ while true
         case {'--dcdp'}
             handles.dcdpfile = varargin{i+1};
             i = i + 1;
+        case {'--chase'}
+            handles.autochase = 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
             disp('  -b, --batch file    batch csv [file]');
@@ -124,6 +126,7 @@ while true
             disp('  --dcd               force to start dcd calculation');
             disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
+            disp('  --chase             export chase behavior after tracking');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
         otherwise
@@ -1277,6 +1280,7 @@ for data_th = 1:size(records,1)
     end_frame = record{5};
     frame_steps = record{16};
     roiNum = record{10};
+    fpsNum = record{7};
     mmPerPixel = record{9};
     fixedTrackNum = getVideoConfigValue(record, 27, 0);
     fixedTrackDir = getVideoConfigValue(record, 28, 0);
@@ -1767,27 +1771,43 @@ for data_th = 1:size(records,1)
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
 
+    % optional data export
+    mdparam = [];
+    dcdparam = [];
+    chaseparam = [];
+    if exportDcd
+        dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
+    end
+    if exportMd
+        mdparam = [mmPerPixel];
+    end
+    if isfield(handles, 'autochase')
+        trackingInfo = struct;
+        trackingInfo.fpsNum = fpsNum;
+        trackingInfo.mmPerPixel = mmPerPixel;
+        trackingInfo.keep_data = keep_data;
+        trackingInfo.vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
+        trackingInfo.accVxy = calcDifferential2(trackingInfo.vxy);
+        bin = calcBinarize(trackingInfo.accVxy, 0);
+        updownVxy = calcDifferential(bin);
+        updownVxy(isnan(updownVxy)) = 0;
+        trackingInfo.updownVxy = updownVxy;
+        trackingInfo.dir = calcDir(keep_data{5}, keep_data{6});
+        chaseparam = trapezoidFindChase(trackingInfo, []);
+    end
+
     % save data as text
     for i=1:roiNum
         outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
 
-        mdparam = [];
-        dcdparam = [];
-        if exportDcd
-            dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
-        end
-        if exportMd
-            mdparam = [mmPerPixel];
-        end
-
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, chaseparam);
 
         % save input data used for generating this result
         record = {records{data_th,:}};
         T = cell2table(record);
-        T.Properties.VariableNames = confTable.Properties.VariableNames;
+        T.Properties.VariableNames = getVideoConfigHeader();
         writetable(T, [dataFileName '_config.csv']);
     end
 
