@@ -1621,7 +1621,11 @@ function showFrameInAxes(hObject, handles, frameNum)
             grayImages = uint8(zeros(m,n,slen));
             for i=1:slen
                 frameImage = TProRead(sharedInst.shuttleVideo, sframe + (i-1)*sharedInst.frameSteps);
-                grayImage = rgb2gray(frameImage);
+                if size(frameImage,3) == 1
+                    grayImage = frameImage;
+                else
+                    grayImage = rgb2gray(frameImage);
+                end
                 grayImages(:,:,i) = grayImage;
             end
             if slen > 1

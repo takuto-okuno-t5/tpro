@@ -1,7 +1,11 @@
 %% image calcuration 
 function outimage = applyBackgroundSub(handles, img)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    grayImg = rgb2gray(img);
+    if size(img,3) == 1
+        grayImg = img;
+    else
+        grayImg = rgb2gray(img);
+    end
     if sharedInst.isInvert
         grayImg = imcomplement(grayImg);
     end

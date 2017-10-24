@@ -674,7 +674,11 @@ function pushbutton3_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     if ~isempty(sharedInst.roiMaskImage)
-        grayImage = rgb2gray(sharedInst.originalImage);
+        if size(sharedInst.originalImage,3) == 1
+            grayImage = sharedInst.originalImage;
+        else
+            grayImage = rgb2gray(sharedInst.originalImage);
+        end
         img = double(grayImage).*(imcomplement(sharedInst.roiMaskImage*0.5));
         img = uint8(img);
         cla;

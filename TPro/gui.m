@@ -556,7 +556,11 @@ for data_th = 1:size(records,1)
         pause(0.001);
 
         frameImage = TProRead(shuttleVideo, r(i) + startFrame - 1);
-        grayImage = rgb2gray(frameImage);
+        if size(frameImage,3) == 1
+            grayImage = frameImage;
+        else
+            grayImage = rgb2gray(frameImage);
+        end
         if isInvert
             grayImages = imcomplement(grayImages);
         end
@@ -874,7 +878,11 @@ for data_th = 1:size(records,1)
             img_real(:,:,2) = img_real(:,:,2) * gRate;
             img_real(:,:,3) = img_real(:,:,3) * bRate;
         end
-        grayImg = rgb2gray(img_real);
+        if size(img_real,3) == 1
+            grayImg = img_real;
+        else
+            grayImg = rgb2gray(img_real);
+        end
         if isInvert
             grayImg = imcomplement(grayImg);
         end
@@ -1974,7 +1982,11 @@ while data_th <= size(records,1)
     if records{data_th, 1}
         shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
         frameImage = TProRead(shuttleVideo,1);
-        grayImage = rgb2gray(frameImage);
+        if size(frameImage,3) == 1
+            grayImage = frameImage;
+        else
+            grayImage = rgb2gray(frameImage);
+        end
 
         % show selectRoiWayDialog
         roiFileName = [videoPath shuttleVideo.name '_tpro/roi.png'];
