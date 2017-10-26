@@ -1003,6 +1003,15 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles);
 
+    % multi ROI
+    if length(sharedInst.roiMasks) > 1
+        for i = 1:length(sharedInst.roiMasks)
+            result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks{i}, r, cnr);
+            addResult2Axes(handles, result, [cname num2str(i)], handles.popupmenu4);
+            save([sharedInst.confPath 'multi/' cname num2str(i) '.mat'], 'result');
+        end
+    end
+
     % calc percentile values
     pfileName = [sharedInst.confPath 'multi/aggr_dcd_percent.mat'];
     if exist(pfileName,'file')
