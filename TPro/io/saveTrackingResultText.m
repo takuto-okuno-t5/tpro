@@ -148,6 +148,7 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         if ~isempty(chaseparam)
             % make save string
             chaseRow = chaseparam(row_count, :);
+            chaseRow(nanIdx) = NaN;
             roiFlyNum = length(chaseRow);
             fmtString = generatePrintFormatDString(roiFlyNum);
             fprintf(write_file_cha, fmtString, chaseRow);
