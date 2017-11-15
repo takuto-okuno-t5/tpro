@@ -6,6 +6,10 @@ function [minDists, minIdxs] = calcMinDistanceFrame(x, y)
     minDists(:) = NaN;
     minIdxs(:) = NaN;
 
+    if xlen <= 1
+        return; % non distances
+    end
+
     % calc local_dencity
     pts = [x, y];
     dist = pdist(pts);
