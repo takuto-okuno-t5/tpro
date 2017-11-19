@@ -845,7 +845,88 @@ for data_th = 1:size(records,1)
     Y_update2 = Y;
     detection_num = nan(2,end_frame-start_frame+1);
     blobAvgSize = 0;
-    
+    checkNums = 25; % for finding middle area size
+
+    % finding middle area size
+    disp(['finding middle area size : ' shuttleVideo.name]);
+    hWaitBar = waitbar(0,'finding middle area size ...','Name',['finding middle area size ', shuttleVideo.name],...
+                'CreateCancelBtn',...
+                'setappdata(gcbf,''canceling'',1)');
+    setappdata(hWaitBar,'canceling',0)
+
+    % generate random
+    r = randperm(end_frame - start_frame + 1);
+    r = r(1:checkNums);
+    areas = [];
+    for i = 1 : checkNums
+        % Check for Cancel button press
+        isCancel = getappdata(hWaitBar, 'canceling');
+        if isCancel
+            break;
+        end
+
+        % Report current estimate in the waitbar's message field
+        waitbar(i/checkNums, hWaitBar, [num2str(100*i/checkNums) ' %']);
+        pause(0.001);
+
+        % read a frame and process image
+        frameImage = TProRead(shuttleVideo, r(i) + start_frame - 1);
+        if size(frameImage,3) == 1
+            grayImg = frameImage;
+        else
+            grayImg = rgb2gray(frameImage);
+        end
+        if isInvert
+            grayImages = imcomplement(grayImages);
+        end
+        grayImages(:,:,i) = grayImg;
+        clear frameImage;
+        if ~isempty(bg_img_mean)
+            grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
+            grayImageDouble = double(grayImg);
+            img = bg_img_double - grayImageDouble;
+            img = uint8(img);
+            img = imcomplement(img);
+        else
+            img = grayImg;
+        end
+        % sharp and consrast filters
+        if contMin > 0 && contMax > 0
+            img = imadjust(img, [contMin; contMax]);
+        end
+        if sharpRadius > 0 && sharpAmount > 0
+            img = imsharpen(img, 'Radius',sharpRadius, 'Amount',sharpAmount);
+        end
+        %do the blob filter
+        blob_img = PD_blobfilter(img, h, sigma, filterType);
+        % ROI
+        if ~isempty(roi_mask)
+            blob_img = blob_img .* roi_mask;
+        end
+        % binarize
+        img = im2bw(blob_img, blob_threshold);
+        blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
+
+        % step
+        H = vision.BlobAnalysis;
+        H.MaximumCount = 100;
+        H.MajorAxisLengthOutputPort = 1;
+        H.MinorAxisLengthOutputPort = 1;
+        H.OrientationOutputPort = 1;
+        H.EccentricityOutputPort = 1;
+        H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
+        [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical2);
+        areas = [areas; AREA];
+    end
+    % delete dialog bar
+    delete(hWaitBar);
+    if isCancel
+        continue;
+    end
+    blobAvgSize = nanmedian(areas) * 0.95;
+    disp(['middle area size : ' num2str(blobAvgSize)]);
+
+    % start detection
     disp(['start detection : ' shuttleVideo.name]);
 
 %load(strcat('./multi/detect_',shuttleVideo.name,'_',filename,'.mat'));
@@ -994,7 +1075,7 @@ for data_th = 1:size(records,1)
         if blob_center_enable
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-                blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, i, blobAvgSize, ...
+                blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, blobAvgSize, ...
                 maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear);
         end
 
@@ -1063,19 +1144,20 @@ for data_th = 1:size(records,1)
         keep_major_axis{i} = blobMajorAxis';
         keep_minor_axis{i} = blobMinorAxis';
 
+        processRate = 100 * (i_count-start_frame)/(end_frame-start_frame+1);
         if extrema_enable
             if size(imax,1) == size(X_update{i},1)
-                disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1))));
+                disp(strcat(num2str(data_th), 'th     >', num2str(processRate), '%', '     detect : ', num2str(size(imax,1))));
             elseif ba_enable
-                disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
+                disp(strcat(num2str(data_th), 'th     >', num2str(100*processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
             else
-                disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
+                disp(strcat(num2str(data_th), 'th     >', num2str(100*processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
             end
             detection_num(:,i) = [size(imax,1); size(X_update{i},1)];
         end
 
         if blob_center_enable
-            disp(strcat(num2str(data_th), 'th     >', num2str(100*(i_count-start_frame)/(end_frame-start_frame+1)), '%', ' i:',num2str(i),' frame:',num2str(i_count), '   detect_blob_center : ', num2str(size(X_update2{i},1))));
+            disp([num2str(data_th), 'th >', num2str(100*processRate), '%', ' i:',num2str(i),' frame:',num2str(i_count), '  detect_blob_center : ', num2str(size(X_update2{i},1))]);
         end
 
         % graph for detection analysis

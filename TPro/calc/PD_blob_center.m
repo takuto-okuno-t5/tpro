@@ -1,7 +1,7 @@
 %%
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
            blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-                        blob_img, blob_img_logical, blob_threshold, blobSeparateRate, frameCount, blobAvgSizeIn,...
+                        blob_img, blob_img_logical, blob_threshold, blobSeparateRate, blobAvgSizeIn,...
                         maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear)
     H = vision.BlobAnalysis;
     H.MaximumCount = 100;
@@ -21,11 +21,10 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     origEcc = ECCENTRICITY;
 
     labeledImage = bwlabel(blob_img_logical);   % label the image
-
-    area_mean = mean(origAreas);
-    blobAvgSize = (area_mean + blobAvgSizeIn * (frameCount - 1)) / frameCount;
-    if isnan(blobAvgSize) || blobAvgSize == 0
-        blobAvgSize = area_mean;
+    if isnan(blobAvgSizeIn) || blobAvgSizeIn == 0
+        blobAvgSize = nanmedian(origAreas) * 0.95;
+    else
+        blobAvgSize = blobAvgSizeIn;
     end
     blob_num = size(origAreas,1);
     blobPointX = [];
@@ -41,8 +40,8 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     % loop for checking all blobs
     for i = 1 : blob_num
         % check blobAreas dimension of current blob and how bigger than avarage.
-        area_ratio = double(origAreas(i))/blobAvgSize;
-        if (mod(area_ratio,1) > blobSeparateRate)
+        area_ratio = double(origAreas(i))/double(blobAvgSize);
+        if (mod(area_ratio,1) >= blobSeparateRate)
             expect_num = area_ratio + (1-mod(area_ratio,1));
         else
             expect_num = floor(area_ratio); % floor to the nearest integer
@@ -56,7 +55,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             chooseOne = false;
         elseif expect_num > 1 && isSeparate
             % find separated area
-            blob_threshold2 = blob_threshold - 0.2;
+            blob_threshold2 = blob_threshold / 2 - 0.1;
             if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
 
             label_mask = labeledImage==i;
@@ -71,34 +70,54 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blob_th_max = max(max(blob_img_trimmed));
             blob_img_trimmed = blob_img_trimmed / blob_th_max;
 
-            for th_i = 1 : 40
-                blob_threshold2 = blob_threshold2 + 0.05;
+            %peakImg = imregionalmax(blob_img_trimmed);
+            NEARBLOBMAX = 999;
+            nearCount = NEARBLOBMAX;
+
+            for th_i = 1 : 60
+                blob_threshold2 = blob_threshold2 + 0.02;
                 if blob_threshold2 > 1
                     break;
                 end
 
                 blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
                 [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
+                count = (expect_num - size(AREA, 1));
 
-                if expect_num <= size(AREA, 1) % change from <= to == 20161015
-                    x_choose = CENTROID(1:expect_num,2);
-                    y_choose = CENTROID(1:expect_num,1);    % choose expect_num according to area (large)
-                    blobPointX = [blobPointX ; x_choose + double(rect(2))];
-                    blobPointY = [blobPointY ; y_choose + double(rect(1))];
-                    blobAreas = [blobAreas ; AREA(1:expect_num)];
-                    blobMajorAxis = [blobMajorAxis ; MAJORAXIS(1:expect_num)];
-                    blobMinorAxis = [blobMinorAxis ; MINORAXIS(1:expect_num)];
-                    blobOrient = [blobOrient ; ORIENTATION(1:expect_num)];
-                    blobEcc = [blobEcc ; ECCENTRICITY(1:expect_num)];
-                    for j=1 : expect_num
-                        pt = CENTROID(j,:) + [double(rect(1)) double(rect(2))];
-                        box = BBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
-                        blobCenterPoints = [blobCenterPoints ; pt];
-                        blobBoxes = [blobBoxes ; box];
+                if nearCount > count
+                    nearCount = count;
+                    nearNum = size(AREA, 1);
+                    nearAREA = AREA;
+                    nearCENTROID = CENTROID;
+                    nearBBOX = BBOX;
+                    nearMAJORAXIS = MAJORAXIS;
+                    nearMINORAXIS = MINORAXIS;
+                    nearORIENTATION = ORIENTATION;
+                    nearECCENTRICITY = ECCENTRICITY;
+                    nearEXTENT = EXTENT;
+                    if nearNum >= expect_num
+                        nearNum = expect_num;
+                        break;
                     end
-                    chooseOne = false;
-                    break
                 end
+            end
+            if nearCount < NEARBLOBMAX
+                x_choose = nearCENTROID(1:nearNum,2);
+                y_choose = nearCENTROID(1:nearNum,1);    % choose nearNum according to area (large)
+                blobPointX = [blobPointX ; x_choose + double(rect(2))];
+                blobPointY = [blobPointY ; y_choose + double(rect(1))];
+                blobAreas = [blobAreas ; nearAREA(1:nearNum)];
+                blobMajorAxis = [blobMajorAxis ; nearMAJORAXIS(1:nearNum)];
+                blobMinorAxis = [blobMinorAxis ; nearMINORAXIS(1:nearNum)];
+                blobOrient = [blobOrient ; nearORIENTATION(1:nearNum)];
+                blobEcc = [blobEcc ; nearECCENTRICITY(1:nearNum)];
+                for j=1 : nearNum
+                    pt = nearCENTROID(j,:) + [double(rect(1)) double(rect(2))];
+                    box = nearBBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
+                    blobCenterPoints = [blobCenterPoints ; pt];
+                    blobBoxes = [blobBoxes ; box];
+                end
+                chooseOne = false;
             end
         end
         if chooseOne
