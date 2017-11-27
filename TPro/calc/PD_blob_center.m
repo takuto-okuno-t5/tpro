@@ -21,7 +21,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     origEcc = ECCENTRICITY;
 
     labeledImage = bwlabel(step4Image);   % label the image
-    if isnan(blobAvgSizeIn) || blobAvgSizeIn == 0
+    if (isnan(blobAvgSizeIn) || blobAvgSizeIn == 0) && ~isempty(origAreas)
         blobAvgSize = nanmedian(origAreas) * 0.95;
     else
         blobAvgSize = blobAvgSizeIn;
@@ -36,8 +36,10 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     blobMinorAxis = [];
     blobOrient = [];
     blobEcc = [];
+    expectNums = zeros(1,blob_num);
+    useTmplMatch = zeros(1,blob_num);
 
-    % loop for checking all blobs
+    % estimate fly numbers in each blob first
     for i = 1 : blob_num
         % check blobAreas dimension of current blob and how bigger than avarage.
         area_ratio = double(origAreas(i))/double(blobAvgSize);
@@ -46,23 +48,48 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         else
             expect_num = floor(area_ratio); % floor to the nearest integer
         end
-
+        if expect_num >= tmplMatchTh
+            % usually, this kind of big blob becomes smaller area than times of single blob
+            % so, expect_num is recalculated.
+            area_ratio = double(origAreas(i))/double(blobAvgSize*0.92);
+            if (mod(area_ratio,1) >= blobSeparateRate)
+                expect_num = area_ratio + (1-mod(area_ratio,1));
+            else
+                expect_num = floor(area_ratio); % floor to the nearest integer
+            end
+            useTmplMatch(i) = 1;
+        end
+        expectNums(i) = expect_num;
+    end
+    total = sum(expectNums);
+    if maxBlobs > 0 && maxBlobs > total
+        % maxBlobs mode. total number is less than maxBlobs. so add a shortage
+        idx = find(expectNums >= tmplMatchTh);
+        k = 0;
+        if ~isempty(idx)
+            for j = 1:(maxBlobs - total)
+                expectNums(idx(k+1)) = expectNums(idx(k+1)) + 1;
+                k = mod(k+1, length(idx));
+            end
+        elseif ~isempty(origAreas)
+            [B, idx] = sort(origAreas,'descend');
+            for j = 1:(maxBlobs - total)
+                expectNums(idx(k+1)) = expectNums(idx(k+1)) + 1;
+                useTmplMatch(idx(k+1)) = 1; % force to use template matching
+                k = mod(k+1, length(idx));
+            end
+        end
+    end
+    
+    % loop for checking all blobs
+    for i = 1 : blob_num
         % check expected number of targets (animals)
         chooseOne = true;
-        if expect_num <= 1  % expect one
+        if expectNums(i) <= 1  % expect one
             % set output later
         elseif isSeparate
             label_mask = labeledImage==i;
-            if expect_num >= tmplMatchTh && ~isempty(tmplImages) % big separation. use template matching
-                % usually, this kind of big blob becomes smaller area than times of single blob
-                % so, expect_num is recalculated.
-                area_ratio = double(origAreas(i))/double(blobAvgSize*0.92);
-                if (mod(area_ratio,1) >= blobSeparateRate)
-                    expect_num = area_ratio + (1-mod(area_ratio,1));
-                else
-                    expect_num = floor(area_ratio); % floor to the nearest integer
-                end
-
+            if useTmplMatch(i) > 0 && ~isempty(tmplImages) % big separation. use template matching
                 blob_img_masked = step2Image .* uint8(label_mask);
 
                 % trimmed from original gray scale image
@@ -79,9 +106,9 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                 blob_img_trimmed(blob_img_trimmed==0) = 255;
 
                 [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
-                    blobSeparationByTemplateMatch(blob_img_trimmed, expect_num, tmplImage, tmplSepTh, origAreas(i));
+                    blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, origAreas(i));
 
-            else % small separation
+            else % small separation. use shading off blob separation
                 blob_img_masked = step3Image .* label_mask;
 
                 % trimmed from original gray scale image
@@ -89,7 +116,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                 blob_img_trimmed = imcrop(blob_img_masked, rect);
 
                 [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
-                    blobSeparationByShadeOff(blob_img_trimmed, blob_threshold, expect_num, hBlobAnls);
+                    blobSeparationByShadeOff(blob_img_trimmed, blob_threshold, expectNums(i), hBlobAnls);
             end
 
             if nearNum > 0
@@ -166,7 +193,8 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             while maxBlobs < (blobNum - length(delIdx))
                 [mm,m] = max(dist1(i,:));
                 delIdx = [delIdx, m];
-                dist1(i,m) = 0; 
+                dist1(i,m) = 0;
+                delIdx = unique(delIdx);
             end
         else
             % find nearest neighbor, then delete smaller area
@@ -181,6 +209,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                 end
                 dist1(n,m(n)) = 9999; % set dummy
                 dist1(m(n),n) = 9999; % set dummy
+                delIdx = unique(delIdx);
             end
         end
         if ~isempty(delIdx)

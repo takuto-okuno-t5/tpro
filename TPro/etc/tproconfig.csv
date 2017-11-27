@@ -35,5 +35,5 @@ beChaseMinDist,8
 beChaseMinDir,30
 beChaseDuration,0.166
 beChaseGap,0.166
-tmplMatchTh,5
+tmplMatchTh,4
 tmplSepTh,0.85
