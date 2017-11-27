@@ -1,17 +1,17 @@
 %%
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
            blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-                        blob_img, blob_img_logical, blob_threshold, blobSeparateRate, blobAvgSizeIn,...
-                        maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear)
-    H = vision.BlobAnalysis;
-    H.MaximumCount = 100;
-    H.MajorAxisLengthOutputPort = 1;
-    H.MinorAxisLengthOutputPort = 1;
-    H.OrientationOutputPort = 1;
-    H.EccentricityOutputPort = 1;
-    H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
+                        step2Image, step3Image, step4Image, blob_threshold, blobSeparateRate, blobAvgSizeIn,...
+                        tmplMatchTh, tmplSepTh, tmplImages, isSeparate, delRectOverlap, maxBlobs, keepNear)
+    hBlobAnls = vision.BlobAnalysis;
+    hBlobAnls.MaximumCount = 100;
+    hBlobAnls.MajorAxisLengthOutputPort = 1;
+    hBlobAnls.MinorAxisLengthOutputPort = 1;
+    hBlobAnls.OrientationOutputPort = 1;
+    hBlobAnls.EccentricityOutputPort = 1;
+    hBlobAnls.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
 
-    [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical);
+    [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(hBlobAnls, step4Image);
     origAreas = AREA;
     origCenterPoints = CENTROID;
     origBoxes = BBOX;
@@ -20,7 +20,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     origOrient = ORIENTATION;
     origEcc = ECCENTRICITY;
 
-    labeledImage = bwlabel(blob_img_logical);   % label the image
+    labeledImage = bwlabel(step4Image);   % label the image
     if isnan(blobAvgSizeIn) || blobAvgSizeIn == 0
         blobAvgSize = nanmedian(origAreas) * 0.95;
     else
@@ -51,57 +51,48 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         chooseOne = true;
         if expect_num <= 1  % expect one
             % set output later
-        elseif expect_num > maxSeparate % too big! isn't it?
-            chooseOne = false;
-        elseif expect_num > 1 && isSeparate
-            % find separated area
-            blob_threshold2 = blob_threshold / 2 - 0.1;
-            if blob_threshold2 < 0, blob_threshold2 = 0; end % should be positive
-
+        elseif isSeparate
             label_mask = labeledImage==i;
-            blob_img_masked = blob_img .* label_mask;
-
-            % trimmed from original gray scale image
-            rect = origBoxes(i,:);
-            blob_img_trimmed = imcrop(blob_img_masked, rect);
-
-            % stronger gaussian again
-            blob_img_trimmed = imgaussfilt(blob_img_trimmed, 2);
-            blob_th_max = max(max(blob_img_trimmed));
-            blob_img_trimmed = blob_img_trimmed / blob_th_max;
-
-            %peakImg = imregionalmax(blob_img_trimmed);
-            NEARBLOBMAX = 999;
-            nearCount = NEARBLOBMAX;
-
-            for th_i = 1 : 60
-                blob_threshold2 = blob_threshold2 + 0.02;
-                if blob_threshold2 > 1
-                    break;
+            if expect_num >= tmplMatchTh && ~isempty(tmplImages) % big separation. use template matching
+                % usually, this kind of big blob becomes smaller area than times of single blob
+                % so, expect_num is recalculated.
+                area_ratio = double(origAreas(i))/double(blobAvgSize*0.92);
+                if (mod(area_ratio,1) >= blobSeparateRate)
+                    expect_num = area_ratio + (1-mod(area_ratio,1));
+                else
+                    expect_num = floor(area_ratio); % floor to the nearest integer
                 end
 
-                blob_img_trimmed2 = im2bw(blob_img_trimmed, blob_threshold2);
-                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_trimmed2);
-                count = (expect_num - size(AREA, 1));
+                blob_img_masked = step2Image .* uint8(label_mask);
 
-                if nearCount > count
-                    nearCount = count;
-                    nearNum = size(AREA, 1);
-                    nearAREA = AREA;
-                    nearCENTROID = CENTROID;
-                    nearBBOX = BBOX;
-                    nearMAJORAXIS = MAJORAXIS;
-                    nearMINORAXIS = MINORAXIS;
-                    nearORIENTATION = ORIENTATION;
-                    nearECCENTRICITY = ECCENTRICITY;
-                    nearEXTENT = EXTENT;
-                    if nearNum >= expect_num
-                        nearNum = expect_num;
-                        break;
-                    end
+                % trimmed from original gray scale image
+                tmplImage = tmplImages{1};
+                rect = origBoxes(i,:);
+                w = max(size(tmplImage,1), size(tmplImage,2));
+                rect = rect + int32([-w/2, -w/2, w, w]);
+                if rect(3) < w*2
+                    rect(3) = w*2 + 2;
+                elseif rect(4) < w*2
+                    rect(4) = w*2 + 2;
                 end
+                blob_img_trimmed = imcrop(blob_img_masked, rect);
+                blob_img_trimmed(blob_img_trimmed==0) = 255;
+
+                [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
+                    blobSeparationByTemplateMatch(blob_img_trimmed, expect_num, tmplImage, tmplSepTh, origAreas(i));
+
+            else % small separation
+                blob_img_masked = step3Image .* label_mask;
+
+                % trimmed from original gray scale image
+                rect = origBoxes(i,:);
+                blob_img_trimmed = imcrop(blob_img_masked, rect);
+
+                [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
+                    blobSeparationByShadeOff(blob_img_trimmed, blob_threshold, expect_num, hBlobAnls);
             end
-            if nearCount < NEARBLOBMAX
+
+            if nearNum > 0
                 x_choose = nearCENTROID(1:nearNum,2);
                 y_choose = nearCENTROID(1:nearNum,1);    % choose nearNum according to area (large)
                 blobPointX = [blobPointX ; x_choose + double(rect(2))];

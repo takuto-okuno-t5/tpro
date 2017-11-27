@@ -720,6 +720,8 @@ exportDcd = readTproConfig('exportDcd', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
+tmplMatchTh = readTproConfig('tmplMatchTh', 5);
+tmplSepTh = readTproConfig('tmplSepTh', 0.85);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -778,6 +780,7 @@ for data_th = 1:size(records,1)
     contMax = getVideoConfigValue(record, 30, 0);
     sharpRadius = getVideoConfigValue(record, 31, 0);
     sharpAmount = getVideoConfigValue(record, 32, 0);
+    templateCount = getVideoConfigValue(record, 33, 0);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -813,6 +816,7 @@ for data_th = 1:size(records,1)
         end
     end
 
+    % background
     bgImageFile = strcat(confPath,'background.png');
     if exist(bgImageFile, 'file')
         bgImage = imread(bgImageFile);
@@ -829,6 +833,20 @@ for data_th = 1:size(records,1)
     else
         bg_img_double = [];
         bg_img_mean = [];
+    end
+
+    % template matching image
+    templateImages = {};
+    for i=1:templateCount
+        if i==1 idx=''; else idx=num2str(i); end
+        templateFileName = [confPath 'template' idx '.png'];
+        if exist(templateFileName, 'file')
+            tmplImage = imread(templateFileName);
+            tmplImage = rgb2gray(tmplImage);
+            tmplImage = 255 - tmplImage;
+            tmplImage = single(tmplImage);
+            templateImages = [templateImages, tmplImage];
+        end
     end
 
     % make output folder
@@ -973,32 +991,32 @@ for data_th = 1:size(records,1)
             grayImageDouble = double(grayImg);
             img = bg_img_double - grayImageDouble;
             img = uint8(img);
-            img = imcomplement(img);
+            step2img = imcomplement(img);
         else
-            img = grayImg;
+            step2img = grayImg;
         end
         % sharp and consrast filters
         if contMin > 0 && contMax > 0
-            img = imadjust(img, [contMin; contMax]);
+            step2img = imadjust(step2img, [contMin; contMax]);
         end
         if sharpRadius > 0 && sharpAmount > 0
-            img = imsharpen(img, 'Radius',sharpRadius, 'Amount',sharpAmount);
+            step2img = imsharpen(step2img, 'Radius',sharpRadius, 'Amount',sharpAmount);
         end
 
         %do the blob filter
-        blob_img = PD_blobfilter(img, h, sigma, filterType);
+        step3img = PD_blobfilter(step2img, h, sigma, filterType);
 
         % ROI
         if ~isempty(roi_mask)
-            blob_img = blob_img .* roi_mask;
+            step3img = step3img .* roi_mask;
         end
 
-        % imshow(blob_img)
-%                blob_img_1st = blob_img;
+        % imshow(step3img)
+%                blob_img_1st = step3img;
 
         %                 if animal_type == 2     % rodent set blob_threshold_peak to be the maximum of blob_img_1st
         %                     blob_th_test = blob_threshold;
-        %                     blob_img_test = blob_img;
+        %                     blob_img_test = step3img;
         %                     for th_i = 1:10
         %                         blob_img_test2 = blob_img_test;
         %                         idx_test = find(blob_img_test < blob_th_test);
@@ -1011,8 +1029,8 @@ for data_th = 1:size(records,1)
         %                     end
         %                     blob_threshold = blob_th_test;
         %                 end
-%                idx = find(blob_img < blob_threshold);
-%                blob_img(idx) = nan ;
+%                idx = find(step3img < blob_threshold);
+%                step3img(idx) = nan ;
 
         %                 %%% find the number of detection
         %                 blob_img_logical = blob_img_1st;
@@ -1025,7 +1043,7 @@ for data_th = 1:size(records,1)
 
         %                     %% for output cut_Video_14.avi blob specific and normal thresholding
         %                     figure(1)
-        %                     imshow(blob_img(228:255,329:369))
+        %                     imshow(step3img(228:255,329:369))
         %                     set(gca,'Units','Normalized','position',[0.1,0.1,0.8,0.8]);
         %
         %                     figure(2)
@@ -1041,21 +1059,21 @@ for data_th = 1:size(records,1)
         %                     keyboard
 
         %%% for output cut_Video_14.aviblob_after_thresholding
-        %                     imshow(blob_img)
+        %                     imshow(step3img)
         %                     f=getframe;
         %                     imwrite(f.cdata,strcat('./for_resource/','blob_after_thresholding','.png'));
         %                     keyboard
 
         %%% for output cut_Video_14.aviblob_splitting
-        %                     imshow(blob_img(60:130,320:390))
+        %                     imshow(step3img(60:130,320:390))
         %                     f=getframe;
         %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting','.png'));
         %                     keyboard
 
         %                 %% for output 3d splitting
         %
-        %                                 blob_temp = blob_img(60:130,320:390);
-        %                                 blob_temp(1:end,:) = blob_img(130:-1:60,320:390);
+        %                                 blob_temp = step3img(60:130,320:390);
+        %                                 blob_temp(1:end,:) = step3img(130:-1:60,320:390);
         %                                 surf(blob_temp);
         %                                 colormap(parula);
         %                                 axis([20 60 20 50 0.8 2.4])
@@ -1068,38 +1086,16 @@ for data_th = 1:size(records,1)
         %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting','.png'));
         %                                 keyboard
 
-        img = im2bw(blob_img, blob_threshold);
+        img = im2bw(step3img, blob_threshold);
         blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
 
         % get blobs from step function
         if blob_center_enable
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-                blob_img, blob_img_logical2, blob_threshold, blobSeparateRate, blobAvgSize, ...
-                maxSeparate, isSeparate, delRectOverlap, maxBlobs, keepNear);
+                step2img, step3img, blob_img_logical2, blob_threshold, blobSeparateRate, blobAvgSize, ...
+                tmplMatchTh, tmplSepTh, templateImages, isSeparate, delRectOverlap, maxBlobs, keepNear);
         end
-
-        %%% for output cut_Video_14.aviblob_splitting_after
-        %                     imshow(blob_img_logical2(60:130,320:390))
-        %                     f=getframe;
-        %                     imwrite(f.cdata,strcat('./for_resource/','blob_splitting_after','.png'));
-        %                     keyboard
-
-        %                 %% for output 3d splitting
-        %                                 blob_img_temp = blob_img.*blob_img_logical2;
-        %                                 blob_temp = blob_img_temp(60:130,320:390);
-        %                                 blob_temp(1:end,:) = blob_img_temp(130:-1:60,320:390);
-        %                                 surf(blob_temp);
-        %                                 colormap(parula);
-        %                                 axis([20 60 20 50 0.8 2.4])
-        %                                 view(-15,29)
-        %                                 xlabel('x','FontSize',18)
-        %                                 ylabel('y','FontSize',18)
-        %                                 zlabel('z','FontSize',18)
-        %                                 set(gca,'fontsize',18)
-        %                                 f=getframe;
-        %                                 imwrite(f.cdata,strcat('./for_resource/','3dblob_splitting_after','.png'));
-        %                                 keyboard
 
         if extrema_enable
 
@@ -1120,8 +1116,6 @@ for data_th = 1:size(records,1)
                 [ X_update2{i}, Y_update2{i} ] = PD_blob_analysis( H, blob_img_logical, X_update{i}, Y_update{i} );
                 blob_img_logical2 = blob_img_logical;   % just copy blob_img_logical
             end
-
-
         end
 
         %% working 20170315
@@ -1149,15 +1143,15 @@ for data_th = 1:size(records,1)
             if size(imax,1) == size(X_update{i},1)
                 disp(strcat(num2str(data_th), 'th     >', num2str(processRate), '%', '     detect : ', num2str(size(imax,1))));
             elseif ba_enable
-                disp(strcat(num2str(data_th), 'th     >', num2str(100*processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
+                disp(strcat(num2str(data_th), 'th     >', num2str(processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1)), '   detect_ba : ', num2str(size(X_update2{i},1))));
             else
-                disp(strcat(num2str(data_th), 'th     >', num2str(100*processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
+                disp(strcat(num2str(data_th), 'th     >', num2str(processRate), '%', '     detect : ', num2str(size(imax,1)), '   detect_npa : ', num2str(size(X_update{i},1))));
             end
             detection_num(:,i) = [size(imax,1); size(X_update{i},1)];
         end
 
         if blob_center_enable
-            disp([num2str(data_th), 'th >', num2str(100*processRate), '%', ' i:',num2str(i),' frame:',num2str(i_count), '  detect_blob_center : ', num2str(size(X_update2{i},1))]);
+            disp([num2str(data_th), 'th >', num2str(processRate), '%', ' i:',num2str(i),' frame:',num2str(i_count), '  detect_blob_center : ', num2str(size(X_update2{i},1))]);
         end
 
         % graph for detection analysis

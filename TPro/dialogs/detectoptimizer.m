@@ -146,7 +146,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.contMax = getVideoConfigValue(records, 30, 0);
     sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
     sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
-    
+    sharedInst.templateCount = getVideoConfigValue(records, 33, 0);
+
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
     if exist(lastConfigFile, 'file') && handles.isArgin
@@ -176,6 +177,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.contMax = cf.contMax;
         sharedInst.sharpRadius = cf.sharpRadius;
         sharedInst.sharpAmount = cf.sharpAmount;
+        sharedInst.templateCount = cf.templateCount;
     end
 
     % deep learning data
@@ -273,6 +275,23 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             else
                 sharedInst.roiMaskImage = sharedInst.roiMaskImage | im2double(img);
             end
+        end
+    end
+
+    % template matching image
+    sharedInst.tmplMatchTh = readTproConfig('tmplMatchTh', 5);
+    sharedInst.tmplSepTh = readTproConfig('tmplSepTh', 0.85);
+    sharedInst.templateImages = {};
+
+    for i=1:sharedInst.templateCount
+        if i==1 idx=''; else idx=num2str(i); end
+        templateFileName = [sharedInst.confPath 'template' idx '.png'];
+        if exist(templateFileName, 'file')
+            tmplImage = imread(templateFileName);
+            tmplImage = rgb2gray(tmplImage);
+            tmplImage = 255 - tmplImage;
+            tmplImage = single(tmplImage);
+            sharedInst.templateImages = [sharedInst.templateImages, tmplImage];
         end
     end
     
@@ -1061,8 +1080,8 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     
     [ blobPointY, blobPointX, blobAreas, blobCenterPoints, blobBoxes, ...
       blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-          sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
-          0, sharedInst.maxSeparate, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, ...
+          sharedInst.step2Image, sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
+          0, sharedInst.tmplMatchTh, sharedInst.tmplSepTh, sharedInst.templateImages, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, ...
           sharedInst.keepNear);
 
     % draw image
