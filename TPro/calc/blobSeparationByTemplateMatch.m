@@ -14,8 +14,6 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     % of the same dimension of the target.
     hConv2D = vision.Convolver('OutputSize','Valid');
 
-    maxTargetNumEachAngle = floor(expect_num / 2);
-
     %%
     % Here you implement the following sequence of operations.
 %Img_org = blob_img_trimmed;
@@ -62,7 +60,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     % normalized cross correlation.
     hFindMax = vision.LocalMaximaFinder( ...
                 'Threshold', single(-1), ...
-                'MaximumNumLocalMaxima', maxTargetNumEachAngle, ...
+                'MaximumNumLocalMaxima', expect_num, ...
                 'NeighborhoodSize', floor([rt, ct]/2)*2 - 1);
 
     Im_del = zeros(ri, ci, 'single');
@@ -71,7 +69,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     for j=1:5
         threshold = tmplSepTh - (j-1)*0.05;
         for i=1:16
-            target_size = repmat([rt, ct], [maxTargetNumEachAngle, 1]);
+            target_size = repmat([rt, ct], [expect_num, 1]);
             r_mod = 2^nextpow2(rt + ri);
             c_mod = 2^nextpow2(ct + ci);
             Im_p = zeros(r_mod, c_mod, 'single'); % Used for zero padding

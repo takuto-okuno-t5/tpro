@@ -11,6 +11,6 @@ function outConf = checkConfigCompatibility(inConf)
         outConf = [outConf, 0, 0, 0, 0];
     end
     if length(outConf) < 33 % template matching
-        outConf = [outConf, 0];
+        outConf = [outConf, 0, 0];
     end
 end

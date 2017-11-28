@@ -1,6 +1,6 @@
 %%
 function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
-    trimSize = boxSize * 1.5;
+    trimSize = max(boxSize) * 1.5;
     rect = [ptX-(trimSize/2) ptY-(trimSize/2) trimSize trimSize];
     trimmedImage = imcrop(image, rect);
 
@@ -20,23 +20,26 @@ function trimmedImage = getOneFlyBoxImage_(image, ptX, ptY, dir, boxSize)
     rotatedImage = imrotate(trimmedImage, angle, 'crop', 'bilinear');
 
     % trim again
-    rect = [(trimSize-boxSize)/2 (trimSize-boxSize)/2 boxSize boxSize];
+    if length(boxSize) == 1
+        boxSize = [boxSize boxSize];
+    end
+    rect = [round((trimSize-boxSize(2))/2) round((trimSize-boxSize(1))/2) boxSize(2) boxSize(1)];
     trimmedImage = imcrop(rotatedImage, rect);
     [x,y,col] = size(trimmedImage);
-    if x > boxSize || y > boxSize
+    if x > boxSize(1) || y > boxSize(2)
         if col == 3
-            trimmedImage(:,(boxSize+1):end,:) = [];
-            trimmedImage((boxSize+1):end,:,:) = [];
+            trimmedImage(:,(boxSize(2)+1):end,:) = [];
+            trimmedImage((boxSize(1)+1):end,:,:) = [];
         else
-            trimmedImage(:,(boxSize+1):end) = [];
-            trimmedImage((boxSize+1):end,:) = [];
+            trimmedImage(:,(boxSize(2)+1):end) = [];
+            trimmedImage((boxSize(1)+1):end,:) = [];
         end
     end
-    if x < boxSize || y < boxSize
+    if x < boxSize(1) || y < boxSize(2)
         if col == 3
-            trimmedImage(boxSize,boxSize,:) = 0;
+            trimmedImage(boxSize(1),boxSize(2),:) = 0;
         else
-            trimmedImage(boxSize,boxSize) = 0;
+            trimmedImage(boxSize(1),boxSize(2)) = 0;
         end
     end
 end

@@ -2,7 +2,7 @@
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
            blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                         step2Image, step3Image, step4Image, blob_threshold, blobSeparateRate, blobAvgSizeIn,...
-                        tmplMatchTh, tmplSepTh, tmplImages, isSeparate, delRectOverlap, maxBlobs, keepNear)
+                        tmplMatchTh, tmplSepNum, tmplSepTh, tmplImages, isSeparate, delRectOverlap, maxBlobs, keepNear)
     hBlobAnls = vision.BlobAnalysis;
     hBlobAnls.MaximumCount = 100;
     hBlobAnls.MajorAxisLengthOutputPort = 1;
@@ -48,7 +48,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         else
             expect_num = floor(area_ratio); % floor to the nearest integer
         end
-        if expect_num >= tmplMatchTh
+        if tmplSepNum > 0 && expect_num >= tmplSepNum
             % usually, this kind of big blob becomes smaller area than times of single blob
             % so, expect_num is recalculated.
             area_ratio = double(origAreas(i))/double(blobAvgSize*0.92);
@@ -64,8 +64,12 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     total = sum(expectNums);
     if maxBlobs > 0 && maxBlobs > total
         % maxBlobs mode. total number is less than maxBlobs. so add a shortage
-        idx = find(expectNums >= tmplMatchTh);
         k = 0;
+        if tmplSepNum > 0
+            idx = find(expectNums >= tmplSepNum);
+        else
+            idx = [];
+        end
         if ~isempty(idx)
             for j = 1:(maxBlobs - total)
                 expectNums(idx(k+1)) = expectNums(idx(k+1)) + 1;
@@ -89,21 +93,12 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             % set output later
         elseif isSeparate
             label_mask = labeledImage==i;
-            if useTmplMatch(i) > 0 && ~isempty(tmplImages) % big separation. use template matching
+            if useTmplMatch(i) > 0 && tmplSepNum > 0 && ~isempty(tmplImages) % big separation. use template matching
                 blob_img_masked = step2Image .* uint8(label_mask);
 
                 % trimmed from original gray scale image
                 tmplImage = tmplImages{1};
-                rect = origBoxes(i,:);
-                w = max(size(tmplImage,1), size(tmplImage,2));
-                rect = rect + int32([-w/2, -w/2, w, w]);
-                if rect(3) < w*2
-                    rect(3) = w*2 + 2;
-                elseif rect(4) < w*2
-                    rect(4) = w*2 + 2;
-                end
-                blob_img_trimmed = imcrop(blob_img_masked, rect);
-                blob_img_trimmed(blob_img_trimmed==0) = 255;
+                [blob_img_trimmed, rect] = getTemplateBoxImage(blob_img_masked, tmplImage, origBoxes(i,:));
 
                 [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
                     blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, origAreas(i));
@@ -117,6 +112,18 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
 
                 [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
                     blobSeparationByShadeOff(blob_img_trimmed, blob_threshold, expectNums(i), hBlobAnls);
+
+                % shading off did not separate well. use template matching and check again
+                if expectNums(i) > nearNum && tmplSepNum > 0 && ~isempty(tmplImages)
+                    blob_img_masked = step2Image .* uint8(label_mask);
+
+                    % trimmed from original gray scale image
+                    tmplImage = tmplImages{1};
+                    [blob_img_trimmed, rect] = getTemplateBoxImage(blob_img_masked, tmplImage, origBoxes(i,:));
+
+                    [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
+                        blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, origAreas(i));
+                end
             end
 
             if nearNum > 0
@@ -151,7 +158,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobEcc = [blobEcc ; origEcc(i)];
         end
     end
-    
+
     % check rectangle overlap
     if delRectOverlap
         delIdx = [];
@@ -179,7 +186,53 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobEcc(delIdx) = [];
         end
     end
-    
+
+    % template matching (NCC) with blobs to check actual fly image
+    blobNum = length(blobPointX);
+    if ~isempty(tmplImages) && tmplMatchTh > 0 && blobNum > 0
+        delIdx = [];
+        tmplNum = length(tmplImages);
+        tmplEnergy = zeros(1,tmplNum);
+        for j=1:tmplNum
+            tmplImage = tmplImages{j};
+            tmplEnergy(j) = sqrt(sum(tmplImage(:).^2));
+        end
+        for i=1:blobNum
+            % pre calculation
+            cx = blobCenterPoints(i,1);
+            cy = blobCenterPoints(i,2);
+            ph = -blobOrient(i);
+            cosph =  cos(ph);
+            sinph =  sin(ph);
+            ncc = zeros(1,tmplNum);
+            for j=1:length(tmplImages)
+                tmplImage = tmplImages{j};
+                len = size(tmplImage,1);
+                vec = [len*cosph; len*sinph];
+                trimmedImage = getOneFlyBoxImage_(step2Image, cx, cy, vec, size(tmplImage));
+                trimmedImage = single(255 - trimmedImage);
+                trimmedEnergy = sqrt(sum(trimmedImage(:).^2));
+                mul = tmplImage .* trimmedImage;
+                ncc(j) = sum(mul(:)) / (tmplEnergy(j) * trimmedEnergy);
+            end
+            idx = find(ncc >= tmplMatchTh);
+            if isempty(idx)
+                delIdx = [delIdx i];
+            end
+        end
+        if ~isempty(delIdx)
+            blobPointX(delIdx) = [];
+            blobPointY(delIdx) = [];
+            blobAreas(delIdx) = [];
+            blobCenterPoints(delIdx,:) = [];
+            blobBoxes(delIdx,:) = [];
+            blobMajorAxis(delIdx) = [];
+            blobMinorAxis(delIdx) = [];
+            blobOrient(delIdx) = [];
+            blobEcc(delIdx) = [];
+        end
+    end
+
     % check maximum blobs
     blobNum = length(blobPointX);
     if maxBlobs > 0 && blobNum > maxBlobs

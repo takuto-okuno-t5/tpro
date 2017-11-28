@@ -720,7 +720,7 @@ exportDcd = readTproConfig('exportDcd', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
-tmplMatchTh = readTproConfig('tmplMatchTh', 5);
+tmplSepNum = readTproConfig('tmplSepNum', 4);
 tmplSepTh = readTproConfig('tmplSepTh', 0.85);
 
 % show start text
@@ -781,6 +781,7 @@ for data_th = 1:size(records,1)
     sharpRadius = getVideoConfigValue(record, 31, 0);
     sharpAmount = getVideoConfigValue(record, 32, 0);
     templateCount = getVideoConfigValue(record, 33, 0);
+    tmplMatchTh = getVideoConfigValue(record, 34, 0);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1094,7 +1095,7 @@ for data_th = 1:size(records,1)
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                 step2img, step3img, blob_img_logical2, blob_threshold, blobSeparateRate, blobAvgSize, ...
-                tmplMatchTh, tmplSepTh, templateImages, isSeparate, delRectOverlap, maxBlobs, keepNear);
+                tmplMatchTh, tmplSepNum, tmplSepTh, templateImages, isSeparate, delRectOverlap, maxBlobs, keepNear);
         end
 
         if extrema_enable

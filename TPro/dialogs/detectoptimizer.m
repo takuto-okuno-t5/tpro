@@ -147,6 +147,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
     sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
     sharedInst.templateCount = getVideoConfigValue(records, 33, 0);
+    sharedInst.tmplMatchTh = getVideoConfigValue(records, 34, 0);
 
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
@@ -178,6 +179,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.sharpRadius = cf.sharpRadius;
         sharedInst.sharpAmount = cf.sharpAmount;
         sharedInst.templateCount = cf.templateCount;
+        sharedInst.tmplMatchTh = cf.tmplMatchTh;
     end
 
     % deep learning data
@@ -279,7 +281,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % template matching image
-    sharedInst.tmplMatchTh = readTproConfig('tmplMatchTh', 5);
+    sharedInst.tmplSepNum = readTproConfig('tmplSepNum', 4);
     sharedInst.tmplSepTh = readTproConfig('tmplSepTh', 0.85);
     sharedInst.templateImages = {};
 
@@ -1081,8 +1083,8 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     [ blobPointY, blobPointX, blobAreas, blobCenterPoints, blobBoxes, ...
       blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
           sharedInst.step2Image, sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
-          0, sharedInst.tmplMatchTh, sharedInst.tmplSepTh, sharedInst.templateImages, sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, ...
-          sharedInst.keepNear);
+          0, sharedInst.tmplMatchTh, sharedInst.tmplSepNum, sharedInst.tmplSepTh, sharedInst.templateImages, ...
+          sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, sharedInst.keepNear);
 
     % draw image
     cla;
