@@ -148,6 +148,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
     sharedInst.templateCount = getVideoConfigValue(records, 33, 0);
     sharedInst.tmplMatchTh = getVideoConfigValue(records, 34, 0);
+    sharedInst.tmplSepNum = getVideoConfigValue(records, 35, 4);
+    sharedInst.tmplSepTh = getVideoConfigValue(records, 36, 0.85);
 
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
@@ -180,6 +182,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.sharpAmount = cf.sharpAmount;
         sharedInst.templateCount = cf.templateCount;
         sharedInst.tmplMatchTh = cf.tmplMatchTh;
+        sharedInst.tmplSepNum = cf.tmplSepNum;
+        sharedInst.tmplSepTh = cf.tmplSepTh;
     end
 
     % deep learning data
@@ -281,10 +285,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
     % template matching image
-    sharedInst.tmplSepNum = readTproConfig('tmplSepNum', 4);
-    sharedInst.tmplSepTh = readTproConfig('tmplSepTh', 0.85);
     sharedInst.templateImages = {};
-
     for i=1:sharedInst.templateCount
         if i==1 idx=''; else idx=num2str(i); end
         templateFileName = [sharedInst.confPath 'template' idx '.png'];

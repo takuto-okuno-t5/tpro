@@ -720,8 +720,6 @@ exportDcd = readTproConfig('exportDcd', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
-tmplSepNum = readTproConfig('tmplSepNum', 4);
-tmplSepTh = readTproConfig('tmplSepTh', 0.85);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -782,6 +780,8 @@ for data_th = 1:size(records,1)
     sharpAmount = getVideoConfigValue(record, 32, 0);
     templateCount = getVideoConfigValue(record, 33, 0);
     tmplMatchTh = getVideoConfigValue(record, 34, 0);
+    tmplSepNum = getVideoConfigValue(record, 35, 4);
+    tmplSepTh = getVideoConfigValue(record, 36, 0.85);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1260,6 +1260,7 @@ end
 
 % show end text
 time = toc;
+disp(['detection ... done!     t =',num2str(time),'s']);
 set(handles.text14, 'String',strcat('detection ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
@@ -1903,6 +1904,7 @@ end
 
 % show end text
 time = toc;
+disp(['tracking ... done!     t =',num2str(time),'s']);
 set(handles.text14, 'String',strcat('tracking ... done!     t =',num2str(time),'s'))
 set(handles.text9, 'String','Ready','BackgroundColor','green');
 checkAllButtons(handles);
