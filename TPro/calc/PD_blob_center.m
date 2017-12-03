@@ -22,7 +22,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
 
     labeledImage = bwlabel(step4Image);   % label the image
     if (isnan(blobAvgSizeIn) || blobAvgSizeIn == 0) && ~isempty(origAreas)
-        blobAvgSize = nanmedian(origAreas) * 0.95;
+        blobAvgSize = nanmedian(origAreas);
     else
         blobAvgSize = blobAvgSizeIn;
     end
@@ -36,55 +36,17 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     blobMinorAxis = [];
     blobOrient = [];
     blobEcc = [];
-    expectNums = zeros(1,blob_num);
-    useTmplMatch = zeros(1,blob_num);
+    blobOrgIdx = [];
 
     % estimate fly numbers in each blob first
-    for i = 1 : blob_num
-        % check blobAreas dimension of current blob and how bigger than avarage.
-        area_ratio = double(origAreas(i))/double(blobAvgSize);
-        if (mod(area_ratio,1) >= blobSeparateRate)
-            expect_num = area_ratio + (1-mod(area_ratio,1));
-        else
-            expect_num = floor(area_ratio); % floor to the nearest integer
-        end
-        if tmplSepNum > 0 && expect_num >= tmplSepNum
-            % usually, this kind of big blob becomes smaller area than times of single blob
-            % so, expect_num is recalculated.
-            area_ratio = double(origAreas(i))/double(blobAvgSize*0.92);
-            if (mod(area_ratio,1) >= blobSeparateRate)
-                expect_num = area_ratio + (1-mod(area_ratio,1));
-            else
-                expect_num = floor(area_ratio); % floor to the nearest integer
-            end
-            useTmplMatch(i) = 1;
-        end
-        expectNums(i) = expect_num;
+    total = -1;
+    divRate = 1;
+    while total < maxBlobs
+        [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blobAvgSize, blobSeparateRate, maxBlobs, tmplSepNum, divRate);
+        total = sum(expectNums);
+        divRate = divRate - 0.02;
     end
-    total = sum(expectNums);
-    if maxBlobs > 0 && maxBlobs > total
-        % maxBlobs mode. total number is less than maxBlobs. so add a shortage
-        k = 0;
-        if tmplSepNum > 0
-            idx = find(expectNums >= tmplSepNum);
-        else
-            idx = [];
-        end
-        if ~isempty(idx)
-            for j = 1:(maxBlobs - total)
-                expectNums(idx(k+1)) = expectNums(idx(k+1)) + 1;
-                k = mod(k+1, length(idx));
-            end
-        elseif ~isempty(origAreas)
-            [B, idx] = sort(origAreas,'descend');
-            for j = 1:(maxBlobs - total)
-                expectNums(idx(k+1)) = expectNums(idx(k+1)) + 1;
-                useTmplMatch(idx(k+1)) = 1; % force to use template matching
-                k = mod(k+1, length(idx));
-            end
-        end
-    end
-    
+
     % loop for checking all blobs
     for i = 1 : blob_num
         % check expected number of targets (animals)
@@ -141,6 +103,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                     box = nearBBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
                     blobCenterPoints = [blobCenterPoints ; pt];
                     blobBoxes = [blobBoxes ; box];
+                    blobOrgIdx = [blobOrgIdx ; i];
                 end
                 chooseOne = false;
             end
@@ -156,6 +119,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
             blobOrient = [blobOrient ; origOrient(i)];
             blobEcc = [blobEcc ; origEcc(i)];
+            blobOrgIdx = [blobOrgIdx ; i];
         end
     end
 
@@ -184,20 +148,22 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobMinorAxis(delIdx) = [];
             blobOrient(delIdx) = [];
             blobEcc(delIdx) = [];
+            blobOrgIdx(delIdx) = [];
         end
     end
 
     % template matching (NCC) with blobs to check actual fly image
-    blobNum = length(blobPointX);
-    if ~isempty(tmplImages) && tmplMatchTh > 0 && blobNum > 0
+    outputNum = length(blobPointX);
+    if ~isempty(tmplImages) && tmplMatchTh > 0 && outputNum > 0
         delIdx = [];
         tmplNum = length(tmplImages);
         tmplEnergy = zeros(1,tmplNum);
+        matchRate = zeros(1,outputNum);
         for j=1:tmplNum
             tmplImage = tmplImages{j};
             tmplEnergy(j) = sqrt(sum(tmplImage(:).^2));
         end
-        for i=1:blobNum
+        for i=1:outputNum
             % pre calculation
             cx = blobCenterPoints(i,1);
             cy = blobCenterPoints(i,2);
@@ -218,8 +184,17 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             idx = find(ncc >= tmplMatchTh);
             if isempty(idx)
                 delIdx = [delIdx i];
+            else
+                matchRate(i) = max(ncc);
             end
         end
+%{
+        if maxBlobs > 0 && blobNum > maxBlobs
+            [Y,I] = sort(matchRate);
+            delIdx = [delIdx I(1:(blobNum-maxBlobs))];
+            delIdx = unique(delIdx);
+        end
+%}
         if ~isempty(delIdx)
             blobPointX(delIdx) = [];
             blobPointY(delIdx) = [];
@@ -230,12 +205,13 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobMinorAxis(delIdx) = [];
             blobOrient(delIdx) = [];
             blobEcc(delIdx) = [];
+            blobOrgIdx(delIdx) = [];
         end
     end
 
     % check maximum blobs
-    blobNum = length(blobPointX);
-    if maxBlobs > 0 && blobNum > maxBlobs
+    outputNum = length(blobPointX);
+    if maxBlobs > 0 && outputNum > maxBlobs
         dist = pdist(blobCenterPoints);
         dist1 = squareform(dist); %make square
         delIdx = [];
@@ -243,7 +219,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         if keepNear
             % find bigest blob, then take nearest blobs
             [marea,i] = max(blobAreas);
-            while maxBlobs < (blobNum - length(delIdx))
+            while maxBlobs < (outputNum - length(delIdx))
                 [mm,m] = max(dist1(i,:));
                 delIdx = [delIdx, m];
                 dist1(i,m) = 0;
@@ -252,13 +228,23 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         else
             % find nearest neighbor, then delete smaller area
             dist1(dist1==0) = 9999; % set dummy
-            while maxBlobs < (blobNum - length(delIdx))
+            while maxBlobs < (outputNum - length(delIdx))
                 [mmin,m] = min(dist1);
                 [nmin,n] = min(mmin);
                 if blobAreas(m(n)) > blobAreas(n)
-                    delIdx = [delIdx, n];
+                    idx = n;
                 else
-                    delIdx = [delIdx, m(n)];
+                    idx = m(n);
+                end
+                orgIdx = blobOrgIdx(idx);
+                if orgIdx > 0
+                    minNum = minNums(orgIdx);
+                    if length(find(blobOrgIdx==orgIdx)) > minNum
+                        delIdx = [delIdx, idx];
+                        blobOrgIdx(idx) = 0;
+                        dist1(idx,:) = 9999;
+                        dist1(:,idx) = 9999;
+                    end
                 end
                 dist1(n,m(n)) = 9999; % set dummy
                 dist1(m(n),n) = 9999; % set dummy
@@ -275,6 +261,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             blobMinorAxis(delIdx) = [];
             blobOrient(delIdx) = [];
             blobEcc(delIdx) = [];
+            blobOrgIdx(delIdx) = [];
         end
     end
 end

@@ -942,7 +942,7 @@ for data_th = 1:size(records,1)
     if isCancel
         continue;
     end
-    blobAvgSize = nanmedian(areas) * 0.95;
+    blobAvgSize = nanmedian(areas);
     disp(['middle area size : ' num2str(blobAvgSize)]);
 
     % start detection
