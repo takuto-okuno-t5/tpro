@@ -56,7 +56,6 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     set(hFindMax, 'NeighborhoodSize', floor([rt, ct]/2)*2 - 1);
     set(hFindMax, 'MaximumNumLocalMaxima', expect_num);
 
-    Im_del = zeros(ri, ci, 'single');
     inloop_target = [];
 
     for i=1:16
@@ -65,12 +64,11 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         c_mod = 2^nextpow2(ct + ci);
         Im_p = zeros(r_mod, c_mod, 'single'); % Used for zero padding
     %    Im_p(:,:) = 255;
-        C_ones = ones(rt, ct, 'single');      % Used to calculate mean using conv
+        %C_ones = ones(rt, ct, 'single');      % Used to calculate mean using conv
+        C_ones = target_images{i};
+        C_ones(C_ones > 0) = 1;
 
         % Frequency domain convolution.
-        Img = Img - Im_del;
-        Img(Img < 0) = 0;
-%figure; imshow(uint8(Img));
         Im_p(1:ri, 1:ci) = Img;    % Zero-pad
         img_fft = step(hFFT2D2, Im_p);
         corr_freq = img_fft .* target_ffts{i};
@@ -110,9 +108,10 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     end
 %figure; imshow(uint8(Img));
 
-    [Y,I] = sort(inloop_target(:,5),'descend');
-    inloop_target = inloop_target(I,:);
-
+    if size(inloop_target,1) > 0
+        [Y,I] = sort(inloop_target(:,5),'descend');
+        inloop_target = inloop_target(I,:);
+    end
     % removing overlap point
     delIdx = [];
     Im_del = zeros(ri, ci, 'single');
