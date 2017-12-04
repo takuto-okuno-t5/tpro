@@ -782,6 +782,7 @@ for data_th = 1:size(records,1)
     tmplMatchTh = getVideoConfigValue(record, 34, 0);
     tmplSepNum = getVideoConfigValue(record, 35, 4);
     tmplSepTh = getVideoConfigValue(record, 36, 0.85);
+    overlapTh = getVideoConfigValue(record, 37, 0.17);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -959,6 +960,11 @@ for data_th = 1:size(records,1)
                 'setappdata(gcbf,''canceling'',1)');
     setappdata(hWaitBar,'canceling',0)
 
+    % loading instance each PD_Blob_center is slow. so allocate instances first.
+    hBlobAnls = getVisionBlobAnalysis();
+    hFindMax = vision.LocalMaximaFinder( 'Threshold', single(-1));
+    hConv2D = vision.Convolver('OutputSize','Valid');
+
     keep_i = [];
     keep_count = [];
     keep_mean_blobmajor = [];
@@ -1095,7 +1101,9 @@ for data_th = 1:size(records,1)
             [ X_update2{i}, Y_update2{i}, blobAreas, blobCenterPoints, blobBoxes, ...
               blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
                 step2img, step3img, blob_img_logical2, blob_threshold, blobSeparateRate, blobAvgSize, ...
-                tmplMatchTh, tmplSepNum, tmplSepTh, templateImages, isSeparate, delRectOverlap, maxBlobs, keepNear);
+                tmplMatchTh, tmplSepNum, tmplSepTh, overlapTh, templateImages, ...
+                isSeparate, delRectOverlap, maxBlobs, keepNear, ...
+                hBlobAnls, hFindMax, hConv2D);
         end
 
         if extrema_enable

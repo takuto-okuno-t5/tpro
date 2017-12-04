@@ -1,18 +1,13 @@
 %%
 function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
-    blobSeparationByTemplateMatch(blob_img_trimmed, expect_num, tmplImage, tmplSepTh, areaSize)
-    hFFT2D1 = vision.FFT;
-    hFFT2D2 = vision.FFT;
-
+    blobSeparationByTemplateMatch(blob_img_trimmed, expect_num, tmplImage, tmplSepTh, overlapTh, areaSize, hFindMax, hConv2D)
     %% 
     % Create a System object to perform 2-D inverse FFT after performing
     % correlation (equivalent to multiplication) in the frequency domain. 
-    hIFFFT2D = vision.IFFT;
+    hFFT2D1 = vision.FFT;
+    hFFT2D2 = vision.FFT;
 
-    %% 
-    % Create 2-D convolution System object to average the image energy in tiles
-    % of the same dimension of the target.
-    hConv2D = vision.Convolver('OutputSize','Valid');
+    hIFFFT2D = vision.IFFT;
 
     %%
     % Here you implement the following sequence of operations.
@@ -56,12 +51,10 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
 %    imshow(uint8(target_images{i}));
     end
 
-    % Create a System object to calculate the local maximum value for the
-    % normalized cross correlation.
-    hFindMax = vision.LocalMaximaFinder( ...
-                'Threshold', single(-1), ...
-                'MaximumNumLocalMaxima', expect_num, ...
-                'NeighborhoodSize', floor([rt, ct]/2)*2 - 1);
+    % set a System object to calculate the local maximum value for the normalized cross correlation.
+    release(hFindMax); 
+    set(hFindMax, 'NeighborhoodSize', floor([rt, ct]/2)*2 - 1);
+    set(hFindMax, 'MaximumNumLocalMaxima', expect_num);
 
     Im_del = zeros(ri, ci, 'single');
     inloop_target = [];
@@ -131,7 +124,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         tgImg = tgImg + Im_del(y:(y+rt-1), x:(x+ct-1));
         overlapIdx = find(tgImg > highestColer);
         overlapRate = length(overlapIdx)/(rt*ct);
-        if overlapRate > 0.2
+        if overlapRate > overlapTh
             delIdx = [delIdx, k];
         else
             Im_del(y:(y+rt-1), x:(x+ct-1)) = tgImg;

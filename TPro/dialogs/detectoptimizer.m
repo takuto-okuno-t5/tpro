@@ -150,6 +150,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.tmplMatchTh = getVideoConfigValue(records, 34, 0);
     sharedInst.tmplSepNum = getVideoConfigValue(records, 35, 4);
     sharedInst.tmplSepTh = getVideoConfigValue(records, 36, 0.85);
+    sharedInst.overlapTh = getVideoConfigValue(records, 37, 0.17);
 
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
@@ -184,6 +185,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.tmplMatchTh = cf.tmplMatchTh;
         sharedInst.tmplSepNum = cf.tmplSepNum;
         sharedInst.tmplSepTh = cf.tmplSepTh;
+        sharedInst.overlapTh = cf.overlapTh;
     end
 
     % deep learning data
@@ -1080,12 +1082,17 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         end
         setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
     end
-    
+
+    hBlobAnls = getVisionBlobAnalysis();
+    hFindMax = vision.LocalMaximaFinder( 'Threshold', single(-1));
+    hConv2D = vision.Convolver('OutputSize','Valid');
+
     [ blobPointY, blobPointX, blobAreas, blobCenterPoints, blobBoxes, ...
       blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-          sharedInst.step2Image, sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, ...
-          0, sharedInst.tmplMatchTh, sharedInst.tmplSepNum, sharedInst.tmplSepTh, sharedInst.templateImages, ...
-          sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, sharedInst.keepNear);
+          sharedInst.step2Image, sharedInst.step3Image, sharedInst.step4Image, sharedInst.binaryTh/100, sharedInst.blobSeparateRate, 0, ...
+          sharedInst.tmplMatchTh, sharedInst.tmplSepNum, sharedInst.tmplSepTh, sharedInst.overlapTh, sharedInst.templateImages, ...
+          sharedInst.isSeparate, sharedInst.delRectOverlap, sharedInst.maxBlobs, sharedInst.keepNear, ...
+          hBlobAnls, hFindMax, hConv2D);
 
     % draw image
     cla;

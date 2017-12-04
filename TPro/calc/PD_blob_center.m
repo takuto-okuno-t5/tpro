@@ -1,16 +1,11 @@
 %%
 function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
            blobMajorAxis, blobMinorAxis, blobOrient, blobEcc, blobAvgSize ] = PD_blob_center( ...
-                        step2Image, step3Image, step4Image, blob_threshold, blobSeparateRate, blobAvgSizeIn,...
-                        tmplMatchTh, tmplSepNum, tmplSepTh, tmplImages, isSeparate, delRectOverlap, maxBlobs, keepNear)
-    hBlobAnls = vision.BlobAnalysis;
-    hBlobAnls.MaximumCount = 100;
-    hBlobAnls.MajorAxisLengthOutputPort = 1;
-    hBlobAnls.MinorAxisLengthOutputPort = 1;
-    hBlobAnls.OrientationOutputPort = 1;
-    hBlobAnls.EccentricityOutputPort = 1;
-    hBlobAnls.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
-
+                        step2Image, step3Image, step4Image, blob_threshold, blobSeparateRate, blobAvgSizeIn, ...
+                        tmplMatchTh, tmplSepNum, tmplSepTh, overlapTh, tmplImages, ...
+                        isSeparate, delRectOverlap, maxBlobs, keepNear, ...
+                        hBlobAnls, hFindMax, hConv2D)
+    % blob analysis
     [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(hBlobAnls, step4Image);
     origAreas = AREA;
     origCenterPoints = CENTROID;
@@ -63,7 +58,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                 [blob_img_trimmed, rect] = getTemplateBoxImage(blob_img_masked, tmplImage, origBoxes(i,:));
 
                 [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
-                    blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, origAreas(i));
+                    blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, overlapTh, origAreas(i), hFindMax, hConv2D);
 
             else % small separation. use shading off blob separation
                 blob_img_masked = step3Image .* label_mask;
@@ -84,7 +79,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
                     [blob_img_trimmed, rect] = getTemplateBoxImage(blob_img_masked, tmplImage, origBoxes(i,:));
 
                     [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXIS, nearORIENTATION, nearECCENTRICITY] = ...
-                        blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, origAreas(i));
+                        blobSeparationByTemplateMatch(blob_img_trimmed, expectNums(i), tmplImage, tmplSepTh, overlapTh, origAreas(i), hFindMax, hConv2D);
                 end
             end
 
