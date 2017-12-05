@@ -22,33 +22,37 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     w = max(rt,ct);
     tg_square_image = single(zeros(w,w));
     if w==rt
-        tg_square_image(:,int32((w-ct)/2):int32((w-ct)/2+ct-1)) = tmplImage;
+        tg_square_image(:,(floor((w-ct)/2)+1):(floor((w-ct)/2)+ct)) = tmplImage;
     else
-        tg_square_image(int32((w-rt)/2):int32((w-rt)/2+rt-1),:) = tmplImage;
+        tg_square_image((floor((w-rt)/2)+1):(floor((w-rt)/2)+rt),:) = tmplImage;
     end
     [rt, ct]= size(tg_square_image);
 
-    target_images = {};
-    target_energies = [];
-    target_ffts = {};
+    tmplImages = {};
+    tmplMasks = {};
+    tmplEnergies = [];
+    tmplFFTs = {};
     for i=1:16
         img = imrotate(tg_square_image, (i-1)*22.5, 'nearest','crop');
     %    img(img==0) = 255;
     %    img(img==0) = 1; % this is mask
-        target_images = [target_images, img];
-        target_energy = sqrt(sum(img(:).^2));
-        target_energies = [target_energies, target_energy];
+        tmplImages = [tmplImages, img];
+        mask = img;
+        mask(mask > 0) = 1;
+        tmplMasks = [tmplMasks, mask];
+        tmplEnergy = sqrt(sum(img(:).^2));
+        tmplEnergies = [tmplEnergies, tmplEnergy];
 
         r_mod = 2^nextpow2(rt + ri);
         c_mod = 2^nextpow2(ct + ci);
-        target_image_p = [img zeros(rt, c_mod-ct)];
-        target_image_p = [target_image_p; zeros(r_mod-rt, c_mod)];
-    %    target_image_p(target_image_p==0) = 255;
+        tmplImage_p = [img zeros(rt, c_mod-ct)];
+        tmplImage_p = [tmplImage_p; zeros(r_mod-rt, c_mod)];
+    %    tmplImage_p(tmplImage_p==0) = 255;
 
         % Compute the 2-D FFT of the target image
-        target_fft = step(hFFT2D1, target_image_p);
-        target_ffts = [target_ffts, target_fft];
-%    imshow(uint8(target_images{i}));
+        tmplFFT = step(hFFT2D1, tmplImage_p);
+        tmplFFTs = [tmplFFTs, tmplFFT];
+%    imshow(uint8(tmplImages{i}));
     end
 
     % set a System object to calculate the local maximum value for the normalized cross correlation.
@@ -65,13 +69,13 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         Im_p = zeros(r_mod, c_mod, 'single'); % Used for zero padding
     %    Im_p(:,:) = 255;
         %C_ones = ones(rt, ct, 'single');      % Used to calculate mean using conv
-        C_ones = target_images{i};
+        C_ones = tmplImages{i};
         C_ones(C_ones > 0) = 1;
 
         % Frequency domain convolution.
         Im_p(1:ri, 1:ci) = Img;    % Zero-pad
         img_fft = step(hFFT2D2, Im_p);
-        corr_freq = img_fft .* target_ffts{i};
+        corr_freq = img_fft .* tmplFFTs{i};
         corrOutput_f = step(hIFFFT2D, corr_freq);
         corrOutput_f = corrOutput_f(rt:ri, ct:ci);
 
@@ -82,7 +86,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         IUT = sqrt(IUT);
 
         % Calculate normalized cross correlation.
-        norm_Corr_f = (corrOutput_f) ./ (IUT * target_energies(i));
+        norm_Corr_f = (corrOutput_f) ./ (IUT * tmplEnergies(i));
         norm_Corr_f(isinf(norm_Corr_f)) = NaN;
         norm_Corr_f(isnan(norm_Corr_f)) = 0;
         xyLocation = step(hFindMax, norm_Corr_f);
@@ -114,25 +118,51 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
     end
     % removing overlap point
     delIdx = [];
-    Im_del = zeros(ri, ci, 'single');
-    highestColer = max(max(target_images{1}));
+    ansPos = [];
+    Im_ans = zeros(ri, ci, 'single');
+    highestColer = max(max(tmplImages{1}));
     for k=1:size(inloop_target,1)
         y = inloop_target(k,2);
         x = inloop_target(k,1);
-        tgImg = target_images{inloop_target(k,6)};
-        tgImg = tgImg + Im_del(y:(y+rt-1), x:(x+ct-1));
-        overlapIdx = find(tgImg > highestColer);
+        angle = inloop_target(k,6);
+        tgImg = tmplImages{angle};
+        srcRectImg = Img(y:(y+rt-1), x:(x+ct-1));
+
+        % calc overlap rate
+        overlapImg = tgImg + Im_ans(y:(y+rt-1), x:(x+ct-1));
+        overlapIdx = find(overlapImg > highestColer);
         overlapRate = length(overlapIdx)/(rt*ct);
-        if overlapRate > overlapTh
+        %overlapImg(overlapImg > highestColer) = highestColer;
+
+        % get original images' NCC. because FFT/IFFT makes bigger images and
+        % not calcurate actuall NCC value.
+        srcImg = tmplMasks{angle} .* srcRectImg;
+        srcEnergy = sqrt(sum(srcImg(:).^2));
+        if srcEnergy > 200 % almost black srcImg shows high ncc. remove such kind of noise.
+            mul = tgImg .* srcImg;
+            ncc = sum(mul(:)) / (srcEnergy * tmplEnergies(angle));
+        else
+            ncc = 0;
+        end
+
+        % find min distance
+        tmpPos = [ansPos; y, x];
+        tmpIdx = size(tmpPos,1);
+        dist = pdist(tmpPos);
+        dist1 = squareform(dist); %make square
+        dist1(tmpIdx,tmpIdx) = 9999; %dummy
+        [md,l] = min(dist1(tmpIdx,:));
+        if overlapRate > overlapTh || ncc < 0.75 || md < 5
             delIdx = [delIdx, k];
         else
-            Im_del(y:(y+rt-1), x:(x+ct-1)) = tgImg;
+            Im_ans(y:(y+rt-1), x:(x+ct-1)) = overlapImg;
+            ansPos = tmpPos;
         end
         if (k-length(delIdx)) >= expect_num
             break;
         end
     end
-%figure; imshow(uint8(Im_del));
+%figure; imshow(uint8(Im_ans));
 
     inloop_target(delIdx,:) = [];
     if size(inloop_target,1) >= expect_num
