@@ -226,6 +226,9 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             while maxBlobs < (outputNum - length(delIdx))
                 [mmin,m] = min(dist1);
                 [nmin,n] = min(mmin);
+                if nmin == 9999
+                    break; % this should not happen.
+                end
                 if blobAreas(m(n)) > blobAreas(n)
                     idx = n;
                 else
