@@ -13,6 +13,9 @@ function [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blob
         else
             expect_num = floor(area_ratio); % floor to the nearest integer
         end
+        if expect_num < 1
+            expect_num = 1;
+        end
         if tmplSepNum > 0 && expect_num >= tmplSepNum
             useTmplMatch(i) = 1;
         end
@@ -26,20 +29,26 @@ function [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blob
 
     totalExpect = sum(expectNums);
     totalMinExpect = sum(minNums);
+    blobCount = length(origAreas);
 
     % min expect num should be smaller than maxBlobs (input)
     if maxBlobs > 0 && totalMinExpect > maxBlobs
-        k = 0;
-        diff = totalMinExpect - maxBlobs;
-        idx = find(minNums >= 2);
-        totalm2area = sum(origAreas(idx));
-        [B, idx] = sort(origAreas,'descend');
-        B = double(B) ./ totalm2area;
-        while totalMinExpect > maxBlobs 
-            idxk = idx(k+1);
-            minNums(idxk) = minNums(idxk) - ceil(B(k+1) * diff);
-            k = mod(k+1, length(idx));
-            totalMinExpect = sum(minNums);
+        if blobCount >= maxBlobs
+            % bad threshold setting !!
+            minNums(:) = 1;
+        else
+            k = 0;
+            diff = totalMinExpect - maxBlobs;
+            idx = find(minNums >= 2);
+            totalm2area = sum(origAreas(idx));
+            [B, idx] = sort(origAreas,'descend');
+            B = double(B) ./ totalm2area;
+            while totalMinExpect > maxBlobs 
+                idxk = idx(k+1);
+                minNums(idxk) = minNums(idxk) - ceil(B(k+1) * diff);
+                k = mod(k+1, length(idx));
+                totalMinExpect = sum(minNums);
+            end
         end
     end
     %{
