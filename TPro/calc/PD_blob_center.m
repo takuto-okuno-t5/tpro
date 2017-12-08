@@ -36,7 +36,7 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
     % estimate fly numbers in each blob first
     total = -1;
     divRate = 1;
-    while total < maxBlobs
+    while total < maxBlobs && divRate > 0
         [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blobAvgSize, blobSeparateRate, maxBlobs, tmplSepNum, divRate);
         total = sum(expectNums);
         divRate = divRate - 0.02;
