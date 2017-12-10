@@ -866,6 +866,9 @@ for data_th = 1:size(records,1)
     detection_num = nan(2,end_frame-start_frame+1);
     blobAvgSize = 0;
     checkNums = 25; % for finding middle area size
+    if checkNums > end_frame - start_frame
+        checkNums = end_frame - start_frame;
+    end
 
     % finding middle area size
     disp(['finding middle area size : ' shuttleVideo.name]);
@@ -1446,7 +1449,7 @@ for data_th = 1:size(records,1)
     end
     Q_loc_estimateY = nan(MAX_FLIES); % position estimate
     Q_loc_estimateX = nan(MAX_FLIES); % position estimate
-    nancount = zeros(1,MAX_FLIES); % position estimate
+    nancount = zeros(1,MAX_FLIES); % counting NaN each fly
     P_estimate = P;  % covariance estimator
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
     outbound_trks = zeros(1, MAX_FLIES);  % counter of out boundary track
@@ -1649,24 +1652,20 @@ for data_th = 1:size(records,1)
             else
                 asgn2 = asgn.*0;
             end
+
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
             for F = 1:length(asgn)
                 Q_estimate_previous = Q_estimate(:,k);
-                if asgn(F) > 0  % found its match
-                    if asgn2(F) ~= 0    % second matching assignment
-                        Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn2
-                        direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
-                        ecc_track(:,k) = ecc_meas(:,asgn(F));
-                        angle_track(:,k) = angle_meas(:,asgn(F));
-                    else
-                        Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgn(F),:)' - C * Q_estimate(:,k)); % same as asgn
-                        direction_track(:,k) = direction_meas(:,asgn(F));   % update the direction to be the match's direction
-                        ecc_track(:,k) = ecc_meas(:,asgn(F));
-                        angle_track(:,k) = angle_meas(:,asgn(F));
-                    end
-                elseif asgn(F) == 0 % assignment for no assignment
+                asgnF = asgn(F);
+                if asgnF > 0  % found its match
+                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(asgnF,:)' - C * Q_estimate(:,k)); % same as asgn
+                    direction_track(:,k) = direction_meas(:,asgnF);   % update the direction to be the match's direction
+                    ecc_track(:,k) = ecc_meas(:,asgnF);
+                    angle_track(:,k) = angle_meas(:,asgnF);
+
+                elseif asgnF == 0 % assignment for no assignment
                     if assign_for_noassign
                         y = round(Q_estimate(1,k));
                         x = round(Q_estimate(2,k));
@@ -1692,7 +1691,8 @@ for data_th = 1:size(records,1)
                         else
                             estF = invIdx(k);
                             [m,i] = min(est_dist1(estF,:));
-                            if m < min_dist_threshold  % search nearest measurement within min_dist_threshold and op
+                            % find non assigned detection point and nearest measurement within min_dist_threshold, then estimate next point
+                            if isempty(find(asgn==i)) && m < min_dist_threshold  
                                 Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
                         end
@@ -1771,7 +1771,18 @@ for data_th = 1:size(records,1)
             no_trk_list = find(asgn==0);
             prev_strk_trks = strk_trks;
             if ~isempty(no_trk_list)
-                strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+                
+                % check 1 frame error detection. sometimes it increase fly
+                % number too much. so find such noise and clean fly number.
+                if ~isempty(find(flyNum==no_trk_list)) && strk_trks(flyNum) == 0
+                    % remove old 1 tracking frames
+                    for j = 1:8
+                        keep_data{j}(t,flyNum) = NaN;
+                    end
+                    flyNum = flyNum - 1;
+                else
+                    strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+                end
             end
 
             % consecutive strike

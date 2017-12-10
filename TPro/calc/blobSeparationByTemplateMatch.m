@@ -152,24 +152,38 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         dist1 = squareform(dist); %make square
         dist1(tmpIdx,tmpIdx) = 9999; %dummy
         [md,l] = min(dist1(tmpIdx,:));
-        if overlapRate > overlapTh || ncc < 0.75 || md < 5
+        if overlapRate > overlapTh || ncc < 0.75 || md <= 10
             delIdx = [delIdx, k];
         else
             Im_ans(y:(y+rt-1), x:(x+ct-1)) = overlapImg;
             ansPos = tmpPos;
         end
         if (k-length(delIdx)) >= expect_num
+            delIdx = [delIdx (k+1):size(inloop_target,1)];
             break;
         end
     end
+    inloop_target(delIdx,:) = [];
 %figure; imshow(uint8(Im_ans));
 
-    inloop_target(delIdx,:) = [];
-    if size(inloop_target,1) >= expect_num
-        result_target = inloop_target(1:expect_num,:);
-    else
-        result_target = inloop_target;
+    % recheck overlap 
+    %{
+    delIdx = [];
+    for k=1:size(inloop_target,1)
+        y = inloop_target(k,2);
+        x = inloop_target(k,1);
+
+        % calc overlap rate
+        overlapImg = Im_ans(y:(y+rt-1), x:(x+ct-1));
+        overlapIdx = find(overlapImg > highestColer);
+        overlapRate = length(overlapIdx)/(rt*ct);
+        if overlapRate > overlapTh
+            delIdx = [delIdx, k];
+        end
     end
+    inloop_target(delIdx,:) = [];
+%}
+    result_target = inloop_target;
 
     % set result
     nearNum = 0;
