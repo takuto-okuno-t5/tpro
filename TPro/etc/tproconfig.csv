@@ -35,3 +35,6 @@ beChaseMinDist,8
 beChaseMinDir,30
 beChaseDuration,0.166
 beChaseGap,0.166
+trackingDeleteTh,5
+ignoreNaNCount,20
+trackingStrikeTh,5

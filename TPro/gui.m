@@ -1320,7 +1320,7 @@ pause(0.01);
 tic % start timer
 
 % for strike track
-STRIKE_TRACK_TH = 3;
+STRIKE_TRACK_TH = readTproConfig('trackingStrikeTh', 5);
 
 % assignment for no assignment
 assign_for_noassign = 1;
@@ -1339,8 +1339,8 @@ dt = 1;  % sampling rate
 frame_start = 1; % starting frame
 MAX_FLIES = readTproConfig('trackingFlyMax', 800); % maxmum number of flies
 RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recursion limit
-IGNORE_NAN_COUNT = 20; % maxmum NaN count of fly (removed from tracking pair-wise)
-DELETE_TRACK_TH = 5; % delete tracking threshold: minimam valid frames
+IGNORE_NAN_COUNT = readTproConfig('ignoreNaNCount', 20); % maxmum NaN count of fly (removed from tracking pair-wise)
+DELETE_TRACK_TH = readTproConfig('trackingDeleteTh', 5); % delete tracking threshold: minimam valid frames
 
 exportDcd = readTproConfig('exportDcd', 0);
 exportMd = readTproConfig('exportMinDistance', 0);
@@ -1690,10 +1690,12 @@ for data_th = 1:size(records,1)
                             end
                         else
                             estF = invIdx(k);
-                            [m,i] = min(est_dist1(estF,:));
-                            % find non assigned detection point and nearest measurement within min_dist_threshold, then estimate next point
-                            if isempty(find(asgn==i)) && m < min_dist_threshold  
-                                Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
+                            if estF > 0
+                                [m,i] = min(est_dist1(estF,:));
+                                % find non assigned detection point and nearest measurement within min_dist_threshold, then estimate next point
+                                if isempty(find(asgn==i)) && m < min_dist_threshold  
+                                    Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
+                                end
                             end
                         end
                     end

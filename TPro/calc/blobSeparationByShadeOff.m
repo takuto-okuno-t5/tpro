@@ -29,12 +29,14 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
             else
                 n = expect_num;
             end
-            nearNum = n;
-            nearAREA = AREA(1:n); nearCENTROID = CENTROID(1:n,:); nearBBOX = BBOX(1:n,:);
-            nearMAJORAXIS = MAJORAXIS(1:n); nearMINORAXIS = MINORAXIS(1:n);
-            nearORIENTATION = ORIENTATION(1:n); nearECCENTRICITY = ECCENTRICITY(1:n);
-            if n > 1
-                break; % end of loop
+            if n > 0
+                nearNum = n;
+                nearAREA = AREA(1:n); nearCENTROID = CENTROID(1:n,:); nearBBOX = BBOX(1:n,:);
+                nearMAJORAXIS = MAJORAXIS(1:n); nearMINORAXIS = MINORAXIS(1:n);
+                nearORIENTATION = ORIENTATION(1:n); nearECCENTRICITY = ECCENTRICITY(1:n);
+                if n > 1
+                    break; % end of loop
+                end
             end
 
         else
@@ -86,16 +88,14 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
                     n = expect_num;
                 end
             end
-            nearNum = n;
-            nearAREA = AREA(1:n);
-            nearCENTROID = CENTROID(1:n,:);
-            nearBBOX = BBOX(1:n,:);
-            nearMAJORAXIS = MAJORAXIS(1:n);
-            nearMINORAXIS = MINORAXIS(1:n);
-            nearORIENTATION = ORIENTATION(1:n);
-            nearECCENTRICITY = ECCENTRICITY(1:n);
-            if n > 1
-                break; % end of loop
+            if n > 0
+                nearNum = n;
+                nearAREA = AREA(1:n); nearCENTROID = CENTROID(1:n,:); nearBBOX = BBOX(1:n,:);
+                nearMAJORAXIS = MAJORAXIS(1:n); nearMINORAXIS = MINORAXIS(1:n);
+                nearORIENTATION = ORIENTATION(1:n); nearECCENTRICITY = ECCENTRICITY(1:n);
+                if n > 1
+                    break; % end of loop
+                end
             end
         end
     end
