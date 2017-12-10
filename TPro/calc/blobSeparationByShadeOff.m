@@ -45,6 +45,9 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
                 [a, i1] = max(AREA);
                 [a, i2] = min(AREA);
                 est1 = round(expect_num * double(AREA(i1)) / double(sum(AREA)));
+                if est1 == expect_num
+                    est1 = expect_num - 1;
+                end
                 est2 = expect_num - est1;
 
                 labeledImage = bwlabel(blob_img_trimmed2);   % label the image

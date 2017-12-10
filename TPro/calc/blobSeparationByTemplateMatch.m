@@ -152,7 +152,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
         dist1 = squareform(dist); %make square
         dist1(tmpIdx,tmpIdx) = 9999; %dummy
         [md,l] = min(dist1(tmpIdx,:));
-        if overlapRate > overlapTh || ncc < 0.75 || md <= 10
+        if overlapRate > overlapTh || ncc < 0.75 || md <= 10 % TODO: this number depends on template size
             delIdx = [delIdx, k];
         else
             Im_ans(y:(y+rt-1), x:(x+ct-1)) = overlapImg;
