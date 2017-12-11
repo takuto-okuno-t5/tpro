@@ -147,6 +147,15 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.longAxesDrag = 0;
     sharedInst.shiftAxes = 0;
     sharedInst.startPoint = [];
+    
+    % load edit log
+    histFile = [confPath 'multi/trackingEditHistory.mat'];
+    if exist(histFile, 'file')
+        cf = load(histFile, 'editHistory');
+        sharedInst.editHistory = cf.editHistory;
+    else
+        sharedInst.editHistory = {};
+    end
 
     sharedInst.originalImage = [];
 
@@ -288,6 +297,11 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     showLongAxes(handles.axes2, handles, sharedInst.axesType1, sharedInst.currentROI, sharedInst.listFly);
 
     % show first frame
+    showMainAxesRectangle(handles.axes6, handles, []);
+    if ~isempty(sharedInst.bgImage)
+        imshow(sharedInst.bgImage);
+        cla;
+    end
     showFrameInAxes(hObject, handles, sharedInst.startFrame);
 
     % UIWAIT makes startEndDialog wait for user response (see UIRESUME)
@@ -338,7 +352,6 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     %	Character: character interpretation of the key(s) that was pressed
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
     % handles    structure with handles and user data (see GUIDATA)
-    % just key
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % shift + key
     if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'shift')
@@ -348,6 +361,28 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         end
         return;
     end
+    % control + key
+    if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'control')
+        switch eventdata.Key
+        case 'z'
+            histNum = size(sharedInst.editHistory, 1);
+            if histNum > 0
+                hist = sharedInst.editHistory(histNum,:);
+                if strcmp(hist{1},'swap')
+                    sharedInst.editHistory(histNum,:) = [];
+                    sharedInst.selectX = {};
+                    sharedInst.selectY = {};
+                    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+                    swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, handles);
+                    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+                else
+                    text(6, 30, 'can not undo. unsupported operation.', 'Color',[1 .2 .2])
+                end
+            end
+        end
+        return;
+    end
+    % just key
     switch eventdata.Key
     case 'rightarrow'
         pushbutton4_Callback(hObject, eventdata, handles);
@@ -357,6 +392,17 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         pushbutton2_Callback(hObject, eventdata, handles);
     case 'downarrow'
         pushbutton3_Callback(hObject, eventdata, handles);
+    case 's'
+        ids = getIdsFromPoints(sharedInst.selectX, sharedInst.selectY, handles);
+        if length(ids) ~= 2
+            text(6, 30, 'can not swap trajectories. please select 2 points.', 'Color',[1 .2 .2])
+            return;
+        end
+        sharedInst.selectX = {};
+        sharedInst.selectY = {};
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.endFrame, handles);
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
     case 'escape'
         sharedInst.editMode = 1;
         sharedInst.selectX = {};
@@ -366,9 +412,32 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     end
 end
 
+function ids = getIdsFromPoints(X, Y, handles)
+    ids = [];
+    sz = length(X{1});
+    if sz == 0
+        return;
+    end
+    if sz ~= length(Y{1})
+        return;
+    end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    selPts = [X{1}(:) Y{1}(:)];
+    estPts = [sharedInst.keep_data{1}(t,:)' sharedInst.keep_data{2}(t,:)'];
+    dist = pdist([selPts; estPts]);
+    dist1 = squareform(dist); %make square
+    dist2 = dist1(1:sz, (sz+1):end);
+    for i=1:sz
+        [m, idx] = min(dist2(i,:));
+        ids = [ids, idx];
+    end
+end
+
 % --- Executes on key press with focus on figure1 and none of its controls.
 function figure1_KeyPressFcn(hObject, eventdata, handles)
-    figure1_WindowKeyPressFcn(hObject, eventdata, handles);
+%    figure1_WindowKeyPressFcn(hObject, eventdata, handles);
 end
 
 function figure1_KeyReleaseFcn(hObject, eventdata, handles)
@@ -384,6 +453,60 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
     if gca == handles.axes1
         cp = get(gca,'CurrentPoint');
         frameNum = sharedInst.frameNum;
+
+        % select point
+        if sharedInst.editMode == 1
+            unselected = false;
+            selected = false;
+            A = [cp(1,2), cp(1,1)];
+            sframe = frameNum;
+            slen = 1;
+            start_t = round((sframe - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+
+            if ~isempty(sharedInst.selectX)
+                for i=1:slen
+                    B = [sharedInst.selectX{i}, sharedInst.selectY{i}];
+                    if ~isempty(B)
+                        distances = sqrt(sum(bsxfun(@minus, B, A).^2,2));
+                        [minDist,k] = min(distances);
+                        if minDist < 9
+                            sharedInst.selectX{i}(k) = [];
+                            sharedInst.selectY{i}(k) = [];
+                            unselected = true;
+                        end
+                    end
+                end
+            end
+            if ~unselected
+                if isempty(sharedInst.selectX)
+                    sharedInst.selectX = cell(slen,1);
+                    sharedInst.selectY = cell(slen,1);
+                end
+                for i=1:slen
+                    t = start_t+(i-1);
+                    B = [sharedInst.X{t}(:), sharedInst.Y{t}(:)];
+                    if ~isempty(B)
+                        distances = sqrt(sum(bsxfun(@minus, B, A).^2,2));
+                        [minDist,k] = min(distances);
+                        if minDist < 9
+                            sharedInst.selectX{i} = [sharedInst.selectX{i}(:); B(k,1)];
+                            sharedInst.selectY{i} = [sharedInst.selectY{i}(:); B(k,2)];
+                            selected = true;
+                        end
+                    end
+                end
+            end
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            % unselect all point
+            if ~unselected && ~selected
+                sharedInst.selectX = {};
+                sharedInst.selectY = {};
+                sharedInst.startPoint = A;
+                setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            end
+        end
+        % show frame
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
 
     elseif gca == handles.axes2 || gca == handles.axes3
         cp = get(gca,'CurrentPoint');
@@ -406,6 +529,15 @@ function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if ~isempty(sharedInst.startPoint)
+        A = sharedInst.startPoint;
+        cp = get(handles.axes1,'CurrentPoint');
+        x = min(A(2), cp(1,1));
+        y = min(A(1), cp(1,2));
+        rect = [x, y, abs(cp(1,1)-A(2)), abs(cp(1,2)-A(1))];
+        showMainAxesRectangle(handles.axes6, handles, rect);
+    end
 end
 
 % --- Executes on mouse press over figure background, over a disabled or
@@ -414,6 +546,44 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if ~isempty(sharedInst.startPoint)
+        % calc points
+        A = sharedInst.startPoint;
+        cp = get(handles.axes1,'CurrentPoint');
+        xmin = min(A(2), cp(1,1));
+        xmax = max(A(2), cp(1,1));
+        ymin = min(A(1), cp(1,2));
+        ymax = max(A(1), cp(1,2));
+
+        % select point
+        frameNum = sharedInst.frameNum;
+        sframe = min(frameNum,sharedInst.selectFrame);
+        eframe = max(frameNum,sharedInst.selectFrame);
+        slen = eframe - sframe + 1;
+        start_t = round((sframe - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+
+        if isempty(sharedInst.selectX)
+            sharedInst.selectX = cell(slen,1);
+            sharedInst.selectY = cell(slen,1);
+        end
+        for i=1:slen
+            t = start_t+(i-1);
+            B = [sharedInst.X{t}(:), sharedInst.Y{t}(:)];
+            for k=1:size(B,1)
+                if xmax > B(k,2) && B(k,2) > xmin && ymax > B(k,1) && B(k,1) > ymin
+                    sharedInst.selectX{i} = [sharedInst.selectX{i}(:); B(k,1)];
+                    sharedInst.selectY{i} = [sharedInst.selectY{i}(:); B(k,2)];
+                end
+            end
+        end
+        sharedInst.startPoint = [];
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        % show plots
+        pause(0.1);
+        showMainAxesRectangle(handles.axes6, handles, []);
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    end
 end
 
 %%
@@ -818,6 +988,7 @@ function pushbutton15_Callback(hObject, eventdata, handles)
     confPath = sharedInst.confPath;
     filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
     roiMasks = sharedInst.roiMasks;
+    editHistory = sharedInst.editHistory;
 
     sharedInst.isModified = false;
     set(handles.pushbutton15, 'Enable', 'off')
@@ -828,6 +999,9 @@ function pushbutton15_Callback(hObject, eventdata, handles)
     
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
+
+    % save edit log
+    save([sharedInst.confPath 'multi/trackingEditHistory.mat'], 'editHistory');
 
     % optional data export
     mdparam = [];
@@ -1287,6 +1461,13 @@ function Untitled_11_Callback(hObject, eventdata, handles)
         return;
     end
 
+    swapTrackingData(id1, id2, startFrame, endFrame, handles);
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+function swapTrackingData(id1, id2, startFrame, endFrame, handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
     % swap data
     startRow = startFrame - sharedInst.startFrame + 1;
     endRow = (endFrame - sharedInst.startFrame) / sharedInst.frameSteps + 1;
@@ -1303,10 +1484,12 @@ function Untitled_11_Callback(hObject, eventdata, handles)
         end
     end
 
+    % update edit history
+    sharedInst.editHistory = [sharedInst.editHistory; {'swap', id1, id2, startFrame, endFrame}];
+
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
 % --------------------------------------------------------------------
@@ -1678,6 +1861,13 @@ function showFrameInAxes(hObject, handles, frameNum)
                 plot(fy,fx,'or'); % the actual detecting
             end
         end
+        % show selected point
+        if ~isempty(sharedInst.selectX)
+            slen = 1; % just for one frame
+            for i=1:slen
+                plot(sharedInst.selectY{i},sharedInst.selectX{i},'or','Color', [.3 1 .3]);
+            end
+        end
     end
 
     for fn = 1:flyNum
@@ -1760,6 +1950,14 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
             end
         end
+    end
+    % show edit mode
+    if sharedInst.editMode > 0
+        switch sharedInst.editMode
+            case 1
+                modeText = 'please click to select tracking point.';
+        end
+        text(6, 12, modeText, 'Color',[1 .4 .4])
     end
     hold off;
 
