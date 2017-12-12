@@ -73,7 +73,7 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         keep_areas{i} = zeros(1,fn);
         keep_ecc_sorted{i} = zeros(1,fn);
         % convert detection
-        angle = jtth(:,i) + pi/2;
+        angle = jtth(:,i);
         keep_direction_sorted{i}(2,:) = 10 .* cos(angle);
         keep_direction_sorted{i}(1,:) = 10 .* sin(angle);
         angle = angle .* (180 / pi);
