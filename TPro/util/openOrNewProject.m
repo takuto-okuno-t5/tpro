@@ -37,11 +37,32 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
 
         % check if imported file is ctrax mat
         if ~isempty(matName)
-            [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted] = loadCtraxMat(videoPath, fileName, 1024);
+            iniHeight = 1024;
+            type = checkMatFileType(videoPath, fileName);
+            switch(type)
+            case 'ctrax'
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data] = loadCtraxMat(videoPath, fileName, iniHeight);
+                fps = 30; mmperpx = 0.1; startframe = 1; endframe = length(X); maxframe = length(X);
+            case 'jntrx'
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data, ...
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(videoPath, fileName, iniHeight);
+            otherwise
+                X = [];
+            end
             if ~isempty(X)
-                [dlg, matName, path, bgPath, roiPathes, frames, fps, width, height, import] = newWorkDialog({matName, videoPath, num2str(length(X))});
+                [dlg, matName, path, bgPath, roiPathes, frames, fps, width, height, import] = newWorkDialog({matName, videoPath, num2str(maxframe), num2str(fps)});
+                maxframe = str2num(frames);
+                fps = str2num(fps);
                 delete(dlg);
                 pause(0.1);
+
+                % recalculate by fixed height
+                diff = str2num(height) - iniHeight;
+                if diff ~= 0
+                    for j=1:length(X)
+                        X{j} = X{j}(:,1) + diff;
+                    end
+                end
             end
             if isempty(X) || isempty(matName)
                 continue;
@@ -86,9 +107,11 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
                 C = {};
             end
             % set config info
-            B{5} = str2num(frames);
-            B{6} = str2num(frames);
-            B{7} = str2num(fps);
+            B{4} = startframe;
+            B{5} = endframe;
+            B{6} = maxframe;
+            B{7} = fps;
+            B{9} = mmperpx;
             B{10} = length(C);
             status = saveInputControlFile(outputFileName, B);
             % make multi dir
@@ -100,11 +123,15 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
                 X{j} = X{j}(:) - 1024 + height;
                 keep_count(j) = length(X{j}(:));
             end
-            % save X, Y, keep_*
+            % save detection X, Y, keep_*
             startend = [sprintf('%05d',B{4}) '_' sprintf('%05d',B{5})];
             save([outPathName '/multi/detect_' startend '.mat'], 'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
             % save keep_count
             save([outPathName '/multi/detect_' startend 'keep_count.mat'], 'keep_count');
+            % save tracking keep_data
+            if ~isempty(keep_data)
+                save([outPathName '/multi/track_' startend '.mat'], 'keep_data');
+            end
         end
         if ~status
             break;

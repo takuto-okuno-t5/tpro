@@ -64,17 +64,20 @@ function newWorkDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         projectName = c{1};
         path = c{2};
         frames = str2num(c{3});
+        fps = str2num(c{4});
         handles.isArgin = true;
     else
         projectName = '';
         path = '';
         frames = 1000;
+        fps = 30;
         handles.isArgin = false;
     end
 
     % init value
     set(handles.edit1, 'String', projectName);
     set(handles.edit2, 'String', path);
+    set(handles.edit3, 'String', fps);
     set(handles.edit6, 'String', frames);
     set(handles.edit7, 'String', [path projectName '.mat']);
     if ~isempty(projectName)

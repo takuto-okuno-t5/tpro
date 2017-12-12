@@ -1458,7 +1458,7 @@ for data_th = 1:size(records,1)
     v_keep = nan(3, MAX_FLIES); % mean value of velocity
     v_agent_max_keep = nan(1, MAX_FLIES); % max velocity of an agent at each time step
 
-    keep_data = cell(1,4);  % x y vx vy
+    keep_data = cell(1,8);  % x y vx vy
     outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 2;
     for i = 1:8
         keep_data{i} = nan(outFrameNum, MAX_FLIES);
@@ -1731,17 +1731,14 @@ for data_th = 1:size(records,1)
         Q_loc_estimateY(t,1:flyNum) = Q_estimate(2,1:flyNum);
 
         % keep data from Q_estimate
-        for F = 1:flyNum
-            keep_data{1}(t,F) = Q_estimate(1,F);
-            keep_data{2}(t,F) = Q_estimate(2,F);
-            keep_data{3}(t,F) = Q_estimate(3,F);
-            keep_data{4}(t,F) = Q_estimate(4,F);
-            keep_data{5}(t,F) = direction_track(1,F);   % keep_data{5} and keep_data{6} are for direction
-            keep_data{6}(t,F) = direction_track(2,F);
-            keep_data{7}(t,F) = ecc_track(1,F);
-            keep_data{8}(t,F) = angle_track(1,F);
-        end
-
+        keep_data{1}(t,1:flyNum) = Q_estimate(1,1:flyNum);
+        keep_data{2}(t,1:flyNum) = Q_estimate(2,1:flyNum);
+        keep_data{3}(t,1:flyNum) = Q_estimate(3,1:flyNum);
+        keep_data{4}(t,1:flyNum) = Q_estimate(4,1:flyNum);
+        keep_data{5}(t,1:flyNum) = direction_track(1,1:flyNum);   % keep_data{5} and keep_data{6} are for direction
+        keep_data{6}(t,1:flyNum) = direction_track(2,1:flyNum);
+        keep_data{7}(t,1:flyNum) = ecc_track(1,1:flyNum);
+        keep_data{8}(t,1:flyNum) = angle_track(1,1:flyNum);
 
         if ~isempty(Q_loc_meas)
 

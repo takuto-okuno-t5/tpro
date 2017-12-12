@@ -1,11 +1,12 @@
 %% load ctrax mat file
-function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted] = loadCtraxMat(path, fileName, img_h)
+function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data] = loadCtraxMat(path, fileName, img_h)
     X = {};
     Y = {};
     keep_angle_sorted = {};
     keep_direction_sorted = {};
     keep_areas = {};
     keep_ecc_sorted = {};
+    keep_data = {};
 
     try
         ctrax = load([path fileName]);
