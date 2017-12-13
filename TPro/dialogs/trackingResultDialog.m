@@ -1737,7 +1737,32 @@ function Untitled_21_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % automatic merge fly IDs
-    maxFlyId = 20;
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{1};
+    fn = size(X,2);
+    frame = size(X,1);
+
+    for i=fn:-1:1
+        if ~isnan(X(1,i))
+            continue;
+        end
+        x1 = X(1:(frame-2),i);
+        xfirst = find(~isnan(x1),1,'first');
+        for j=(i-1):-1:1
+            s = max(1, xfirst-5);
+            e = min(xfirst+5, frame-2);
+            x2 = X(s:e,j);
+            nanidx = find(isnan(x2));
+            nanlen = length(nanidx);
+            if nanlen > 0 && nanlen < 11 && nanidx(1) < 10
+                disp(['merge trajectory : ' num2str(j) ' <= ' num2str(i) ' (xfirst=' num2str(xfirst) ')']);
+                mergeTrackingData(j, i, handles);
+                break;
+            end
+        end
+    end
+    
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
 
