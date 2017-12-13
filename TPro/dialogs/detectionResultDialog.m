@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 15-Oct-2017 17:34:50
+% Last Modified by GUIDE v2.5 13-Dec-2017 23:39:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -831,41 +831,8 @@ function pushbutton6_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton6 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    img_h = size(sharedInst.originalImage, 1);
-    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
-    dataFileName = [sharedInst.confPath 'multi/detect_' filename '.mat'];
-
-    % load and save detection & tracking
-    X = sharedInst.X;
-    Y = sharedInst.Y;
-    keep_angle_sorted = sharedInst.keep_angle_sorted;
-    keep_direction_sorted = sharedInst.keep_direction_sorted;
-    keep_areas = sharedInst.keep_areas;
-    keep_ecc_sorted = sharedInst.keep_ecc_sorted;
-    save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
-    % save keep_count
-    keep_count = zeros(1,length(X));
-    for i=1:length(X)
-        keep_count(i) = length(X{i}(:));
-    end
-    dataFileName = [sharedInst.confPath 'multi/detect_' filename 'keep_count.mat'];
-    save(dataFileName, 'keep_count');
-
-    % save data as text
-    for i=1:length(sharedInst.roiMasks)
-        outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
-        dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
-        
-        dcdparam = {};
-        if sharedInst.exportDcd
-            dcdparam = {sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel, [sharedInst.confPath 'multi/aggr_dcd_percent.mat']};
-        end
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, dcdparam);
-    end
-    sharedInst.isModified = false;
-    set(handles.pushbutton6, 'Enable', 'off');
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    Untitled_27_Callback(hObject, eventdata, handles);
+    Untitled_28_Callback(hObject, eventdata, handles);
 end
 
 % --- Executes on selection change in popupmenu4.
@@ -1599,6 +1566,80 @@ function Untitled_26_Callback(hObject, eventdata, handles)
     set(handles.text9, 'String', score);
 end
 
+% --------------------------------------------------------------------
+function Untitled_27_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_27 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.isModified == false
+        return;
+    end
+
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    dataFileName = [sharedInst.confPath 'multi/detect_' filename '.mat'];
+
+    % load and save detection & tracking
+    X = sharedInst.X;
+    Y = sharedInst.Y;
+    keep_angle_sorted = sharedInst.keep_angle_sorted;
+    keep_direction_sorted = sharedInst.keep_direction_sorted;
+    keep_areas = sharedInst.keep_areas;
+    keep_ecc_sorted = sharedInst.keep_ecc_sorted;
+    save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    % save keep_count
+    keep_count = zeros(1,length(X));
+    for i=1:length(X)
+        keep_count(i) = length(X{i}(:));
+    end
+    dataFileName = [sharedInst.confPath 'multi/detect_' filename 'keep_count.mat'];
+    save(dataFileName, 'keep_count');
+
+    sharedInst.isModified = false;
+    set(handles.pushbutton6, 'Enable', 'off');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+end
+
+% --------------------------------------------------------------------
+function Untitled_28_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_28 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    img_h = size(sharedInst.originalImage, 1);
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    roiMasks = sharedInst.roiMasks;
+    roiNum = length(roiMasks);
+
+    %
+    disp(['saving detection result : ' sharedInst.shuttleVideo.name]);
+    tic;
+
+    for i=1:roiNum
+        outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i)];
+        if ~exist(outputPath, 'dir')
+            mkdir(outputPath);
+        end
+    end
+
+    X = sharedInst.X;
+    Y = sharedInst.Y;
+
+    % save data as text
+    for i=1:roiNum
+        outputPath = [sharedInst.confPath 'detect_output/' filename '_roi' num2str(i) '/'];
+        dataFileName = [outputPath sharedInst.shuttleVideo.name '_' filename];
+        
+        dcdparam = {};
+        if sharedInst.exportDcd
+            dcdparam = {sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel, [sharedInst.confPath 'multi/aggr_dcd_percent.mat']};
+        end
+        saveDetectionResultText(dataFileName, X, Y, i, img_h, sharedInst.roiMasks, dcdparam);
+    end
+    time = toc;
+    disp(['done!     t =' num2str(time) 's']);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1808,5 +1849,3 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
-
-

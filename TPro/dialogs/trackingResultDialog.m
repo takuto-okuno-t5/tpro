@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 13-Dec-2017 18:13:13
+    % Last Modified by GUIDE v2.5 13-Dec-2017 23:20:11
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1008,51 +1008,8 @@ function pushbutton15_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton15 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    keep_data = sharedInst.keep_data;
-    confPath = sharedInst.confPath;
-    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
-    roiMasks = sharedInst.roiMasks;
-    editHistory = sharedInst.editHistory;
-
-    sharedInst.isModified = false;
-    set(handles.pushbutton15, 'Enable', 'off')
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-
-    disp(['saving tracking result : ' sharedInst.shuttleVideo.name]);
-    tic;
-    
-    % save keep_data
-    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
-
-    % save edit log
-    save([sharedInst.confPath 'multi/trackingEditHistory.mat'], 'editHistory');
-
-    % optional data export
-    mdparam = [];
-    dcdparam = [];
-    if sharedInst.exportDcd
-        dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
-    end
-    if sharedInst.exportMd
-        mdparam = [sharedInst.mmPerPixel];
-    end
-
-    % save data as text
-    flyNum = size(keep_data{1}, 2);
-    end_row = size(keep_data{1}, 1) - 2;
-    img_h = sharedInst.img_h;
-    img_w = sharedInst.img_w;
-    roiNum = length(roiMasks);
-    for i=1:roiNum
-        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-        dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
-
-        % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, []);
-    end
-    time = toc;
-    disp(['done!     t =' num2str(time) 's']);
+    Untitled_24_Callback(hObject, eventdata, handles);
+    Untitled_25_Callback(hObject, eventdata, handles);
 end
 
 % --- Executes on selection change in popupmenu7.
@@ -1815,6 +1772,84 @@ function Untitled_23_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
+% --------------------------------------------------------------------
+function Untitled_24_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_24 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    if sharedInst.isModified == false
+        return;
+    end
+
+    confPath = sharedInst.confPath;
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    keep_data = sharedInst.keep_data;
+    editHistory = sharedInst.editHistory;
+
+    % save keep_data
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
+
+    % save edit log
+    save([sharedInst.confPath 'multi/trackingEditHistory.mat'], 'editHistory');
+
+    sharedInst.isModified = false;
+    set(handles.pushbutton15, 'Enable', 'off')
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+end
+
+% --------------------------------------------------------------------
+function Untitled_25_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_25 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    confPath = sharedInst.confPath;
+    filename = [sprintf('%05d',sharedInst.startFrame) '_' sprintf('%05d',sharedInst.endFrame)];
+    keep_data = sharedInst.keep_data;
+    roiMasks = sharedInst.roiMasks;
+    roiNum = length(roiMasks);
+    
+    %
+    disp(['saving tracking result : ' sharedInst.shuttleVideo.name]);
+    tic;
+
+    % make output folder
+    if ~exist([confPath 'output'], 'dir')
+        mkdir([confPath 'output']);
+    end
+    for i=1:roiNum
+        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+        if ~exist(outputDataPath, 'dir')
+            mkdir(outputDataPath);
+        end
+    end
+
+    % optional data export
+    mdparam = [];
+    dcdparam = [];
+    if sharedInst.exportDcd
+        dcdparam = [sharedInst.dcdRadius / sharedInst.mmPerPixel, sharedInst.dcdCnRadius / sharedInst.mmPerPixel];
+    end
+    if sharedInst.exportMd
+        mdparam = [sharedInst.mmPerPixel];
+    end
+
+    % save data as text
+    flyNum = size(keep_data{1}, 2);
+    end_row = size(keep_data{1}, 1) - 2;
+    img_h = sharedInst.img_h;
+    img_w = sharedInst.img_w;
+    for i=1:roiNum
+        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+        dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
+
+        % output text data
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, []);
+    end
+    time = toc;
+    disp(['done!     t =' num2str(time) 's']);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
