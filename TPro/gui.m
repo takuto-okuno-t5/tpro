@@ -1818,7 +1818,7 @@ for data_th = 1:size(records,1)
                     if ~isempty(bad_trks)
                         % remove old 3 tracking frames
                         for j = 1:8
-                            keep_data{j}((t-2):t,bad_trks) = NaN;
+                            keep_data{j}((t-(STRIKE_TRACK_TH-1)):t,bad_trks) = NaN;
                         end
                     end
                 end

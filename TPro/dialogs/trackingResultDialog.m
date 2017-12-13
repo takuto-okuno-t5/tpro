@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 11-Oct-2017 16:52:07
+    % Last Modified by GUIDE v2.5 13-Dec-2017 18:13:13
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -358,26 +358,47 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         switch eventdata.Key
         case 'rightarrow'
         case 'leftarrow'
+        case 's'
+            % swap trajectory at current frame
+            ids = getIdsFromPoints(sharedInst.selectX, sharedInst.selectY, handles);
+            if length(ids) ~= 2
+                text(6, 30, 'can not swap trajectories. please select 2 points.', 'Color',[1 .2 .2])
+                return;
+            end
+            sharedInst.selectX = {};
+            sharedInst.selectY = {};
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.frameNum, handles);
+            showFrameInAxes(hObject, handles, sharedInst.frameNum);
         end
         return;
     end
     % control + key
     if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'control')
         switch eventdata.Key
-        case 'z'
-            histNum = size(sharedInst.editHistory, 1);
-            if histNum > 0
-                hist = sharedInst.editHistory(histNum,:);
-                if strcmp(hist{1},'swap')
-                    sharedInst.editHistory(histNum,:) = [];
-                    sharedInst.selectX = {};
-                    sharedInst.selectY = {};
-                    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-                    swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, handles);
-                    showFrameInAxes(hObject, handles, sharedInst.frameNum);
-                else
-                    text(6, 30, 'can not undo. unsupported operation.', 'Color',[1 .2 .2])
-                end
+        case 'rightarrow'
+            if sharedInst.frameNum < sharedInst.maxFrame
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*10);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        case 'leftarrow'
+            if sharedInst.frameNum > 1
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*10);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        case 'uparrow'
+            if sharedInst.frameNum < sharedInst.maxFrame
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum + sharedInst.frameSteps*100);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            end
+        case 'downarrow'
+            if sharedInst.frameNum > 1
+                pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
+                set(handles.slider1, 'value', sharedInst.frameNum - sharedInst.frameSteps*100);
+                slider1_Callback(handles.slider1, eventdata, handles)
             end
         end
         return;
@@ -393,6 +414,7 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     case 'downarrow'
         pushbutton3_Callback(hObject, eventdata, handles);
     case 's'
+        % swap trajectory after whole frames
         ids = getIdsFromPoints(sharedInst.selectX, sharedInst.selectY, handles);
         if length(ids) ~= 2
             text(6, 30, 'can not swap trajectories. please select 2 points.', 'Color',[1 .2 .2])
@@ -414,6 +436,9 @@ end
 
 function ids = getIdsFromPoints(X, Y, handles)
     ids = [];
+    if isempty(X)
+        return;
+    end
     sz = length(X{1});
     if sz == 0
         return;
@@ -1492,6 +1517,37 @@ function swapTrackingData(id1, id2, startFrame, endFrame, handles)
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
+function mergeTrackingData(id1, id2, handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % merge data (id2) into (id1), and remove (id2)
+    idx = find(~isnan(sharedInst.keep_data{1}(:,id2)));
+    startRow = idx(1);
+    endRow = idx(end);
+
+    for i=1:8
+        sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
+        sharedInst.keep_data{i}(:,id2) = [];
+    end
+
+    % update edit history
+    sharedInst.editHistory = [sharedInst.editHistory; {'merge', id1, id2, startRow, endRow}];
+
+    % set fly list box
+    flyNum = size(sharedInst.keep_data{1}, 2);
+    listItem = [];
+    for i = 1:flyNum
+        listItem = [listItem;{i}];
+    end
+    set(handles.popupmenu5,'Value', 1);
+    set(handles.popupmenu5,'String',listItem);
+
+    sharedInst.listFly = 1;
+    sharedInst.isModified = true;
+    set(handles.pushbutton15, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+end
+
 % --------------------------------------------------------------------
 function Untitled_12_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_12 (see GCBO)
@@ -1507,29 +1563,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
         return;
     end
 
-    % merge data (id2) into (id1), and remove (id2)
-    idx = find(~isnan(sharedInst.keep_data{1}(:,id2)));
-    startRow = idx(1);
-    endRow = idx(end);
-
-    for i=1:8
-        sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
-        sharedInst.keep_data{i}(:,id2) = [];
-    end
-
-    % set fly list box
-    flyNum = size(sharedInst.keep_data{1}, 2);
-    listItem = [];
-    for i = 1:flyNum
-        listItem = [listItem;{i}];
-    end
-    set(handles.popupmenu5,'Value', 1);
-    set(handles.popupmenu5,'String',listItem);
-
-    sharedInst.listFly = 1;
-    sharedInst.isModified = true;
-    set(handles.pushbutton15, 'Enable', 'on');
-    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    mergeTrackingData(id1, id2, handles);
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1710,6 +1744,77 @@ function Untitled_18_Callback(hObject, eventdata, handles)
         disp([num2str(i) ') ' sex ' (' num2str(flySexes(i)) ')']);
     end
 end
+
+% --------------------------------------------------------------------
+function Untitled_19_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_19 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    histNum = size(sharedInst.editHistory, 1);
+    if histNum > 0
+        hist = sharedInst.editHistory(histNum,:);
+        if strcmp(hist{1},'swap')
+            sharedInst.editHistory(histNum,:) = [];
+            sharedInst.selectX = {};
+            sharedInst.selectY = {};
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, handles);
+            showFrameInAxes(hObject, handles, sharedInst.frameNum);
+        else
+            text(6, 30, 'can not undo. unsupported operation.', 'Color',[1 .2 .2])
+        end
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_20_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_20 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_21_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_21 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % automatic merge fly IDs
+    maxFlyId = 20;
+end
+
+
+% --------------------------------------------------------------------
+function Untitled_23_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_23 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % apply edit history
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % unselect points
+    sharedInst.selectX = {};
+    sharedInst.selectY = {};
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    % TODO: load csv file
+    src = load([sharedInst.confPath 'multi/trackingEditHistoryOrg.mat']);
+    % apply history
+    for i=1:size(src.editHistory,1)
+        id1 = src.editHistory{i,2};
+        id2 = src.editHistory{i,3};
+        startFrame = src.editHistory{i,4};
+        endFrame = src.editHistory{i,5};
+        switch(src.editHistory{i,1})
+        case 'merge'
+            mergeTrackingData(id1, id2, handles);
+        case 'swap'
+            swapTrackingData(id1, id2, startFrame, endFrame, handles);
+        end
+    end
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
