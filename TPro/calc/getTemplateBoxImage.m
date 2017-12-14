@@ -8,6 +8,8 @@ function [trimmedImage, rect] = getTemplateBoxImage(blob_img_masked, tmplImage, 
     if rect(4) < w*2
         rect(4) = w*2 + 4;
     end
-    trimmedImage = imcrop(blob_img_masked, rect);
+    trimmedImage = uint8(zeros(rect(4),rect(3)));
+    cimg = imcrop(blob_img_masked, rect); % sometime edge may be cut
+    trimmedImage(1:size(cimg,1),1:size(cimg,2)) = cimg;
     trimmedImage(trimmedImage==0) = 255;
 end
