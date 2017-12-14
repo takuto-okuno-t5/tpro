@@ -272,6 +272,9 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % calc velocity and etc.
+    addResult2Axes(handles, sharedInst.keep_data{2}, 'x', handles.popupmenu8);
+    addResult2Axes(handles, sharedInst.keep_data{1}, 'y', handles.popupmenu8);
+
     result = calcVxy(keep_data{3}, keep_data{4}) * sharedInst.fpsNum * sharedInst.mmPerPixel;
     cname = 'velocity';
     addResult2Axes(handles, result, cname, handles.popupmenu8);
