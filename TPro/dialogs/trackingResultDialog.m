@@ -1447,6 +1447,11 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     end
 
     swapTrackingData(id1, id2, startFrame, endFrame, handles);
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+    setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
+
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1524,6 +1529,11 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     end
 
     mergeTrackingData(id1, id2, handles);
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+    setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
+
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1765,6 +1775,11 @@ function Untitled_21_Callback(hObject, eventdata, handles)
             nanidx = find(isnan(x2));
             nanlen = length(nanidx);
             if nanlen > 0 && nanlen < 11 && nanidx(1) < 10
+                % check more. trajectory should not be overwritten.
+                nanidx = find(~isnan(X(e:frame-2,j)));
+                if ~isempty(nanidx)
+                    continue;
+                end
                 disp(['merge trajectory : ' num2str(j) ' <= ' num2str(i) ' (xfirst=' num2str(xfirst) ')']);
                 mergeTrackingData(j, i, handles);
                 break;
@@ -1772,6 +1787,10 @@ function Untitled_21_Callback(hObject, eventdata, handles)
         end
     end
     
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+    setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
+
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1804,6 +1823,11 @@ function Untitled_23_Callback(hObject, eventdata, handles)
             swapTrackingData(id1, id2, startFrame, endFrame, handles);
         end
     end
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+    setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
+
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
