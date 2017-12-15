@@ -1625,6 +1625,13 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     cname = 'nn_cluster_result_tracking';
     addResult2Axes(handles, result, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+
+    [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+    save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum');
+    addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
+    addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
+    addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
+    addResult2Axes(handles, singleFlyNum, 'nn_singleFlyNum', handles.popupmenu8);
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
@@ -1959,7 +1966,9 @@ function showFrameInAxes(hObject, handles, frameNum)
 
     hold on;
     if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
-       strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking')
+       strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking') || ...
+       strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+       strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
         major = sharedInst.mean_blobmajor * 0.9;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
@@ -1987,35 +1996,55 @@ function showFrameInAxes(hObject, handles, frameNum)
             culster(idxs) = [];
             scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
         end
-        % get ewd/dcd result of all fly
-        data = getappdata(handles.figure1, sharedInst.axesType1);
-        if size(data,3) == 1
-            ewdmin = min(min(data));
-            ewdmax = max(max(data));
-        else
-            mrIdx = 11;
-            ewdmin = min(min(data(:,:,mrIdx)));
-            ewdmax = max(max(data(:,:,mrIdx)));
+        % nn clustered groups
+        data = getappdata(handles.figure1, 'nn_groups');
+        if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+             strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
+            height = sharedInst.nnHeight;
+            if height > 10, height = 10; end
+            height = height / sharedInst.mmPerPixel;
+
+            culster = data(t,:);
+            idxs = find(isnan(culster));
+            fy2 = fy; fx2 = fx;
+            fy2(idxs) = [];
+            fx2(idxs) = [];
+            culster(idxs) = [];
+            scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
         end
-        for i=1:length(fx)
-            if ~isnan(fy(i)) && ~isnan(fx(i))
-                if size(data,3) == 1
-                    score = data(t,i);
-                else
-                    score = data(t,i,mrIdx);
-                end
-                if ~isnan(score)
-                    idx = floor((score - ewdmin) / (ewdmax - ewdmin) * 100 * 1.5);
-                    if idx <= 0, idx = 1; end
-                    if idx > size(sharedInst.ewdColors,1), idx = size(sharedInst.ewdColors,1); end
-                    col = sharedInst.ewdColors(idx,:);
-                    g = hgtransform();
-                    r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
-                    ang = angle(t,i);
-                    if isnan(ang)
-                        ang = 0;
+        % local densities
+        if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
+           strcmp(sharedInst.axesType1,'aggr_dcd_result_mr')
+            % get ewd/dcd result of all fly
+            data = getappdata(handles.figure1, sharedInst.axesType1);
+            if size(data,3) == 1
+                ewdmin = min(min(data));
+                ewdmax = max(max(data));
+            else
+                mrIdx = 11;
+                ewdmin = min(min(data(:,:,mrIdx)));
+                ewdmax = max(max(data(:,:,mrIdx)));
+            end
+            for i=1:length(fx)
+                if ~isnan(fy(i)) && ~isnan(fx(i))
+                    if size(data,3) == 1
+                        score = data(t,i);
+                    else
+                        score = data(t,i,mrIdx);
                     end
-                    g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-ang/180*pi);
+                    if ~isnan(score)
+                        idx = floor((score - ewdmin) / (ewdmax - ewdmin) * 100 * 1.5);
+                        if idx <= 0, idx = 1; end
+                        if idx > size(sharedInst.ewdColors,1), idx = size(sharedInst.ewdColors,1); end
+                        col = sharedInst.ewdColors(idx,:);
+                        g = hgtransform();
+                        r = rectangle('Parent',g,'Position',pos,'Curvature',[1 1],'FaceColor',col,'EdgeColor',col/2);
+                        ang = angle(t,i);
+                        if isnan(ang)
+                            ang = 0;
+                        end
+                        g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-ang/180*pi);
+                    end
                 end
             end
         end
