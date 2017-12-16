@@ -1341,6 +1341,8 @@ MAX_FLIES = readTproConfig('trackingFlyMax', 800); % maxmum number of flies
 RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recursion limit
 IGNORE_NAN_COUNT = readTproConfig('ignoreNaNCount', 20); % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = readTproConfig('trackingDeleteTh', 5); % delete tracking threshold: minimam valid frames
+PILEUPS_SWAP_TH = readTproConfig('pileupsSwapTh', 7); % pile-ups checking threshold at tracking
+KEEP_DATA_MAX = 8;
 
 exportDcd = readTproConfig('exportDcd', 0);
 exportMd = readTproConfig('exportMinDistance', 0);
@@ -1458,11 +1460,13 @@ for data_th = 1:size(records,1)
     v_keep = nan(3, MAX_FLIES); % mean value of velocity
     v_agent_max_keep = nan(1, MAX_FLIES); % max velocity of an agent at each time step
 
-    keep_data = cell(1,8);  % x y vx vy
+    keep_data = cell(1,KEEP_DATA_MAX);  % x y vx vy
     outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 2;
-    for i = 1:8
+    for i = 1:KEEP_DATA_MAX
         keep_data{i} = nan(outFrameNum, MAX_FLIES);
     end
+    assignCost = nan(outFrameNum, 1);
+    trackHistory = {};
 
     % size
     img_initial = TProRead(shuttleVideo,1);
@@ -1653,6 +1657,40 @@ for data_th = 1:size(records,1)
                 asgn2 = asgn.*0;
             end
 
+            % check 3 - pile-ups
+            [m3,mi3] = min(est_dist1,[],2);
+            log3 = nan(1,length(asgn));
+            tmp = (mi3' == asgn(invIdx>0));
+            log3(invIdx>0) = tmp;
+            idx3 = find(log3==0);
+            for j=1:length(idx3)
+                qidx = idx3(j);
+                q = Q_estimate(:,qidx);
+                v = sqrt(q(3)^2 + q(4)^2);
+                jidx = invIdx(qidx);
+                dist = est_dist1(jidx,mi3(jidx));
+                if v < PILEUPS_SWAP_TH && dist < PILEUPS_SWAP_TH
+                    % fly should not move
+                    ridx = find(asgn==mi3(jidx));
+                    if ~isempty(ridx)
+                        tmp = asgn(qidx);
+                        asgn(qidx) = mi3(jidx);
+                        asgn(ridx(1)) = tmp;
+                        disp(['fixed pile-ups at ' num2str(t_count) ' : ' num2str(qidx) ' <-> ' num2str(ridx(1))]);
+                        trackHistory = [trackHistory; {'pileups',t_count,qidx,ridx(1)}];
+                    end
+                end
+            end
+            % recalc assign cost
+            cost = 0;
+            asgn3 = asgn(invIdx>0);
+            for F = 1:length(asgn3)
+                if asgn3(F) > 0
+                    cost = cost + est_dist1(F,asgn3(F));
+                end
+            end
+            assignCost(t) = cost;
+
             %apply the assingment to the update
             k = 1;
             velocity_temp2 = [];
@@ -1775,7 +1813,7 @@ for data_th = 1:size(records,1)
                 % number too much. so find such noise and clean fly number.
                 if ~isempty(find(flyNum==no_trk_list)) && strk_trks(flyNum) == 0
                     % remove old 1 tracking frames
-                    for j = 1:8
+                    for j = 1:KEEP_DATA_MAX
                         keep_data{j}(t,flyNum) = NaN;
                     end
                     flyNum = flyNum - 1;
@@ -1817,7 +1855,7 @@ for data_th = 1:size(records,1)
                     bad_trks = find(strk_trks ==(STRIKE_TRACK_TH+1));
                     if ~isempty(bad_trks)
                         % remove old 3 tracking frames
-                        for j = 1:8
+                        for j = 1:KEEP_DATA_MAX
                             keep_data{j}((t-(STRIKE_TRACK_TH-1)):t,bad_trks) = NaN;
                         end
                     end
@@ -1864,7 +1902,7 @@ for data_th = 1:size(records,1)
         flyNum = length(moveIdx);
     end
     % organize keep_data
-    for j = 1:8
+    for j = 1:KEEP_DATA_MAX
         keep_data{j} = keep_data{j}(:,moveIdx);
     end
     % inverse the angle upside-down
@@ -1873,7 +1911,7 @@ for data_th = 1:size(records,1)
     keep_data{8} = fixAngleFlip(keep_data{8},1,end_row);
 
     % save keep_data
-    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data');
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');
 
     % optional data export
     mdparam = [];
