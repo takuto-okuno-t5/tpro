@@ -272,7 +272,9 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % calc velocity and etc.
-    addResult2Axes(handles, assignCost, 'assignCost', handles.popupmenu8);
+    if exist('assignCost','var')
+        addResult2Axes(handles, assignCost, 'assignCost', handles.popupmenu8);
+    end
     addResult2Axes(handles, sharedInst.keep_data{2}, 'x', handles.popupmenu8);
     addResult2Axes(handles, sharedInst.keep_data{1}, 'y', handles.popupmenu8);
 
