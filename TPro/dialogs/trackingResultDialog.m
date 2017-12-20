@@ -374,7 +374,7 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
             sharedInst.selectX = {};
             sharedInst.selectY = {};
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-            swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.frameNum, handles);
+            swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.frameNum, true, handles);
             showFrameInAxes(hObject, handles, sharedInst.frameNum);
         end
         return;
@@ -429,8 +429,25 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         sharedInst.selectX = {};
         sharedInst.selectY = {};
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-        swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.endFrame, handles);
+        swapTrackingData(ids(1), ids(2), sharedInst.frameNum, sharedInst.endFrame, true, handles);
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    case 'delete'
+        frameNum = sharedInst.frameNum;
+        if ~isempty(sharedInst.selectX)
+            ids = getIdsFromPoints(sharedInst.selectX, sharedInst.selectY, handles);
+            for i=1:length(ids)
+                moveTrackingPoint(ids(i), frameNum, NaN, NaN, true, handles);
+            end
+        elseif sharedInst.editMode == 1 && sharedInst.listMode == 2
+            % move point
+            moveTrackingPoint(sharedInst.listFly, frameNum, NaN, NaN, true, handles);
+        end
+        sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+        sharedInst.selectX = {};
+        sharedInst.selectY = {};
+        setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+        setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);        
     case 'escape'
         sharedInst.editMode = 1;
         sharedInst.selectX = {};
@@ -486,7 +503,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
         frameNum = sharedInst.frameNum;
 
         % select point
-        if sharedInst.editMode == 1
+        if sharedInst.editMode == 1 && sharedInst.listMode == 1
             unselected = false;
             selected = false;
             A = [cp(1,2), cp(1,1)];
@@ -534,6 +551,17 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
                 sharedInst.selectY = {};
                 sharedInst.startPoint = A;
                 setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            end
+        elseif sharedInst.editMode == 1 && sharedInst.listMode == 2
+            y = cp(1,2);
+            x = cp(1,1);
+            if x > 0 && x < sharedInst.img_w && y > 0 && y < sharedInst.img_h
+                % move point
+                moveTrackingPoint(sharedInst.listFly, frameNum, y, x, true, handles);
+
+                sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+                setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
+                setappdata(handles.figure1,'y',sharedInst.keep_data{1}); % update shared
             end
         end
         % show frame
@@ -1449,7 +1477,7 @@ function Untitled_11_Callback(hObject, eventdata, handles)
         return;
     end
 
-    swapTrackingData(id1, id2, startFrame, endFrame, handles);
+    swapTrackingData(id1, id2, startFrame, endFrame, true, handles);
 
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
@@ -1458,7 +1486,30 @@ function Untitled_11_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
-function swapTrackingData(id1, id2, startFrame, endFrame, handles)
+function moveTrackingPoint(id, frameNum, x, y, isSaveHistory, handles)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    % move point
+    row = frameNum - sharedInst.startFrame + 1;
+    px = sharedInst.keep_data{1}(row,id);
+    py = sharedInst.keep_data{2}(row,id);
+    sharedInst.keep_data{1}(row,id) = x;
+    sharedInst.keep_data{2}(row,id) = y;
+
+    % update edit history
+    if isSaveHistory
+        if size(sharedInst.editHistory,2) < 7
+            sharedInst.editHistory{size(sharedInst.editHistory,1),7} = [];
+        end
+        sharedInst.editHistory = [sharedInst.editHistory; {'pmove', id, frameNum, x, y, px, py}];
+    end
+
+    sharedInst.isModified = true;
+    set(handles.pushbutton15, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+end
+
+function swapTrackingData(id1, id2, startFrame, endFrame, isSaveHistory, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % swap data
@@ -1478,14 +1529,16 @@ function swapTrackingData(id1, id2, startFrame, endFrame, handles)
     end
 
     % update edit history
-    sharedInst.editHistory = [sharedInst.editHistory; {'swap', id1, id2, startFrame, endFrame}];
+    if isSaveHistory
+        sharedInst.editHistory = [sharedInst.editHistory; {'swap', id1, id2, startFrame, endFrame, [], []}];
+    end
 
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
-function mergeTrackingData(id1, id2, handles)
+function mergeTrackingData(id1, id2, isSaveHistory, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     % merge data (id2) into (id1), and remove (id2)
@@ -1499,7 +1552,9 @@ function mergeTrackingData(id1, id2, handles)
     end
 
     % update edit history
-    sharedInst.editHistory = [sharedInst.editHistory; {'merge', id1, id2, startRow, endRow}];
+    if isSaveHistory
+        sharedInst.editHistory = [sharedInst.editHistory; {'merge', id1, id2, startRow, endRow, [], []}];
+    end
 
     % set fly list box
     flyNum = size(sharedInst.keep_data{1}, 2);
@@ -1531,7 +1586,7 @@ function Untitled_12_Callback(hObject, eventdata, handles)
         return;
     end
 
-    mergeTrackingData(id1, id2, handles);
+    mergeTrackingData(id1, id2, true, handles);
 
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     setappdata(handles.figure1,'x',sharedInst.keep_data{2}); % update shared
@@ -1734,15 +1789,22 @@ function Untitled_19_Callback(hObject, eventdata, handles)
     histNum = size(sharedInst.editHistory, 1);
     if histNum > 0
         hist = sharedInst.editHistory(histNum,:);
-        if strcmp(hist{1},'swap')
+        if strcmp(hist{1},'swap') && sharedInst.listMode == 1
             sharedInst.editHistory(histNum,:) = [];
             sharedInst.selectX = {};
             sharedInst.selectY = {};
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-            swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, handles);
+            swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, false, handles);
+            showFrameInAxes(hObject, handles, sharedInst.frameNum);
+        elseif strcmp(hist{1},'pmove')
+            sharedInst.editHistory(histNum,:) = [];
+            sharedInst.selectX = {};
+            sharedInst.selectY = {};
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            moveTrackingPoint(hist{2}, hist{3}, hist{6}, hist{7}, false, handles);
             showFrameInAxes(hObject, handles, sharedInst.frameNum);
         else
-            text(6, 30, 'can not undo. unsupported operation.', 'Color',[1 .2 .2])
+            text(6, 30, 'can not undo. bad fly list mode or unsupported operation.', 'Color',[1 .2 .2])
         end
     end
 end
@@ -1784,7 +1846,7 @@ function Untitled_21_Callback(hObject, eventdata, handles)
                     continue;
                 end
                 disp(['merge trajectory : ' num2str(j) ' <= ' num2str(i) ' (xfirst=' num2str(xfirst) ')']);
-                mergeTrackingData(j, i, handles);
+                mergeTrackingData(j, i, true, handles);
                 break;
             end
         end
@@ -1821,9 +1883,9 @@ function Untitled_23_Callback(hObject, eventdata, handles)
         endFrame = src.editHistory{i,5};
         switch(src.editHistory{i,1})
         case 'merge'
-            mergeTrackingData(id1, id2, handles);
+            mergeTrackingData(id1, id2, true, handles);
         case 'swap'
-            swapTrackingData(id1, id2, startFrame, endFrame, handles);
+            swapTrackingData(id1, id2, startFrame, endFrame, true, handles);
         end
     end
 
@@ -2177,9 +2239,10 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     % show edit mode
     if sharedInst.editMode > 0
-        switch sharedInst.editMode
-            case 1
-                modeText = 'please click to select tracking point.';
+        if sharedInst.editMode == 1 && sharedInst.listMode == 1
+            modeText = 'please click to select tracking point.';
+        elseif sharedInst.editMode == 1 && sharedInst.listMode == 2
+            modeText = 'please click to move tracking point. (Ctrl+Z to undo)';
         end
         text(6, 12, modeText, 'Color',[1 .4 .4])
     end
