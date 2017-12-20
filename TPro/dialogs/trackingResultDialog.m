@@ -515,7 +515,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
                 end
                 for i=1:slen
                     t = start_t+(i-1);
-                    B = [sharedInst.X{t}(:), sharedInst.Y{t}(:)];
+                    B = [sharedInst.keep_data{1}(t,:)' sharedInst.keep_data{2}(t,:)'];
                     if ~isempty(B)
                         distances = sqrt(sum(bsxfun(@minus, B, A).^2,2));
                         [minDist,k] = min(distances);
@@ -600,7 +600,7 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
         end
         for i=1:slen
             t = start_t+(i-1);
-            B = [sharedInst.X{t}(:), sharedInst.Y{t}(:)];
+            B = [sharedInst.keep_data{1}(t,:)' sharedInst.keep_data{2}(t,:)'];
             for k=1:size(B,1)
                 if xmax > B(k,2) && B(k,2) > xmin && ymax > B(k,1) && B(k,1) > ymin
                     sharedInst.selectX{i} = [sharedInst.selectX{i}(:); B(k,1)];
