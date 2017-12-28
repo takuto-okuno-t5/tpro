@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 13-Dec-2017 23:20:11
+    % Last Modified by GUIDE v2.5 29-Dec-2017 00:10:48
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -153,9 +153,13 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if exist(histFile, 'file')
         cf = load(histFile, 'editHistory');
         sharedInst.editHistory = cf.editHistory;
+        set(handles.Untitled_19, 'Enable', 'on');
     else
         sharedInst.editHistory = {};
+        set(handles.Untitled_19, 'Enable', 'off');
     end
+    sharedInst.redoHistory = {};
+    set(handles.Untitled_26, 'Enable', 'off');
 
     sharedInst.originalImage = [];
 
@@ -1502,6 +1506,9 @@ function moveTrackingPoint(id, frameNum, x, y, isSaveHistory, handles)
             sharedInst.editHistory{size(sharedInst.editHistory,1),7} = [];
         end
         sharedInst.editHistory = [sharedInst.editHistory; {'pmove', id, frameNum, x, y, px, py}];
+        sharedInst.redoHistory = {};
+        set(handles.Untitled_19, 'Enable', 'on');
+        set(handles.Untitled_26, 'Enable', 'off');
     end
 
     sharedInst.isModified = true;
@@ -1531,6 +1538,9 @@ function swapTrackingData(id1, id2, startFrame, endFrame, isSaveHistory, handles
     % update edit history
     if isSaveHistory
         sharedInst.editHistory = [sharedInst.editHistory; {'swap', id1, id2, startFrame, endFrame, [], []}];
+        sharedInst.redoHistory = {};
+        set(handles.Untitled_19, 'Enable', 'on');
+        set(handles.Untitled_26, 'Enable', 'off');
     end
 
     sharedInst.isModified = true;
@@ -1554,6 +1564,9 @@ function mergeTrackingData(id1, id2, isSaveHistory, handles)
     % update edit history
     if isSaveHistory
         sharedInst.editHistory = [sharedInst.editHistory; {'merge', id1, id2, startRow, endRow, [], []}];
+        sharedInst.redoHistory = {};
+        set(handles.Untitled_19, 'Enable', 'on');
+        set(handles.Untitled_26, 'Enable', 'off');
     end
 
     % set fly list box
@@ -1790,19 +1803,31 @@ function Untitled_19_Callback(hObject, eventdata, handles)
     if histNum > 0
         hist = sharedInst.editHistory(histNum,:);
         if strcmp(hist{1},'swap') && sharedInst.listMode == 1
+            sharedInst.redoHistory = [sharedInst.redoHistory; hist];
             sharedInst.editHistory(histNum,:) = [];
             sharedInst.selectX = {};
             sharedInst.selectY = {};
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, false, handles);
             showFrameInAxes(hObject, handles, sharedInst.frameNum);
+            text(6, 30, ['undo swap: ' num2str(hist{2}) ' and ' num2str(hist{3}) ' at frame ' num2str(hist{4})], 'Color',[1 .2 .2])
+            if histNum == 1
+                set(handles.Untitled_19, 'Enable', 'off');
+            end
+            set(handles.Untitled_26, 'Enable', 'on');
         elseif strcmp(hist{1},'pmove')
+            sharedInst.redoHistory = [sharedInst.redoHistory; hist];
             sharedInst.editHistory(histNum,:) = [];
             sharedInst.selectX = {};
             sharedInst.selectY = {};
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             moveTrackingPoint(hist{2}, hist{3}, hist{6}, hist{7}, false, handles);
             showFrameInAxes(hObject, handles, sharedInst.frameNum);
+            text(6, 30, ['undo point move: id=' num2str(hist{2}) ' at frame ' num2str(hist{3})], 'Color',[1 .2 .2])
+            if histNum == 1
+                set(handles.Untitled_19, 'Enable', 'off');
+            end
+            set(handles.Untitled_26, 'Enable', 'on');
         else
             text(6, 30, 'can not undo. bad fly list mode or unsupported operation.', 'Color',[1 .2 .2])
         end
@@ -1973,6 +1998,47 @@ function Untitled_25_Callback(hObject, eventdata, handles)
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);
+end
+
+% --------------------------------------------------------------------
+function Untitled_26_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_26 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    histNum = size(sharedInst.redoHistory, 1);
+    if histNum > 0
+        hist = sharedInst.redoHistory(histNum,:);
+        if strcmp(hist{1},'swap') && sharedInst.listMode == 1
+            sharedInst.editHistory = [sharedInst.editHistory; hist];
+            sharedInst.redoHistory(histNum,:) = [];
+            sharedInst.selectX = {};
+            sharedInst.selectY = {};
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            swapTrackingData(hist{2}, hist{3}, hist{4}, hist{5}, false, handles);
+            showFrameInAxes(hObject, handles, sharedInst.frameNum);
+            text(6, 30, ['redo swap: ' num2str(hist{2}) ' and ' num2str(hist{3}) ' at frame ' num2str(hist{4})], 'Color',[1 .2 .2])
+            if histNum == 1
+                set(handles.Untitled_26, 'Enable', 'off');
+            end
+            set(handles.Untitled_19, 'Enable', 'on');
+        elseif strcmp(hist{1},'pmove')
+            sharedInst.editHistory = [sharedInst.editHistory; hist];
+            sharedInst.redoHistory(histNum,:) = [];
+            sharedInst.selectX = {};
+            sharedInst.selectY = {};
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+            moveTrackingPoint(hist{2}, hist{3}, hist{4}, hist{5}, false, handles);
+            showFrameInAxes(hObject, handles, sharedInst.frameNum);
+            text(6, 30, ['redo point move: id=' num2str(hist{2}) ' at frame ' num2str(hist{3})], 'Color',[1 .2 .2])
+            if histNum == 1
+                set(handles.Untitled_26, 'Enable', 'off');
+            end
+            set(handles.Untitled_19, 'Enable', 'on');
+        else
+            text(6, 30, 'can not redo. bad fly list mode or unsupported operation.', 'Color',[1 .2 .2])
+        end
+    end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
