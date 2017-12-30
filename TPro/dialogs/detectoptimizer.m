@@ -254,7 +254,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         bgImage = rgb2gray(bgImage);
         sharedInst.bgImage = bgImage;
-        sharedInst.bgImageDouble = double(bgImage);
+        sharedInst.bgImageDouble = single(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
     else
         sharedInst.bgImage = [];
@@ -279,9 +279,9 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
             if i==1
-                sharedInst.roiMaskImage = im2double(img);
+                sharedInst.roiMaskImage = im2single(img);
             else
-                sharedInst.roiMaskImage = sharedInst.roiMaskImage | im2double(img);
+                sharedInst.roiMaskImage = sharedInst.roiMaskImage | im2single(img);
             end
         end
     end
@@ -703,7 +703,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
         else
             grayImage = rgb2gray(sharedInst.originalImage);
         end
-        img = double(grayImage).*(imcomplement(sharedInst.roiMaskImage*0.5));
+        img = single(grayImage).*(imcomplement(sharedInst.roiMaskImage*0.5));
         img = uint8(img);
         cla;
         imshow(img);
@@ -865,9 +865,6 @@ function edit5_Callback(hObject, eventdata, handles)
     % hObject    handle to edit5 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-
-    % Hints: get(hObject,'String') returns contents of edit5 as text
-    %        str2double(get(hObject,'String')) returns contents of edit5 as a double
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     mmPerPixel = str2double(get(hObject,'String'));
     if isnan(mmPerPixel) || mmPerPixel <= 0

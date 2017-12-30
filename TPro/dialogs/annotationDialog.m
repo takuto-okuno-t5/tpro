@@ -189,7 +189,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         bgImage = rgb2gray(bgImage);
         sharedInst.bgImage = bgImage;
-        sharedInst.bgImageDouble = double(bgImage);
+        sharedInst.bgImageDouble = single(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
     else
         sharedInst.bgImage = [];
@@ -201,7 +201,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     roiFileName = strcat(sharedInst.confPath,'roi.png');
     if exist(roiFileName, 'file')
         img = imread(roiFileName);
-        sharedInst.roiMaskImage = im2double(img);
+        sharedInst.roiMaskImage = im2single(img);
     else
         sharedInst.roiMaskImage = [];
     end
@@ -1247,7 +1247,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             % show number
             if sharedInst.showNumber
                 num_txt = ['  ', num2str(fn)];
-                text(Q_loc_estimateY(t,listFly),Q_loc_estimateX(t,listFly),num_txt, 'Color','red')
+                text(double(Q_loc_estimateY(t,listFly)),double(Q_loc_estimateX(t,listFly)),num_txt, 'Color','red')
             end            
         else
             % show tail lines
@@ -1601,9 +1601,9 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
     if sharedInst.annoStart > 0
         t2 = round((sharedInst.annoStart - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
         if t >= t2
-            xv = [double(t2)-0.5 double(t2)-0.5 double(t)+0.5 double(t)+0.5];
+            xv = [single(t2)-0.5 single(t2)-0.5 single(t)+0.5 single(t)+0.5];
         else
-            xv = [double(t)-0.5 double(t)-0.5 double(t2)+0.5 double(t2)+0.5];
+            xv = [single(t)-0.5 single(t)-0.5 single(t2)+0.5 single(t2)+0.5];
         end
         yv = [ymin ymax ymax ymin];
         patch(xv,yv,'red','FaceAlpha',.3,'EdgeColor','none');
@@ -1616,7 +1616,7 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
 end
 
 function plotAnnotationBlock(ymin, ymax, lastAnnoFrame, i, annoNum)
-    xv = [double(lastAnnoFrame)-0.5 double(lastAnnoFrame)-0.5 double(i)-0.5 double(i)-0.5];
+    xv = [single(lastAnnoFrame)-0.5 single(lastAnnoFrame)-0.5 single(i)-0.5 single(i)-0.5];
     yv = [ymin ymax ymax ymin];
     CLIST = {[1 0 0] [1 1 0] [1 0 1] [0 1 1] [0 1 0] [0 0 1] [1 1 1] [1 .5 .1] [.1 .5 1]};
     cnum = mod(annoNum-1, length(CLIST)) + 1;

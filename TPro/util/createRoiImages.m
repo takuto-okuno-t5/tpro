@@ -16,8 +16,8 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         roiMatName = [confRoiName idx '.mat'];
         if exist(roiFileName, 'file')
             roiImage = imread(roiFileName);
-            roiImage = im2double(roiImage);
-            img = double(grayImage).*(imcomplement(roiImage*0.5));
+            roiImage = im2single(roiImage);
+            img = single(grayImage).*(imcomplement(roiImage*0.5));
             img = uint8(img);
         else
             roiImage = [];
@@ -27,11 +27,11 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
         if i>1 && ~isempty(multiRoiImage)
             % to color
             if ismatrix(img)
-                redImage = uint8(double(img).*(imcomplement(multiRoiImage*0.1)));
+                redImage = uint8(single(img).*(imcomplement(multiRoiImage*0.1)));
                 img = cat(3,img,redImage,img);
             else
                 redImage = img(:,:,2);
-                redImage = uint8(double(redImage).*(imcomplement(multiRoiImage*0.1)));
+                redImage = uint8(single(redImage).*(imcomplement(multiRoiImage*0.1)));
                 img(:,:,2) = redImage;
             end
         end
@@ -41,7 +41,7 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
 
         % if canceled, do not show and save roi file
         if ~isempty(newRoiImage)
-            img = double(grayImage).*imcomplement(newRoiImage*0.5);
+            img = single(grayImage).*imcomplement(newRoiImage*0.5);
             img = uint8(img);
             imshow(img)
 
@@ -56,9 +56,9 @@ function [count, figureWindow] = createRoiImages(videoPath, shuttleVideo, frameI
             return;
         end
         if i==1
-            multiRoiImage = im2double(newRoiImage);
+            multiRoiImage = im2single(newRoiImage);
         else
-            multiRoiImage = multiRoiImage | im2double(newRoiImage);
+            multiRoiImage = multiRoiImage | im2single(newRoiImage);
         end
 
         % confirm to set next ROI

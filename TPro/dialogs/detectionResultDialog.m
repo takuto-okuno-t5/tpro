@@ -160,7 +160,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         bgImage = rgb2gray(bgImage);
         sharedInst.bgImage = bgImage;
-        sharedInst.bgImageDouble = double(bgImage);
+        sharedInst.bgImageDouble = single(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
         sharedInst.img_h = size(bgImage,1);
         sharedInst.img_w = size(bgImage,2);
@@ -191,7 +191,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
-            roiMasks = [roiMasks, im2double(img)];
+            roiMasks = [roiMasks, im2single(img)];
             if i==1
                 roiMaskImage = roiMasks{i};
             else
@@ -1264,7 +1264,7 @@ function Untitled_11_Callback(hObject, eventdata, handles)
 
     maxArea = max(max(areaMap));
 %img0 = (areaMap ./ maxArea);
-%img1 = double(sharedInst.bgImage) .* img0;
+%img1 = single(sharedInst.bgImage) .* img0;
 %imshow(uint8(img1));
     areaMap = maxArea ./ areaMap;
     areaMap(isinf(areaMap)) = 0;
@@ -1716,10 +1716,10 @@ function showFrameInAxes(hObject, handles, frameNum)
         end
 
         redImage = img(:,:,2);
-        redImage = uint8(double(redImage).*(imcomplement(sharedInst.roiMasks{str2num(C{3})}*0.1)));
+        redImage = uint8(single(redImage).*(imcomplement(sharedInst.roiMasks{str2num(C{3})}*0.1)));
         img(:,:,2) = redImage;
         blueImage = img(:,:,1);
-        blueImage = uint8(double(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
+        blueImage = uint8(single(blueImage).*(imcomplement(sharedInst.roiMasks{str2num(C{5})}*0.1)));
         img(:,:,1) = blueImage;
     end
     if strcmp(sharedInst.axesType1,'aggr_pdbscan_result') || sharedInst.showPixelScanOneFrame
@@ -1732,7 +1732,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             img = cat(3,img,img,img);
         end
         redImage = img(:,:,2);
-        redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
+        redImage = uint8(single(redImage).*(imcomplement(map*0.1)));
         img(:,:,2) = redImage;
     end
     if strcmp(sharedInst.axesType1,'aggr_grid_result')
@@ -1755,7 +1755,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             img = cat(3,img,img,img);
         end
         redImage = img(:,:,2);
-        redImage = uint8(double(redImage).*(imcomplement(map)));
+        redImage = uint8(single(redImage).*(imcomplement(map)));
         img(:,:,2) = redImage;
     end
 

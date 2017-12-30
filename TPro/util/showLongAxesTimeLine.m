@@ -18,7 +18,7 @@ function showLongAxesTimeLine(hObject, handles, t)
     % plot selected frame
     t2 = round((sharedInst.selectFrame - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
     if abs(t-t2) >= 1
-        xv = [double(t2)-0.5 double(t2)-0.5 double(t)+0.5 double(t)+0.5];
+        xv = [single(t2)-0.5 single(t2)-0.5 single(t)+0.5 single(t)+0.5];
         yv = [ymin ymax ymax ymin];
         patch(xv,yv,[.1 .7 .1],'FaceAlpha',.4,'EdgeColor','none');
     end

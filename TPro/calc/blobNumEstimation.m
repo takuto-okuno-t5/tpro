@@ -7,7 +7,7 @@ function [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blob
     minNums = zeros(1,blob_num);
     for i = 1 : blob_num
         % check blobAreas dimension of current blob and how bigger than avarage.
-        area_ratio = double(origAreas(i))/double(blobAvgSize*divRate);
+        area_ratio = single(origAreas(i))/single(blobAvgSize*divRate);
         if (mod(area_ratio,1) >= blobSeparateRate)
             expect_num = area_ratio + (1-mod(area_ratio,1));
         else
@@ -42,7 +42,7 @@ function [expectNums, useTmplMatch, minNums] = blobNumEstimation(origAreas, blob
             idx = find(minNums >= 2);
             totalm2area = sum(origAreas(idx));
             [B, idx] = sort(origAreas,'descend');
-            B = double(B) ./ totalm2area;
+            B = single(B) ./ totalm2area;
             while totalMinExpect > maxBlobs 
                 idxk = idx(k+1);
                 minNums(idxk) = minNums(idxk) - ceil(B(k+1) * diff);

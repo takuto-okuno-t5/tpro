@@ -575,7 +575,7 @@ for data_th = 1:size(records,1)
     bgMeanImage = mean(grayImages,3);
     maxImage = max(grayImages,[],3); % get most blight image
 
-    diffImage = abs(double(bgImage) - bgMeanImage);
+    diffImage = abs(single(bgImage) - bgMeanImage);
     diffImage2 = maxImage - bgImage;
     for x = 1 : n
         for y = 1 : m
@@ -809,7 +809,7 @@ for data_th = 1:size(records,1)
         end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
-            roiMasks = [roiMasks, im2double(img)];
+            roiMasks = [roiMasks, im2single(img)];
             if i==1
                 roi_mask = roiMasks{i};
             else
@@ -830,7 +830,7 @@ for data_th = 1:size(records,1)
             bgImage(:,:,3) = bgImage(:,:,1);
         end
         bgImage = rgb2gray(bgImage);
-        bg_img_double = double(bgImage);
+        bg_img_double = single(bgImage);
         bg_img_mean = mean(mean(bgImage));
     else
         bg_img_double = [];
@@ -906,7 +906,7 @@ for data_th = 1:size(records,1)
         clear frameImage;
         if ~isempty(bg_img_mean)
             grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
-            grayImageDouble = double(grayImg);
+            grayImageDouble = single(grayImg);
             img = bg_img_double - grayImageDouble;
             img = uint8(img);
             img = imcomplement(img);
@@ -998,7 +998,7 @@ for data_th = 1:size(records,1)
         clear img_real;
         if ~isempty(bg_img_mean)
             grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
-            grayImageDouble = double(grayImg);
+            grayImageDouble = single(grayImg);
             img = bg_img_double - grayImageDouble;
             img = uint8(img);
             step2img = imcomplement(img);
@@ -1419,7 +1419,7 @@ for data_th = 1:size(records,1)
         end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
-            roiMasks = [roiMasks, im2double(img)];
+            roiMasks = [roiMasks, im2single(img)];
             if i==1
                 roiImage = roiMasks{i};
             else
@@ -1433,24 +1433,24 @@ for data_th = 1:size(records,1)
 
     % initialize estimation variables for two dimensions
     Q = [X{frame_start} Y{frame_start} zeros(length(X{frame_start}),1) zeros(length(X{frame_start}),1)]';
-    Q_estimate = nan(4, MAX_FLIES);
+    Q_estimate = nan(4, MAX_FLIES, 'single');
     Q_estimate(:,1:size(Q,2)) = Q;  % initial location
-    direction_track = nan(2, MAX_FLIES); % initialize the direction
+    direction_track = nan(2, MAX_FLIES, 'single'); % initialize the direction
     direction_track(:,1:size(keep_direction_sorted{frame_start},2)) = keep_direction_sorted{frame_start};
-    ecc_track = nan(1, MAX_FLIES);
+    ecc_track = nan(1, MAX_FLIES, 'single');
     % ecc
     szMax = size(keep_ecc_sorted{frame_start},2);
     if szMax > 0
         ecc_track(:,1:szMax) = keep_ecc_sorted{frame_start};
     end
     % angle
-    angle_track = nan(1, MAX_FLIES);
+    angle_track = nan(1, MAX_FLIES, 'single');
     szMax = size(keep_angle_sorted{frame_start},2);
     if szMax > 0
         angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
     end
-    Q_loc_estimateY = nan(MAX_FLIES); % position estimate
-    Q_loc_estimateX = nan(MAX_FLIES); % position estimate
+    Q_loc_estimateY = nan(MAX_FLIES, 'single'); % position estimate
+    Q_loc_estimateX = nan(MAX_FLIES, 'single'); % position estimate
     nancount = zeros(1,MAX_FLIES); % counting NaN each fly
     P_estimate = P;  % covariance estimator
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
@@ -1463,9 +1463,9 @@ for data_th = 1:size(records,1)
     keep_data = cell(1,KEEP_DATA_MAX);  % x y vx vy
     outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 2;
     for i = 1:KEEP_DATA_MAX
-        keep_data{i} = nan(outFrameNum, MAX_FLIES);
+        keep_data{i} = nan(outFrameNum, MAX_FLIES, 'single');
     end
-    assignCost = nan(outFrameNum, 1);
+    assignCost = nan(outFrameNum, 1, 'single');
     trackHistory = {};
 
     % size

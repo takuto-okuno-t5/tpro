@@ -31,9 +31,9 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
             end
             if n > 0
                 nearNum = n;
-                nearAREA = AREA(1:n); nearCENTROID = CENTROID(1:n,:); nearBBOX = BBOX(1:n,:);
-                nearMAJORAXIS = MAJORAXIS(1:n); nearMINORAXIS = MINORAXIS(1:n);
-                nearORIENTATION = ORIENTATION(1:n); nearECCENTRICITY = ECCENTRICITY(1:n);
+                nearAREA = AREA(1:n); nearCENTROID = single(CENTROID(1:n,:)); nearBBOX = BBOX(1:n,:);
+                nearMAJORAXIS = single(MAJORAXIS(1:n)); nearMINORAXIS = single(MINORAXIS(1:n));
+                nearORIENTATION = single(ORIENTATION(1:n)); nearECCENTRICITY = single(ECCENTRICITY(1:n));
                 if n > 1
                     break; % end of loop
                 end
@@ -46,7 +46,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
                 % separate bigger one to small
                 [a, i1] = max(AREA);
                 [a, i2] = min(AREA);
-                est1 = round(expect_num * double(AREA(i1)) / double(sum(AREA)));
+                est1 = round(expect_num * single(AREA(i1)) / single(sum(AREA)));
                 if est1 == expect_num
                     est1 = expect_num - 1;
                 end
@@ -77,7 +77,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
 
                 n = nn1 + nn2;
                 AREA = [area1 ; area2];
-                CENTROID = [cntr1+repmat(double(r1(1:2)),nn1,1) ; cntr2+repmat(double(r2(1:2)),nn2,1)];
+                CENTROID = [cntr1+repmat(single(r1(1:2)),nn1,1) ; cntr2+repmat(single(r2(1:2)),nn2,1)];
                 BBOX = [bbox1+repmat([r1(1:2) 0 0],nn1,1) ; bbox2+repmat([r2(1:2) 0 0],nn2,1)];
                 MAJORAXIS = [majr1 ; majr2]; MINORAXIS = [minr1 ; minr2];
                 ORIENTATION = [ori1 ; ori2]; ECCENTRICITY = [ecc1 ; ecc2];
@@ -90,9 +90,9 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
             end
             if n > 0
                 nearNum = n;
-                nearAREA = AREA(1:n); nearCENTROID = CENTROID(1:n,:); nearBBOX = BBOX(1:n,:);
-                nearMAJORAXIS = MAJORAXIS(1:n); nearMINORAXIS = MINORAXIS(1:n);
-                nearORIENTATION = ORIENTATION(1:n); nearECCENTRICITY = ECCENTRICITY(1:n);
+                nearAREA = AREA(1:n); nearCENTROID = single(CENTROID(1:n,:)); nearBBOX = BBOX(1:n,:);
+                nearMAJORAXIS = single(MAJORAXIS(1:n)); nearMINORAXIS = single(MINORAXIS(1:n));
+                nearORIENTATION = single(ORIENTATION(1:n)); nearECCENTRICITY = single(ECCENTRICITY(1:n));
                 if n > 1
                     break; % end of loop
                 end

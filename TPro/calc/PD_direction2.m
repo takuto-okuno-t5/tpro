@@ -2,8 +2,8 @@
 function [ keep_direction, keep_angle ] = PD_direction2(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
     % init
     areaNumber = size(blobAreas, 1);
-    keep_direction = zeros(2, areaNumber); % allocate memory
-    keep_angle = zeros(1, areaNumber); % allocate memory;
+    keep_direction = zeros(2, areaNumber, 'single'); % allocate memory
+    keep_angle = zeros(1, areaNumber, 'single'); % allocate memory;
 
     % constant hidden params
     TH_OVER_HEAD_COLOR = 245;

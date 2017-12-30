@@ -5,10 +5,10 @@ search_radius = 4;
 disk_size = 6;
 
 % init
-blobBoxes = double(blobBoxes);
+blobBoxes = single(blobBoxes);
 areaNumber = size(blobAreas, 1);
-keep_direction = zeros(2, areaNumber); % allocate memory
-keep_angle = zeros(1, areaNumber); % allocate memory;
+keep_direction = zeros(2, areaNumber, 'single'); % allocate memory
+keep_angle = zeros(1, areaNumber, 'single'); % allocate memory;
 
 for i = 1:areaNumber
     % calculate angle
@@ -34,7 +34,7 @@ for i = 1:areaNumber
     range = 0.3:0.05:0.6;  % for Video_14.avi TODO: change this later?
 
     for j = 1:size(range,2)
-        keep2 = im2double(trimmedImage);
+        keep2 = im2single(trimmedImage);
         range_begin = range(j);
         ind = find(keep2>(range_begin+0.05));  % find brighter pixel
         ind2 = find(keep2<range_begin); % find darker pixel

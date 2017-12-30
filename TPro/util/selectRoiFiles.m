@@ -41,8 +41,8 @@ function [count, figureWindow] = selectRoiFiles(csvFileName, shuttleVideo, grayI
         if exist(roiFileName, 'file')
             try
                 roiImage = imread(roiFileName);
-                roiImage = im2double(roiImage);
-                img = double(grayImage).*(imcomplement(roiImage*0.5));
+                roiImage = im2single(roiImage);
+                img = single(grayImage).*(imcomplement(roiImage*0.5));
                 img = uint8(img);
             catch e
                 errordlg(['failed to load a ROI image file : ' roiFileName], 'Error');

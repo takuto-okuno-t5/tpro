@@ -11,7 +11,7 @@ function outimage = applyBackgroundSub(handles, img)
     end
     if ~isempty(sharedInst.bgImageMean)
         grayImg = grayImg + (sharedInst.bgImageMean - mean(mean(grayImg)));
-        grayImageDouble = double(grayImg);
+        grayImageDouble = single(grayImg);
         img = sharedInst.bgImageDouble - grayImageDouble;
         img = uint8(img);
         img = imcomplement(img);

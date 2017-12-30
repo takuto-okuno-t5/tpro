@@ -86,15 +86,15 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
             if nearNum > 0
                 x_choose = nearCENTROID(1:nearNum,2);
                 y_choose = nearCENTROID(1:nearNum,1);    % choose nearNum according to area (large)
-                blobPointX = [blobPointX ; x_choose + double(rect(2))];
-                blobPointY = [blobPointY ; y_choose + double(rect(1))];
+                blobPointX = [blobPointX ; x_choose + single(rect(2))];
+                blobPointY = [blobPointY ; y_choose + single(rect(1))];
                 blobAreas = [blobAreas ; nearAREA(1:nearNum)];
                 blobMajorAxis = [blobMajorAxis ; nearMAJORAXIS(1:nearNum)];
                 blobMinorAxis = [blobMinorAxis ; nearMINORAXIS(1:nearNum)];
                 blobOrient = [blobOrient ; nearORIENTATION(1:nearNum)];
                 blobEcc = [blobEcc ; nearECCENTRICITY(1:nearNum)];
                 for j=1 : nearNum
-                    pt = nearCENTROID(j,:) + [double(rect(1)) double(rect(2))];
+                    pt = nearCENTROID(j,:) + [single(rect(1)) single(rect(2))];
                     box = nearBBOX(j,:) + [int32(rect(1)) int32(rect(2)) 0 0];
                     blobCenterPoints = [blobCenterPoints ; pt];
                     blobBoxes = [blobBoxes ; box];
@@ -105,15 +105,15 @@ function [ blobPointX, blobPointY, blobAreas, blobCenterPoints, blobBoxes, ...
         end
         if chooseOne
             % choose one
-            blobPointX = [blobPointX ; origCenterPoints(i,2)];
-            blobPointY = [blobPointY ; origCenterPoints(i,1)];
+            blobPointX = [blobPointX ; single(origCenterPoints(i,2))];
+            blobPointY = [blobPointY ; single(origCenterPoints(i,1))];
             blobAreas = [blobAreas ; origAreas(i)];
-            blobCenterPoints = [blobCenterPoints ; origCenterPoints(i,:)];
+            blobCenterPoints = [blobCenterPoints ; single(origCenterPoints(i,:))];
             blobBoxes = [blobBoxes ; origBoxes(i,:)];
-            blobMajorAxis = [blobMajorAxis ; origMajorAxis(i)];
-            blobMinorAxis = [blobMinorAxis ; origMinorAxis(i)];
-            blobOrient = [blobOrient ; origOrient(i)];
-            blobEcc = [blobEcc ; origEcc(i)];
+            blobMajorAxis = [blobMajorAxis ; single(origMajorAxis(i))];
+            blobMinorAxis = [blobMinorAxis ; single(origMinorAxis(i))];
+            blobOrient = [blobOrient ; single(origOrient(i))];
+            blobEcc = [blobEcc ; single(origEcc(i))];
             blobOrgIdx = [blobOrgIdx ; i];
         end
     end

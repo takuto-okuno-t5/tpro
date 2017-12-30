@@ -225,7 +225,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         bgImage = rgb2gray(bgImage);
         sharedInst.bgImage = bgImage;
-        sharedInst.bgImageDouble = double(bgImage);
+        sharedInst.bgImageDouble = single(bgImage);
         sharedInst.bgImageMean = mean(mean(bgImage));
         sharedInst.img_h = size(bgImage,1);
         sharedInst.img_w = size(bgImage,2);
@@ -254,7 +254,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         if exist(roiFileName, 'file')
             img = imread(roiFileName);
-            roiMasks = [roiMasks, im2double(img)];
+            roiMasks = [roiMasks, im2single(img)];
             if i==1
                 roiMaskImage = roiMasks{i};
             else
@@ -2082,7 +2082,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             img = cat(3,img,img,img);
         end
         redImage = img(:,:,2);
-        redImage = uint8(double(redImage).*(imcomplement(map*0.1)));
+        redImage = uint8(single(redImage).*(imcomplement(map*0.1)));
         img(:,:,2) = redImage;
     end
 
@@ -2297,7 +2297,7 @@ function showFrameInAxes(hObject, handles, frameNum)
                 % show number
                 if sharedInst.showNumber
                     num_txt = ['  ', num2str(fn)];
-                    text(tmY(end),tmX(end),num_txt, 'Color','red')
+                    text(double(tmY(end)),double(tmX(end)),num_txt, 'Color','red')
                     % quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
                 end
             end

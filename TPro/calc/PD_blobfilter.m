@@ -10,9 +10,9 @@ function [ outputImage ] = PD_blobfilter( image, h, sigma, type )
     switch(type)
     case 'log'
         %   laplacian of a gaussian (LOG) template
-        outputImage = conv2(double(image), logKernel, 'same');
+        outputImage = conv2(single(image), logKernel, 'same');
     case 'gaussian'
-        image = double(imcomplement(image)) / 256;
+        image = single(imcomplement(image)) / 256;
         outputImage = conv2(image, logKernel, 'same');
     end
 end

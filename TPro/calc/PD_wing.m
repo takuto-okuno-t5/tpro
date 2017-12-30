@@ -11,7 +11,7 @@ linearInd = sub2ind(size(blob_img_logical), round(X_update2), round(Y_update2));
 
 [AREA,CENTROID,BBOX,MAJORAXIS,MINORAXIS,ORIENTATION,ECCENTRICITY] = step(H,blob_img_logical);
 
-BBOX = double(BBOX);
+BBOX = single(BBOX);
 labeledImage = bwlabel(blob_img_logical);   % label the image
 
 XY_update_to_keep_direction = labeledImage(linearInd);
@@ -36,7 +36,7 @@ for test_count = 1 : size(AREA,1)
     x(1) = CENTROID(index,1)-BBOX(index,1)+1 + disk_size;
     y(1) = CENTROID(index,2)-BBOX(index,2)+1 + disk_size;
     
-    imgN = double(keep-min(keep(:)))/double(max(keep(:)-min(keep(:))));
+    imgN = single(keep-min(keep(:)))/single(max(keep(:)-min(keep(:))));
     %[1] Otsu, N., "A Threshold Selection Method from Gray-Level Histograms," IEEE Transactions on Systems, Man, and Cybernetics, Vol. 9, No. 1, 1979, pp. 62-66.
     th1 = graythresh(imgN);
     th2 = graythresh(imgN(imgN>th1));
@@ -181,8 +181,8 @@ for i_index = 1:size(AREA,1)    %26
     
     for i = 1:size(range,2)
         
-        keep2 = im2double(keep);
-        keep4 = im2double(~keep3);
+        keep2 = im2single(keep);
+        keep4 = im2single(~keep3);
         
         
         %         range_begin = range(i);
@@ -236,7 +236,7 @@ for i_index = 1:size(AREA,1)    %26
             X = keep(:);
             options = statset('MaxIter', 300); % default value is 100. Sometimes too few to converge
             
-            gm = gmdistribution.fit(double(X),3, 'Options', options);
+            gm = gmdistribution.fit(single(X),3, 'Options', options);
             
             subplot(3, 2, 4);
             plot(binLocations, pdf(gm,binLocations));
@@ -258,7 +258,7 @@ for i_index = 1:size(AREA,1)    %26
         
         %%%
         
-        imgN = double(keep-min(keep(:)))/double(max(keep(:)-min(keep(:))));
+        imgN = single(keep-min(keep(:)))/single(max(keep(:)-min(keep(:))));
         %[1] Otsu, N., "A Threshold Selection Method from Gray-Level Histograms," IEEE Transactions on Systems, Man, and Cybernetics, Vol. 9, No. 1, 1979, pp. 62-66.
         th1 = graythresh(imgN); %82/255  0.4784
         th2 = graythresh(imgN(imgN>th1)); %151/255   0.6902
@@ -325,7 +325,7 @@ for i_index = 1:size(AREA,1)    %26
         X = keep(:);
         options = statset('MaxIter', 300); % default value is 100. Sometimes too few to converge
         
-        gm = gmdistribution.fit(double(X),3, 'Options', options);
+        gm = gmdistribution.fit(single(X),3, 'Options', options);
         
         subplot(3, 2, 4);
         plot(binLocations, pdf(gm,binLocations));
@@ -349,7 +349,7 @@ for i_index = 1:size(AREA,1)    %26
         
         %%
         
-        prepare = keep2.*im2double(keep);
+        prepare = keep2.*im2single(keep);
         data = find(prepare~=0);
         [I,J] = ind2sub(size(prepare),data);
         data2 = [J I prepare(data)];

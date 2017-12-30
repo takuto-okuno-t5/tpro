@@ -70,7 +70,7 @@ function cmdCalcDcdAndExportResult(handles)
             end
             if exist(roiFileName, 'file')
                 img = imread(roiFileName);
-                roiMasks = [roiMasks, im2double(img)];
+                roiMasks = [roiMasks, im2single(img)];
             end
         end
 
