@@ -499,7 +499,10 @@ for data_th = 1:size(records,1)
     else
         [dlg, startFrame, endFrame, checkNums, detectMode] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
         delete(dlg);
-        
+        if startFrame < 0
+            continue;
+        end
+
         % update configuration with mode template
         modeFileName = 'etc/mode_template.csv';
         if ~exist(modeFileName, 'file')
