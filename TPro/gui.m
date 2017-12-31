@@ -1377,13 +1377,13 @@ for data_th = 1:size(records,1)
         continue;
     end
     record = records(data_th,:);
-    reject_dist = record{11};
     start_frame = record{4};
     end_frame = record{5};
     frame_steps = record{16};
     roiNum = record{10};
     fpsNum = record{7};
     mmPerPixel = record{9};
+    reject_dist = record{11} / mmPerPixel / fpsNum;
     fixedTrackNum = getVideoConfigValue(record, 27, 0);
     fixedTrackDir = getVideoConfigValue(record, 28, 0);
 

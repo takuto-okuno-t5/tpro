@@ -64,6 +64,6 @@ function showLongAxes(hObject, handles, type, roi, flyId)
     % xtickOff
     % xticks(0); % from 2016b
     type = strrep(type, '_', ' ');
-    text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
+    text(10, double(ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
     hold off;
 end

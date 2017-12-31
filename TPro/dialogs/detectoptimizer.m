@@ -22,7 +22,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 07-Oct-2017 01:05:09
+    % Last Modified by GUIDE v2.5 31-Dec-2017 17:58:02
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -209,8 +209,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox1, 'Value', sharedInst.showDetectResult);
     if sharedInst.isModified
         set(handles.pushbutton4, 'Enable', 'on')
+        set(handles.Untitled_6, 'Enable', 'on');
     else
         set(handles.pushbutton4, 'Enable', 'off')
+        set(handles.Untitled_6, 'Enable', 'off');
     end
     set(handles.edit1, 'String', sharedInst.startFrame);
     set(handles.edit2, 'String', sharedInst.endFrame);
@@ -340,6 +342,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
+            set(hdl.Untitled_6, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
             % nothing to do
@@ -370,6 +373,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
+            set(hdl.Untitled_6, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
             % nothing to do
@@ -400,6 +404,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
+            set(hdl.Untitled_6, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
             % nothing to do
@@ -430,6 +435,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
+            set(hdl.Untitled_6, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
             % nothing to do
@@ -460,6 +466,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.isModified = true;
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             set(hdl.pushbutton4, 'Enable', 'on');
+            set(hdl.Untitled_6, 'Enable', 'on');
             showFrameInAxes(hObject, hdl, sharedInst.imageMode, sharedInst.frameNum);
         catch
             % nothing to do
@@ -522,7 +529,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
         case 'Cancel'
             return;
         case 'Yes'
-            saveConfigurationFile(handles);
+            Untitled_6_Callback(hObject, eventdata, handles);
         case 'No'
             % nothing todo
         end
@@ -720,6 +727,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
     status = saveConfigurationFile(handles);
     if status 
         set(handles.pushbutton4, 'Enable', 'off');
+        set(handles.Untitled_6, 'Enable', 'off');
     end
 end
 
@@ -748,6 +756,7 @@ function edit1_Callback(hObject, eventdata, handles)
             sharedInst.startFrame = num;
             sharedInst.isModified = true;
             set(handles.pushbutton4, 'Enable', 'on');
+            set(handles.Untitled_6, 'Enable', 'on');
         end
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -783,6 +792,7 @@ function edit2_Callback(hObject, eventdata, handles)
             sharedInst.endFrame = num;
             sharedInst.isModified = true;
             set(handles.pushbutton4, 'Enable', 'on');
+            set(handles.Untitled_6, 'Enable', 'on');
         end
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -818,6 +828,7 @@ function edit3_Callback(hObject, eventdata, handles)
             sharedInst.frameSteps = num;
             sharedInst.isModified = true;
             set(handles.pushbutton4, 'Enable', 'on');
+            set(handles.Untitled_6, 'Enable', 'on');
         end
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -874,6 +885,7 @@ function edit5_Callback(hObject, eventdata, handles)
     sharedInst.mmPerPixel = mmPerPixel;
     sharedInst.isModified = true;
     set(handles.pushbutton4, 'Enable', 'on');
+    set(handles.Untitled_6, 'Enable', 'on');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     guidata(hObject, handles);  % Update handles structure
 end
@@ -897,6 +909,20 @@ end
 % --------------------------------------------------------------------
 function Untitled_1_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_1 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_4_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_7_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_7 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
 end
@@ -942,6 +968,112 @@ function Untitled_3_Callback(hObject, eventdata, handles)
 
     outputFlyImageFiles(handles, sharedInst.startFrame, sharedInst.endFrame, sharedInst.boxSize, sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
 end
+
+% --------------------------------------------------------------------
+function Untitled_5_Callback(hObject, eventdata, handles) % close
+    % hObject    handle to Untitled_5 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    hFig = ancestor(hObject, 'figure');
+    figure1_CloseRequestFcn(hFig, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_6_Callback(hObject, eventdata, handles) % save
+    % hObject    handle to Untitled_6 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    saveConfigurationFile(handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_10_Callback(hObject, eventdata, handles) % additional detection options
+    % hObject    handle to Untitled_10 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    [dlg, algo, maxSep, isSep, rectDel, maxBlob, keepNear] = otherDetectionOptionDialog({
+        sharedInst.filterType, num2str(sharedInst.maxSeparate), num2str(sharedInst.isSeparate), ...
+        num2str(sharedInst.delRectOverlap), num2str(sharedInst.maxBlobs), num2str(sharedInst.keepNear) });
+    delete(dlg);
+
+    sharedInst.filterType = algo;
+    sharedInst.maxSeparate = str2num(maxSep);
+    sharedInst.isSeparate = str2num(isSep);
+    sharedInst.delRectOverlap = str2num(rectDel);
+    sharedInst.maxBlobs = str2num(maxBlob);
+    sharedInst.keepNear = str2num(keepNear);
+    if ~isempty(sharedInst.maxSeparate)
+        sharedInst.step3Image = [];
+        sharedInst.step4Image = [];
+        sharedInst.isModified = true;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.pushbutton4, 'Enable', 'on');
+        set(handles.Untitled_6, 'Enable', 'on');
+        showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_8_Callback(hObject, eventdata, handles) % pre image filter
+    % hObject    handle to Untitled_8 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    [dlg, r, g, b, cmin, cmax, rad, amo, inv] = preImageFilterDialog({
+        num2str(sharedInst.rRate), num2str(sharedInst.gRate), num2str(sharedInst.bRate), ...
+        num2str(sharedInst.contMin), num2str(sharedInst.contMax), ...
+        num2str(sharedInst.sharpRadius), num2str(sharedInst.sharpAmount), num2str(sharedInst.isInvert) });
+    delete(dlg);
+    
+    sharedInst.rRate = str2num(r);
+    sharedInst.gRate = str2num(g);
+    sharedInst.bRate = str2num(b);
+    sharedInst.contMin = str2num(cmin);
+    sharedInst.contMax = str2num(cmax);
+    sharedInst.sharpRadius = str2num(rad);
+    sharedInst.sharpAmount = str2num(amo);
+    sharedInst.isInvert = str2num(inv);
+    if ~isempty(sharedInst.rRate)
+        sharedInst.originalImage = [];
+        sharedInst.step2Image = [];
+        sharedInst.isModified = true;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.pushbutton4, 'Enable', 'on');
+        set(handles.Untitled_6, 'Enable', 'on');
+        showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_9_Callback(hObject, eventdata, handles) % tracking options
+    % hObject    handle to Untitled_9 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    [dlg, reject_dist, fixedTrackNum, fixedTrackDir] = trackingOptionDialog({ num2str(sharedInst.reject_dist), ...
+        num2str(sharedInst.fixedTrackNum), num2str(sharedInst.fixedTrackDir) });
+    delete(dlg);
+    sharedInst.reject_dist = str2num(reject_dist);
+    sharedInst.fixedTrackNum = str2num(fixedTrackNum);
+    sharedInst.fixedTrackDir = str2num(fixedTrackDir);
+    if ~isempty(sharedInst.reject_dist)
+        sharedInst.isModified = true;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.pushbutton4, 'Enable', 'on');
+        set(handles.Untitled_6, 'Enable', 'on');
+    end
+end
+
+% --------------------------------------------------------------------
+function Untitled_11_Callback(hObject, eventdata, handles) % template matching options
+    % hObject    handle to Untitled_11 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
