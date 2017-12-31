@@ -171,6 +171,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
 
     set(handles.pushbutton3, 'Enable', 'off')
+    set(handles.Untitled_24, 'Enable', 'off')
     set(handles.pushbutton15, 'Enable', 'off')
     set(handles.popupmenu5, 'Enable', 'off')
     set(handles.edit3, 'Enable', 'on')
@@ -990,6 +991,7 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.popupmenu2, 'Enable', 'off')
     set(handles.pushbutton14, 'Enable', 'off')
     set(handles.pushbutton15, 'Enable', 'off')
+    set(handles.Untitled_24, 'Enable', 'off')
     
     % make output folder
     confPath = sharedInst.confPath;
@@ -1035,8 +1037,10 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.pushbutton14, 'Enable', 'on')
     if sharedInst.isModified
         set(handles.pushbutton15, 'Enable', 'on')
+        set(handles.Untitled_24, 'Enable', 'on')
     else
         set(handles.pushbutton15, 'Enable', 'off')
+        set(handles.Untitled_24, 'Enable', 'off')
     end
 end
 
@@ -1462,6 +1466,7 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     sharedInst.listFly = 1;
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
+    set(handles.Untitled_24, 'Enable', 'on')
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -1513,6 +1518,7 @@ function moveTrackingPoint(id, frameNum, x, y, isSaveHistory, handles)
 
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
+    set(handles.Untitled_24, 'Enable', 'on')
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -1545,6 +1551,7 @@ function swapTrackingData(id1, id2, startFrame, endFrame, isSaveHistory, handles
 
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
+    set(handles.Untitled_24, 'Enable', 'on')
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -1581,6 +1588,7 @@ function mergeTrackingData(id1, id2, isSaveHistory, handles)
     sharedInst.listFly = 1;
     sharedInst.isModified = true;
     set(handles.pushbutton15, 'Enable', 'on');
+    set(handles.Untitled_24, 'Enable', 'on')
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -1944,6 +1952,7 @@ function Untitled_24_Callback(hObject, eventdata, handles)
 
     sharedInst.isModified = false;
     set(handles.pushbutton15, 'Enable', 'off')
+    set(handles.Untitled_24, 'Enable', 'on')
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -2266,7 +2275,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             % show number
             if sharedInst.showNumber && listFly > 0
                 num_txt = ['  ', num2str(fn)];
-                text(Q_loc_estimateY(t,listFly),Q_loc_estimateX(t,listFly),num_txt, 'Color','red')
+                text(double(Q_loc_estimateY(t,listFly)),double(Q_loc_estimateX(t,listFly)),num_txt, 'Color','red')
             end            
         else
             % show tail lines

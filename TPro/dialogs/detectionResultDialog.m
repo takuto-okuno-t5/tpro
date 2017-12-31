@@ -146,6 +146,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     set(handles.pushbutton3, 'Enable', 'off');
     set(handles.pushbutton6, 'Enable', 'off');
+    set(handles.Untitled_27, 'Enable', 'off');
+    set(handles.Untitled_16, 'Enable', 'off'); % edit mode:1
+    set(handles.Untitled_17, 'Enable', 'on'); % edit mode:2
 
     set(hObject, 'name', ['Detection result for ', sharedInst.shuttleVideo.name]); % set window title
 
@@ -363,22 +366,29 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
             sharedInst.selectY = {};
             sharedInst.isModified = true;
             set(handles.pushbutton6, 'Enable', 'on');
+            set(handles.Untitled_27, 'Enable', 'on');
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
             showFrameInAxes(hObject, handles, sharedInst.frameNum);
         end
     case {'a', 'insert'}
         sharedInst.editMode = 2;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.Untitled_16, 'Enable', 'on'); % edit mode:1
+        set(handles.Untitled_17, 'Enable', 'off'); % edit mode:2
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     case 's'
         sharedInst.editMode = 1;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.Untitled_16, 'Enable', 'off'); % edit mode:1
+        set(handles.Untitled_17, 'Enable', 'on'); % edit mode:2
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     case 'escape'
         sharedInst.editMode = 1;
         sharedInst.selectX = {};
         sharedInst.selectY = {};
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.Untitled_16, 'Enable', 'off'); % edit mode:1
+        set(handles.Untitled_17, 'Enable', 'on'); % edit mode:2
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     end
 end
@@ -476,6 +486,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
             end
             sharedInst.isModified = true;
             set(handles.pushbutton6, 'Enable', 'on');
+            set(handles.Untitled_27, 'Enable', 'on');
             setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
             setappdata(handles.figure1,'count_0',flyCounts);
@@ -1197,6 +1208,7 @@ function Untitled_20_Callback(hObject, eventdata, handles)
     % update gui
     sharedInst.isModified = true;
     set(handles.pushbutton6, 'Enable', 'on');
+    set(handles.Untitled_27, 'Enable', 'on');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
     % show long params
@@ -1374,6 +1386,7 @@ function Untitled_15_Callback(hObject, eventdata, handles)
 
     sharedInst.isModified = true;
     set(handles.pushbutton6, 'Enable', 'on');
+    set(handles.Untitled_27, 'Enable', 'on');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -1419,6 +1432,8 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.editMode = 1;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.Untitled_16, 'Enable', 'off'); % edit mode:1
+    set(handles.Untitled_17, 'Enable', 'on'); % edit mode:2
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1430,6 +1445,8 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.editMode = 2;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    set(handles.Untitled_16, 'Enable', 'on'); % edit mode:1
+    set(handles.Untitled_17, 'Enable', 'off'); % edit mode:2
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
@@ -1597,6 +1614,7 @@ function Untitled_27_Callback(hObject, eventdata, handles)
 
     sharedInst.isModified = false;
     set(handles.pushbutton6, 'Enable', 'off');
+    set(handles.Untitled_27, 'Enable', 'off');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
