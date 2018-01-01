@@ -992,18 +992,17 @@ function Untitled_10_Callback(hObject, eventdata, handles) % additional detectio
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    [dlg, algo, maxSep, isSep, rectDel, maxBlob, keepNear] = otherDetectionOptionDialog({
-        sharedInst.filterType, num2str(sharedInst.maxSeparate), num2str(sharedInst.isSeparate), ...
+    [dlg, algo, isSep, rectDel, maxBlob, keepNear] = otherDetectionOptionDialog({
+        sharedInst.filterType, num2str(sharedInst.isSeparate), ...
         num2str(sharedInst.delRectOverlap), num2str(sharedInst.maxBlobs), num2str(sharedInst.keepNear) });
     delete(dlg);
 
     sharedInst.filterType = algo;
-    sharedInst.maxSeparate = str2num(maxSep);
     sharedInst.isSeparate = str2num(isSep);
     sharedInst.delRectOverlap = str2num(rectDel);
     sharedInst.maxBlobs = str2num(maxBlob);
     sharedInst.keepNear = str2num(keepNear);
-    if ~isempty(sharedInst.maxSeparate)
+    if ~isempty(sharedInst.maxBlobs)
         sharedInst.step3Image = [];
         sharedInst.step4Image = [];
         sharedInst.isModified = true;
@@ -1071,7 +1070,23 @@ function Untitled_11_Callback(hObject, eventdata, handles) % template matching o
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+    [dlg, count, mTh, sepNum, sepTh, oTh] = templateMatchingOptionDialog({ 
+        num2str(sharedInst.templateCount), num2str(sharedInst.tmplMatchTh), num2str(sharedInst.tmplSepNum), ...
+        num2str(sharedInst.tmplSepTh), num2str(sharedInst.overlapTh), ...
+        sharedInst.confPath });
+    delete(dlg);
+
+    sharedInst.templateCount = count;
+    sharedInst.tmplMatchTh = mTh;
+    sharedInst.tmplSepNum = sepNum;
+    sharedInst.tmplSepTh = sepTh;
+    sharedInst.overlapTh = oTh;
+    if ~isempty(sharedInst.tmplMatchTh)
+        sharedInst.isModified = true;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.pushbutton4, 'Enable', 'on');
+        set(handles.Untitled_6, 'Enable', 'on');
+    end
 end
 
 

@@ -22,7 +22,7 @@ function varargout = otherDetectionOptionDialog(varargin)
 
 % Edit the above text to modify the response to help otherDetectionOptionDialog
 
-% Last Modified by GUIDE v2.5 01-Jan-2018 02:06:02
+% Last Modified by GUIDE v2.5 01-Jan-2018 19:54:03
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -61,11 +61,10 @@ function otherDetectionOptionDialog_OpeningFcn(hObject, eventdata, handles, vara
 
     c = varargin{1};
     algo = c{1};
-    maxSep = str2num(c{2});
-    isSep = str2num(c{3});
-    rectDel = str2num(c{4});
-    maxBlob = str2num(c{5});
-    keepNear = str2num(c{6});
+    isSep = str2num(c{2});
+    rectDel = str2num(c{3});
+    maxBlob = str2num(c{4});
+    keepNear = str2num(c{5});
 
     % init value
     if strcmp(algo, 'gaussian')
@@ -73,9 +72,8 @@ function otherDetectionOptionDialog_OpeningFcn(hObject, eventdata, handles, vara
     else
         set(handles.popupmenu1, 'Value', 1)
     end
-    set(handles.edit1, 'String', maxSep);
     set(handles.edit2, 'String', maxBlob);
-    set(handles.checkbox1, 'value', isSep);
+    set(handles.checkbox4, 'value', isSep);
     set(handles.checkbox2, 'value', rectDel);
     set(handles.checkbox3, 'value', keepNear);
 
@@ -95,11 +93,10 @@ function varargout = otherDetectionOptionDialog_OutputFcn(hObject, eventdata, ha
     varargout{1} = handles.output;
     contents = cellstr(get(handles.popupmenu1,'String'));
     varargout{2} = contents{get(handles.popupmenu1,'Value')};
-    varargout{3} = get(handles.edit1, 'String'); % max sep
-    varargout{4} = num2str(get(handles.checkbox1, 'value')); % is sep
-    varargout{5} = num2str(get(handles.checkbox2, 'value')); % rect
-    varargout{6} = get(handles.edit2, 'String'); % max blob
-    varargout{7} = num2str(get(handles.checkbox3, 'value')); % keep near
+    varargout{3} = num2str(get(handles.checkbox4, 'value')); % is sep
+    varargout{4} = num2str(get(handles.checkbox2, 'value')); % rect
+    varargout{5} = get(handles.edit2, 'String'); % max blob
+    varargout{6} = num2str(get(handles.checkbox3, 'value')); % keep near
 end
 
 % --- Executes when user attempts to close figure1.
@@ -107,7 +104,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
     % hObject    handle to figure1 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    set(handles.edit1, 'String', '');
+    set(handles.edit2, 'String', '');
     uiresume(handles.figure1);
 end
 
@@ -125,7 +122,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
     % hObject    handle to pushbutton2 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    set(handles.edit1, 'String', '');
+    set(handles.edit2, 'String', '');
     uiresume(handles.figure1);
 end
 
@@ -175,6 +172,12 @@ function checkbox3_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 end
 
+% --- Executes on button press in checkbox4.
+function checkbox4_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
 
 function edit2_Callback(hObject, eventdata, handles)
 % hObject    handle to edit2 (see GCBO)
@@ -219,4 +222,3 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 end
-
