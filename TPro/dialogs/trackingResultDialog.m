@@ -459,6 +459,70 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         sharedInst.selectY = {};
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    case 'n' % find next
+        t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+        flyId = sharedInst.listFly;
+        type = sharedInst.axesType1;
+        data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
+        if isempty(data)
+            if ~isempty(flyId) && flyId == 0
+                type = strrep(type, '_tracking', '');
+            end
+            data = getappdata(handles.figure1, type);
+        end
+        if ~isempty(data)
+            for i=(t+1):size(data,1)
+                if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                    yval = data(i,flyId);
+                elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                    yval = nanmean(data(i,:));
+                else
+                    yval = data(i);
+                end
+                if yval > 30
+                    break;
+                end
+            end
+            frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+            if frame <= sharedInst.endFrame
+                set(handles.slider1, 'value', frame);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            else
+                text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+            end
+        end
+    case 'p' % find prev
+        t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+        flyId = sharedInst.listFly;
+        type = sharedInst.axesType1;
+        data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
+        if isempty(data)
+            if ~isempty(flyId) && flyId == 0
+                type = strrep(type, '_tracking', '');
+            end
+            data = getappdata(handles.figure1, type);
+        end
+        if ~isempty(data)
+            for i=(t-1):-1:1
+                if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                    yval = data(i,flyId);
+                elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                    yval = nanmean(data(i,:));
+                else
+                    yval = data(i);
+                end
+                if yval > 30
+                    break;
+                end
+            end
+            frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+            if frame >= 1
+                set(handles.slider1, 'value', frame);
+                slider1_Callback(handles.slider1, eventdata, handles)
+            else
+                text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+            end
+        end
     end
 end
 
@@ -2342,6 +2406,8 @@ function showFrameInAxes(hObject, handles, frameNum)
     if ~isempty(data)
         if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
             yval = data(t,flyId);
+        elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+            yval = nanmean(data(t,:));
         else
             yval = data(t);
         end
