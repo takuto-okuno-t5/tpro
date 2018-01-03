@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 29-Dec-2017 00:10:48
+    % Last Modified by GUIDE v2.5 03-Jan-2018 20:56:59
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -124,6 +124,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
     sharedInst.editMode = 1; % select / add mode
+    sharedInst.findType = 0;
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -460,68 +461,114 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     case 'n' % find next
-        t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-        flyId = sharedInst.listFly;
-        type = sharedInst.axesType1;
-        data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
-        if isempty(data)
-            if ~isempty(flyId) && flyId == 0
-                type = strrep(type, '_tracking', '');
-            end
-            data = getappdata(handles.figure1, type);
-        end
-        if ~isempty(data)
-            for i=(t+1):size(data,1)
-                if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
-                    yval = data(i,flyId);
-                elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
-                    yval = nanmean(data(i,:));
-                else
-                    yval = data(i);
-                end
-                if yval > 30
-                    break;
-                end
-            end
-            frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
-            if frame <= sharedInst.endFrame
-                set(handles.slider1, 'value', frame);
-                slider1_Callback(handles.slider1, eventdata, handles)
-            else
-                text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
-            end
+        if sharedInst.findType == 1
+            findAxesValueNext(handles, eventdata, sharedInst.findCondition, sharedInst.findValue);
         end
     case 'p' % find prev
-        t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-        flyId = sharedInst.listFly;
-        type = sharedInst.axesType1;
-        data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
-        if isempty(data)
-            if ~isempty(flyId) && flyId == 0
-                type = strrep(type, '_tracking', '');
-            end
-            data = getappdata(handles.figure1, type);
+        if sharedInst.findType == 1
+            findAxesValuePrev(handles, eventdata, sharedInst.findCondition, sharedInst.findValue);
         end
-        if ~isempty(data)
-            for i=(t-1):-1:1
-                if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
-                    yval = data(i,flyId);
-                elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
-                    yval = nanmean(data(i,:));
-                else
-                    yval = data(i);
-                end
-                if yval > 30
-                    break;
-                end
-            end
-            frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
-            if frame >= 1
-                set(handles.slider1, 'value', frame);
-                slider1_Callback(handles.slider1, eventdata, handles)
+    end
+end
+
+function findAxesValueNext(handles, eventdata, condition, value)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    flyId = sharedInst.listFly;
+    type = sharedInst.axesType1;
+    data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
+    if isempty(data)
+        if ~isempty(flyId) && flyId == 0
+            type = strrep(type, '_tracking', '');
+        end
+        data = getappdata(handles.figure1, type);
+    end
+    if ~isempty(data)
+        isFound = false;
+        for i=(t+1):size(data,1)
+            if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                yval = data(i,flyId);
+            elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                yval = nanmean(data(i,:));
             else
-                text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+                yval = data(i);
             end
+            switch condition
+            case 'bigger'
+                if yval >= value
+                    isFound = true;
+                end
+            case 'equal'
+                if yval == value
+                    isFound = true;
+                end
+            case 'smaller'
+                if yval <= value
+                    isFound = true;
+                end
+            end
+            if isFound
+                break;
+            end
+        end
+        frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+        if isFound && ~isempty(frame) && frame <= sharedInst.endFrame
+            set(handles.slider1, 'value', frame);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        else
+            axes(handles.axes1); % set drawing area
+            text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+        end
+    end
+end
+
+function findAxesValuePrev(handles, eventdata, condition, value)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    flyId = sharedInst.listFly;
+    type = sharedInst.axesType1;
+    data = getappdata(handles.figure1, [type '_' num2str(sharedInst.currentROI)]); % get data
+    if isempty(data)
+        if ~isempty(flyId) && flyId == 0
+            type = strrep(type, '_tracking', '');
+        end
+        data = getappdata(handles.figure1, type);
+    end
+    if ~isempty(data)
+        isFound = false;
+        for i=(t-1):-1:1
+            if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                yval = data(i,flyId);
+            elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                yval = nanmean(data(i,:));
+            else
+                yval = data(i);
+            end
+            switch condition
+            case 'bigger'
+                if yval >= value
+                    isFound = true;
+                end
+            case 'equal'
+                if yval == value
+                    isFound = true;
+                end
+            case 'smaller'
+                if yval <= value
+                    isFound = true;
+                end
+            end
+            if isFound
+                break;
+            end
+        end
+        frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+        if isFound && ~isempty(frame) && frame >= 1
+            set(handles.slider1, 'value', frame);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        else
+            axes(handles.axes1); % set drawing area
+            text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
         end
     end
 end
@@ -2114,6 +2161,32 @@ function Untitled_26_Callback(hObject, eventdata, handles)
     end
 end
 
+% --------------------------------------------------------------------
+function Untitled_27_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_27 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    while true 
+        [dlg, op, type, condition, value] = findTrackingDialog({});
+        if op > 0
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+            sharedInst.findType = str2num(type);
+            sharedInst.findCondition = condition;
+            sharedInst.findValue = str2num(value);
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        end
+        switch(op)
+        case 0
+            delete(dlg);
+            break;
+        case 1
+            findAxesValueNext(handles, eventdata, condition, sharedInst.findValue)
+        case 2
+            findAxesValuePrev(handles, eventdata, condition, sharedInst.findValue)
+        end
+    end
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -2416,3 +2489,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     % show detected count
     guidata(hObject, handles);    % Update handles structure
 end
+
