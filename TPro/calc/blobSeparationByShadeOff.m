@@ -29,7 +29,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
             else
                 n = expect_num;
             end
-            if n > 0
+            if n > nearNum
                 nearNum = n;
                 nearAREA = AREA(1:n); nearCENTROID = single(CENTROID(1:n,:)); nearBBOX = BBOX(1:n,:);
                 nearMAJORAXIS = single(MAJORAXIS(1:n)); nearMINORAXIS = single(MINORAXIS(1:n));
@@ -45,7 +45,12 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
             elseif size(AREA,1) == 2
                 % separate bigger one to small
                 [a, i1] = max(AREA);
-                [a, i2] = min(AREA);
+                [b, i2] = min(AREA);
+                if a == b % oops! that causes bug!!
+                    idx = 1:length(AREA);
+                    i1not = find(idx~=i1);
+                    i2 = i1not(1);
+                end
                 est1 = round(expect_num * single(AREA(i1)) / single(sum(AREA)));
                 if est1 == expect_num
                     est1 = expect_num - 1;
@@ -88,7 +93,7 @@ function [nearNum, nearAREA, nearCENTROID, nearBBOX, nearMAJORAXIS, nearMINORAXI
                     n = expect_num;
                 end
             end
-            if n > 0
+            if n > nearNum
                 nearNum = n;
                 nearAREA = AREA(1:n); nearCENTROID = single(CENTROID(1:n,:)); nearBBOX = BBOX(1:n,:);
                 nearMAJORAXIS = single(MAJORAXIS(1:n)); nearMINORAXIS = single(MINORAXIS(1:n));
