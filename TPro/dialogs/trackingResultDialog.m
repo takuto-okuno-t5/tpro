@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 03-Jan-2018 20:56:59
+    % Last Modified by GUIDE v2.5 08-Jan-2018 16:41:25
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -2187,6 +2187,25 @@ function Untitled_27_Callback(hObject, eventdata, handles)
     end
 end
 
+% --------------------------------------------------------------------
+function Untitled_28_Callback(hObject, eventdata, handles) % find crossed trajectory
+    % hObject    handle to Untitled_28 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{1};
+    Y = sharedInst.keep_data{2};
+
+    % find clossed trajectory
+    result = findClossedTrajectory(X, Y, sharedInst.roiMaskImage);
+
+    % add result to axes & show in axes
+    cname = 'cross_traj_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu8);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -2489,4 +2508,3 @@ function showFrameInAxes(hObject, handles, frameNum)
     % show detected count
     guidata(hObject, handles);    % Update handles structure
 end
-
