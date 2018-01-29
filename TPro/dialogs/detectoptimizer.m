@@ -1197,7 +1197,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
             end
         end
         if sharedInst.showDirection && ~isempty(sharedInst.detectedDirection)
-            quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedDirection(1,:)', sharedInst.detectedDirection(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
+            quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedDirection(1,:)', sharedInst.detectedDirection(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
         end
         hold off;
         return;
@@ -1264,9 +1264,9 @@ function showDetectResultInAxes(hObject, handles, frameImage)
             [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
         else
-            [keep_direction, keep_angle] = PD_direction2(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            [keep_direction, keep_angle] = PD_direction(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
-        quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
+        quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
     end
     hold off;
     

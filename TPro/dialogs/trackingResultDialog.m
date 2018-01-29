@@ -2369,13 +2369,19 @@ function showFrameInAxes(hObject, handles, frameNum)
             end
         end
     elseif sharedInst.showDetectResult
+        keepY = Q_loc_estimateY(t,:);
+        keepX = Q_loc_estimateX(t,:);
+        keepDirY = sharedInst.keep_data{5}(t,:);
+        keepDirX = sharedInst.keep_data{6}(t,:);
         if sharedInst.listMode == 1
             plot(Y,X,'or'); % the actual detecting
+            quiver(keepY, keepX, keepDirY, keepDirX, 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
         else
-            fy = Q_loc_estimateY(t,listFly);
-            fx = Q_loc_estimateX(t,listFly);
+            fy = keepY(listFly);
+            fx = keepX(listFly);
             if ~isnan(fy) && ~isnan(fx) && currentMask(round(fx),round(fy)) > 0
                 plot(fy,fx,'or'); % the actual detecting
+                quiver(fy, fx, keepDirY(listFly), keepDirX(listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
             end
         end
         % show selected point
