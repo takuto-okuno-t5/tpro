@@ -1,5 +1,5 @@
 %%
-function [ keep_direction, keep_angle ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
+function [ keep_direction, keep_angle, keep_wings ] = PD_direction(grayImage, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient)
 % hidden parameters
 search_radius = 4;
 disk_size = 6;
@@ -7,8 +7,9 @@ disk_size = 6;
 % init
 blobBoxes = single(blobBoxes);
 areaNumber = size(blobAreas, 1);
-keep_direction = zeros(2, areaNumber, 'single'); % allocate memory
-keep_angle = zeros(1, areaNumber, 'single'); % allocate memory;
+keep_direction = nan(2, areaNumber, 'single'); % allocate memory
+keep_angle = nan(1, areaNumber, 'single'); % allocate memory
+keep_wings = []; % allocate memory
 
 for i = 1:areaNumber
     % calculate angle

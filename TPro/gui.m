@@ -1140,9 +1140,11 @@ for data_th = 1:size(records,1)
 
         %%
         if size(netForFrontBack, 1) > 0
-            [ keep_direction, keep_angle ] = PD_direction_deepLearning(grayImg, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
+            [ keep_direction, keep_angle, keep_wings ] = PD_direction_deepLearning(step2img, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
+        elseif true
+            [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2img, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc);
         else
-            [ keep_direction, keep_angle ] = PD_direction( grayImg, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            [ keep_direction, keep_angle, keep_wings ] = PD_direction(step2img, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
         % ith of the XY_update is the XY_update_to_keep_direction th of the keep direction
         % sort based on X_update2 and Y_update2
@@ -1152,6 +1154,7 @@ for data_th = 1:size(records,1)
         keep_areas{i} = blobAreas';
         keep_major_axis{i} = blobMajorAxis';
         keep_minor_axis{i} = blobMinorAxis';
+        keep_wings_sorted{i} = keep_wings;
 
         processRate = 100 * (i_count-start_frame)/(end_frame-start_frame+1);
         if extrema_enable
@@ -1240,7 +1243,7 @@ for data_th = 1:size(records,1)
     end
 
     % save data
-    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas', 'keep_major_axis', 'keep_minor_axis');
+    save(strcat(confPath,'multi/detect_',filename,'.mat'),  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas', 'keep_major_axis', 'keep_minor_axis', 'keep_wings_sorted');
     save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
 
     % save data as text
@@ -1345,7 +1348,7 @@ RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recu
 IGNORE_NAN_COUNT = readTproConfig('ignoreNaNCount', 20); % maxmum NaN count of fly (removed from tracking pair-wise)
 DELETE_TRACK_TH = readTproConfig('trackingDeleteTh', 5); % delete tracking threshold: minimam valid frames
 PILEUPS_SWAP_TH = readTproConfig('pileupsSwapTh', 7); % pile-ups checking threshold at tracking
-KEEP_DATA_MAX = 8;
+KEEP_DATA_MAX = 10;
 
 exportDcd = readTproConfig('exportDcd', 0);
 exportMd = readTproConfig('exportMinDistance', 0);
@@ -1452,6 +1455,11 @@ for data_th = 1:size(records,1)
     if szMax > 0
         angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
     end
+    % wings
+    wings_track = nan(2, MAX_FLIES, 'single'); % initialize the direction
+    if exist('keep_wings_sorted', 'var')
+        direction_track(:,1:size(keep_wings_sorted{frame_start},2)) = keep_wings_sorted{frame_start};
+    end
     Q_loc_estimateY = nan(MAX_FLIES, 'single'); % position estimate
     Q_loc_estimateX = nan(MAX_FLIES, 'single'); % position estimate
     nancount = zeros(1,MAX_FLIES); % counting NaN each fly
@@ -1498,11 +1506,14 @@ for data_th = 1:size(records,1)
         Q_loc_meas = [X{t} Y{t}];
         direction_meas = keep_direction_sorted{t};
 
-        % major & minor
+        % other params
         ecc_meas = keep_ecc_sorted{t};
-
-        % bodyline angle
         angle_meas = keep_angle_sorted{t};
+        if exist('keep_wings_sorted', 'var')
+            wings_meas = keep_wings_sorted{t};
+        else
+            wings_meas = [];
+        end
 
         % do the kalman filter
         % Predict next state
@@ -1705,6 +1716,9 @@ for data_th = 1:size(records,1)
                     direction_track(:,k) = direction_meas(:,asgnF);   % update the direction to be the match's direction
                     ecc_track(:,k) = ecc_meas(:,asgnF);
                     angle_track(:,k) = angle_meas(:,asgnF);
+                    if ~isempty(wings_meas)
+                        wings_track(:,k) = wings_meas(:,asgnF);
+                    end
 
                 elseif asgnF == 0 % assignment for no assignment
                     if assign_for_noassign
@@ -1772,14 +1786,16 @@ for data_th = 1:size(records,1)
         Q_loc_estimateY(t,1:flyNum) = Q_estimate(2,1:flyNum);
 
         % keep data from Q_estimate
-        keep_data{1}(t,1:flyNum) = Q_estimate(1,1:flyNum);
-        keep_data{2}(t,1:flyNum) = Q_estimate(2,1:flyNum);
-        keep_data{3}(t,1:flyNum) = Q_estimate(3,1:flyNum);
-        keep_data{4}(t,1:flyNum) = Q_estimate(4,1:flyNum);
-        keep_data{5}(t,1:flyNum) = direction_track(1,1:flyNum);   % keep_data{5} and keep_data{6} are for direction
-        keep_data{6}(t,1:flyNum) = direction_track(2,1:flyNum);
-        keep_data{7}(t,1:flyNum) = ecc_track(1,1:flyNum);
-        keep_data{8}(t,1:flyNum) = angle_track(1,1:flyNum);
+        keep_data{1}(t,1:flyNum) = Q_estimate(1,1:flyNum);    % x
+        keep_data{2}(t,1:flyNum) = Q_estimate(2,1:flyNum);    % y
+        keep_data{3}(t,1:flyNum) = Q_estimate(3,1:flyNum);    % vx
+        keep_data{4}(t,1:flyNum) = Q_estimate(4,1:flyNum);    % vy
+        keep_data{5}(t,1:flyNum) = direction_track(1,1:flyNum);   % fly head direction X
+        keep_data{6}(t,1:flyNum) = direction_track(2,1:flyNum);   % fly head direction Y
+        keep_data{7}(t,1:flyNum) = ecc_track(1,1:flyNum);     % ellipse body ecc
+        keep_data{8}(t,1:flyNum) = angle_track(1,1:flyNum);   % ellipse body angle (-90 to 90)
+        keep_data{9}(t,1:flyNum) = wings_track(1,1:flyNum);   % fly's right wing angle
+        keep_data{10}(t,1:flyNum) = wings_track(2,1:flyNum);  % fly's left wing angle        
 
         if ~isempty(Q_loc_meas)
 
@@ -1909,9 +1925,20 @@ for data_th = 1:size(records,1)
         keep_data{j} = keep_data{j}(:,moveIdx);
     end
     % inverse the angle upside-down
-    % fix angle flip
     keep_data{8} = -keep_data{8};
-    keep_data{8} = fixAngleFlip(keep_data{8},1,end_row);
+
+    % fix angle flip
+    dir = calcDir(keep_data{5}, keep_data{6});
+    dir2 = fixAngleFlip(dir,1,size(keep_data{5},1));
+    invMat = dir2 - dir;
+    invMat(invMat > -170 & invMat < 170) = 1;
+    invMat(invMat <= -170 | invMat >= 170) = -1;
+    keep_data{5} = keep_data{5} .* invMat;
+    keep_data{6} = keep_data{6} .* invMat;
+    invMat(invMat==-1) = 180;
+    invMat(invMat==1) = 0;
+    keep_data{9} = (keep_data{9} + invMat);
+    keep_data{10} = (keep_data{10} + invMat);
 
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');

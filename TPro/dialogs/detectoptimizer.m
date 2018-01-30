@@ -126,6 +126,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
     sharedInst.detectedBoxes = [];
+    sharedInst.detectedLeftWing = [];
+    sharedInst.detectedRightWing = [];
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -668,6 +670,8 @@ function checkbox2_Callback(hObject, eventdata, handles)
     sharedInst.showDirection = get(hObject,'Value');
     if ~sharedInst.showDirection
         sharedInst.detectedDirection = [];
+        sharedInst.detectedLeftWing = [];
+        sharedInst.detectedRightWing = [];
     else
         sharedInst.detectedPointX = []; % because it is necessary to calcurate direction again
     end
@@ -1198,6 +1202,10 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         end
         if sharedInst.showDirection && ~isempty(sharedInst.detectedDirection)
             quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedDirection(1,:)', sharedInst.detectedDirection(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+            if ~isempty(sharedInst.detectedLeftWing) && ~isempty(sharedInst.detectedRightWing)
+                quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedLeftWing(:,1), sharedInst.detectedLeftWing(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                quiver(sharedInst.detectedPointX(:), sharedInst.detectedPointY(:), sharedInst.detectedRightWing(:,1), sharedInst.detectedRightWing(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            end
         end
         hold off;
         return;
@@ -1261,12 +1269,33 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     % calc and draw direction
     if sharedInst.showDirection
         if sharedInst.useDeepLearning
-            [keep_direction, keep_angle] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
+            [keep_direction, keep_angle, keep_wings] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
         else
-            [keep_direction, keep_angle] = PD_direction3(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
+            [keep_direction, keep_angle, keep_wings] = PD_direction3(sharedInst.step2Image, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc);
         end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+
+        % show wings
+        if ~isempty(keep_wings)
+            leftWingDir = nan(length(keep_wings), 2);
+            rightWingDir = nan(length(keep_wings), 2);
+            wingLength = median(blobMajorAxis) * 0.6;
+            for i=1:length(keep_wings)
+                ph = keep_wings(1,i)/180 * pi;
+                cosph =  cos(ph);
+                sinph =  sin(ph);
+                rightWingDir(i,:) = [wingLength*cosph, wingLength*sinph];
+                ph = keep_wings(2,i)/180 * pi;
+                cosph =  cos(ph);
+                sinph =  sin(ph);
+                leftWingDir(i,:) = [wingLength*cosph, wingLength*sinph];
+            end
+            quiver(blobPointX(:), blobPointY(:), leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            quiver(blobPointX(:), blobPointY(:), rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            sharedInst.detectedLeftWing = leftWingDir;
+            sharedInst.detectedRightWing = rightWingDir;
+        end
     end
     hold off;
     

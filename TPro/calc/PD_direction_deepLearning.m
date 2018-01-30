@@ -1,9 +1,10 @@
 %%
-function [ keep_direction, keep_angle ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack)
+function [ keep_direction, keep_angle, keep_wings ] = PD_direction_deepLearning(glayImage, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack)
     % init
     areaNumber = size(blobAreas, 1);
-    keep_direction = zeros(2, areaNumber, 'single'); % allocate memory
-    keep_angle = zeros(1, areaNumber, 'single'); % allocate memory;
+    keep_direction = nan(2, areaNumber, 'single'); % allocate memory
+    keep_angle = nan(1, areaNumber, 'single'); % allocate memory
+    keep_wings = []; % allocate memory
 
     % find direction for every blobs
     for i = 1:areaNumber
