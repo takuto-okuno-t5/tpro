@@ -123,6 +123,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.step2Image = [];
     sharedInst.step3Image = [];
     sharedInst.step4Image = [];
+    sharedInst.wingImage  = [];
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
     sharedInst.detectedBoxes = [];
@@ -350,6 +351,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
             sharedInst.step4Image = [];
+            sharedInst.wingImage  = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.detectedBoxes = [];
@@ -381,6 +383,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
             sharedInst.step4Image = [];
+            sharedInst.wingImage  = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.detectedBoxes = [];
@@ -412,6 +415,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
             sharedInst.step4Image = [];
+            sharedInst.wingImage  = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.detectedBoxes = [];
@@ -443,6 +447,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
             sharedInst.step4Image = [];
+            sharedInst.wingImage  = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.detectedBoxes = [];
@@ -474,6 +479,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
             sharedInst.step2Image = [];      % filter param is changed, so clear cache
             sharedInst.step3Image = [];
             sharedInst.step4Image = [];
+            sharedInst.wingImage  = [];
             sharedInst.detectedPointX = [];
             sharedInst.detectedPointY = [];
             sharedInst.detectedBoxes = [];
@@ -592,6 +598,7 @@ function slider1_Callback(hObject, eventdata, handles)
     sharedInst.step2Image = [];
     sharedInst.step3Image = [];
     sharedInst.step4Image = [];
+    sharedInst.wingImage  = [];
     sharedInst.detectedPointX = [];
     sharedInst.detectedPointY = [];
     sharedInst.detectedBoxes = [];
@@ -654,6 +661,17 @@ function radiobutton4_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.imageMode = 4;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+end
+
+%% --- Executes on button press in radiobutton5.
+function radiobutton5_Callback(hObject, eventdata, handles)
+    % hObject    handle to radiobutton4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.imageMode = 5;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
@@ -965,6 +983,9 @@ function Untitled_2_Callback(hObject, eventdata, handles)
         case 4
             image = im2uint8(sharedInst.step4Image);
             color = 1;
+        case 5
+            image = im2uint8(sharedInst.wingImage);
+            color = 1;
     end
     images = uint8(zeros(bsize,bsize,color,blobNumber));
     % get fly images
@@ -1021,6 +1042,7 @@ function Untitled_10_Callback(hObject, eventdata, handles) % additional detectio
     if ~isempty(sharedInst.maxBlobs)
         sharedInst.step3Image = [];
         sharedInst.step4Image = [];
+        sharedInst.wingImage  = [];
         sharedInst.isModified = true;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         set(handles.pushbutton4, 'Enable', 'on');
@@ -1124,62 +1146,48 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
         end
         sharedInst.originalImage = img;
     end
-    % show original image
-    if imageMode == 1
-        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-        if sharedInst.showDetectResult
-            showDetectResultInAxes(hObject, handles, img);
-        else
-            cla;
-            imshow(img);
-        end
-        return;
-    end
     
     % background substraction
-    if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
-        img = sharedInst.step2Image;
-    else
-        img = applyBackgroundSub(handles, img);
-        sharedInst.step2Image = img;
-    end
-    if imageMode == 2
-        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-        if sharedInst.showDetectResult
-            showDetectResultInAxes(hObject, handles, img);
+    if imageMode >= 2
+        if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
+            img = sharedInst.step2Image;
         else
-            cla;
-            imshow(img);
+            img = applyBackgroundSub(handles, img);
+            sharedInst.step2Image = img;
         end
-        return;
     end
     
     % filter and Roi
-    if ~isempty(sharedInst.step3Image) && (ndims(sharedInst.step3Image) > 1) % check cache
-        img = sharedInst.step3Image;
-    else
-        img = applyFilterAndRoi(handles, img);
-        sharedInst.step3Image = img;
-    end
-    if imageMode == 3
-        setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
-        if sharedInst.showDetectResult
-            showDetectResultInAxes(hObject, handles, img);
+    if imageMode >= 3
+        if ~isempty(sharedInst.step3Image) && (ndims(sharedInst.step3Image) > 1) % check cache
+            img = sharedInst.step3Image;
         else
-            cla;
-            imshow(img);
+            img = applyFilterAndRoi(handles, img);
+            sharedInst.step3Image = img;
         end
-        return;
     end
 
     % binarize
-    if ~isempty(sharedInst.step4Image) && (ndims(sharedInst.step4Image) > 1) % check cache
-        img = sharedInst.step4Image;
-    else
-        img = applyBinarizeAndAreaMin(handles, img);
-        sharedInst.step4Image = img;
+    if imageMode >= 4
+        if ~isempty(sharedInst.step4Image) && (ndims(sharedInst.step4Image) > 1) % check cache
+            img = sharedInst.step4Image;
+        else
+            img = applyBinarizeAndAreaMin(handles, img);
+            sharedInst.step4Image = img;
+        end
     end
-    
+
+    % wing
+    if imageMode >= 5
+        if ~isempty(sharedInst.wingImage) && (ndims(sharedInst.wingImage) > 1) % check cache
+            img = sharedInst.wingImage;
+        else
+            img = applyWingFilter(sharedInst.step2Image, sharedInst.wingColorMin, sharedInst.wingColorMax);
+            sharedInst.wingImage = img;
+        end
+    end
+
+    % show image
     setappdata(handles.figure1,'sharedInst',sharedInst); % update shared
     if sharedInst.showDetectResult
         showDetectResultInAxes(hObject, handles, img);

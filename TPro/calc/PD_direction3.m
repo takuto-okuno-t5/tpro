@@ -1,5 +1,5 @@
 %%
-function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params)
+function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params)
     % init
     areaNumber = size(blobAreas, 1);
     keep_direction = nan(2, areaNumber, 'single'); % allocate memory
@@ -15,16 +15,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
     ignoreEccTh = params{6};
 
     %
-    wingImage = grayImage;
-    wingImage(wingImage >= wingColorMax) = 255;
-    wingImage(wingImage <= wingColorMin) = 255;
-    wingImage = 255 - wingImage;
-    wingImage(wingImage > 0) = 255;
-
-    % blur and cut again
-    wingImage = imgaussfilt(wingImage, 1);
-    wingImage(wingImage <= wingColorMin) = 0;
-    wingImage(wingImage > wingColorMin) = 255;
+    wingImage = applyWingFilter(step2Image, wingColorMin, wingColorMax);
 
     % find direction for every blobs
     for i = 1:areaNumber
@@ -75,7 +66,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
             end
         end
         if ~isnan(wb) && ~isnan(we)
-            wangle = (wb+we)/2 * step;
+            wangle = ((wb+we)/2 - 1) * step;
             keep_wings(1,i) = angle + wangle;
         end
 
@@ -94,7 +85,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
             end
         end
         if ~isnan(wb) && ~isnan(we)
-            wangle = (colLen - (wb+we)/2) * step;
+            wangle = (colLen - ((wb+we)/2 - 1)) * step;
             keep_wings(2,i) = angle - wangle;
         end        
     end
