@@ -45,8 +45,8 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     keep_ecc_sorted = cell(1,frames);
 
     % init tracking cells
-    keep_data = cell(1,8);
-    for i = 1:8
+    keep_data = cell(1,10);
+    for i = 1:10
         keep_data{i} = nan(frames, fn);
     end
 

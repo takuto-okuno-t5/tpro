@@ -5,13 +5,17 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
     write_file_vy = fopen([dataFileName '_vy.txt'],'wt');
     write_file_vxy = fopen([dataFileName '_vxy.txt'],'wt');
-    write_file_dir = fopen([dataFileName '_dir.txt'],'wt');    % direction 2016-11-10
+    write_file_dir = fopen([dataFileName '_dir.txt'],'wt');    % head angle 0 to 360 2016-11-10
 %    write_file_dd = fopen([dataFileName '_dd.txt'],'wt');    % direction 2016-11-10
 %    write_file_dd2 = fopen([dataFileName '_dd2.txt'],'wt');    % direction 2016-11-11
-    write_file_ecc = fopen([dataFileName '_ecc.txt'],'wt');    % direction 2016-11-29
-    write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % bodyline 2017-03-17
+    write_file_ecc = fopen([dataFileName '_ecc.txt'],'wt');    % body ecc
+    write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % body angle -90 to 90
 %    write_file_dis = fopen([dataFileName '_dis.txt'],'wt');
 %    write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
+    if length(keep_data) > 8
+        write_file_rwdir = fopen([dataFileName '_rwdir.txt'],'wt');    % right wing angle 0 to 360
+        write_file_lwdir = fopen([dataFileName '_lwdir.txt'],'wt');    % left wing angle 0 to 360
+    end
     if ~isempty(dcdparam)
         write_file_dcd = fopen([dataFileName '_dcd.txt'], 'wt');
     end
@@ -20,6 +24,12 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     end
     if ~isempty(chaseparam)
         write_file_cha = fopen([dataFileName '_chase.txt'], 'wt');
+    end
+
+    % pre process
+    if length(keep_data) > 8
+        rightWingAngle = angleAxis2def(keep_data{9});
+        leftWingAngle = angleAxis2def(keep_data{10});
     end
 
     % cook raw data before saving
@@ -32,6 +42,10 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         ddy = keep_data{5}(row_count, :);
         ecc = keep_data{7}(row_count, :);
         angle = keep_data{8}(row_count, :);
+        if length(keep_data) > 8
+            rwdir = rightWingAngle(row_count, :);
+            lwdir = leftWingAngle(row_count, :);
+        end
 %        if row_count > 1
 %            distance_travel = sqrt((fx - keep_data{2}(row_count-1, :)).^2 + (fy - keep_data{1}(row_count-1, :)).^2);
 %        end
@@ -50,6 +64,7 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             ddx(nanIdx) = NaN; ddy(nanIdx) = NaN;
             ecc(nanIdx) = NaN;
             angle(nanIdx) = NaN;
+            rwdir(nanIdx) = NaN; lwdir(nanIdx) = NaN;
         end
         % make save string
         roiFlyNum = length(fx);
@@ -105,6 +120,10 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         fprintf(write_file_dir, fmtString, angle_v1 );
         fprintf(write_file_ecc, fmtString, ecc);
         fprintf(write_file_angle, fmtString, angle);
+        if length(keep_data) > 8
+            fprintf(write_file_rwdir, fmtString, rwdir);
+            fprintf(write_file_lwdir, fmtString, lwdir);
+        end
 
         % calculate sideway velocity
         %{
@@ -165,6 +184,10 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 %    fclose(write_file_dd2);
     fclose(write_file_ecc);
     fclose(write_file_angle);
+    if length(keep_data) > 8
+        fclose(write_file_rwdir);
+        fclose(write_file_lwdir);
+    end
 %    fclose(write_file_dis);
 %    fclose(write_file_svxy);
     if ~isempty(dcdparam)

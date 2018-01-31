@@ -1561,7 +1561,7 @@ function Untitled_10_Callback(hObject, eventdata, handles)
     end
 
     % remove fly data (id)
-    for i=1:8
+    for i=1:length(sharedInst.keep_data)
         sharedInst.keep_data{i}(:,id1) = [];
     end
 
@@ -1640,7 +1640,7 @@ function swapTrackingData(id1, id2, startFrame, endFrame, isSaveHistory, handles
     startRow = startFrame - sharedInst.startFrame + 1;
     endRow = (endFrame - sharedInst.startFrame) / sharedInst.frameSteps + 1;
 
-    for i=1:8
+    for i=1:length(sharedInst.keep_data)
         if id1 == 0
             sharedInst.keep_data{i}(startRow:endRow,id2) = NaN;
         elseif id2 == 0
@@ -1674,7 +1674,7 @@ function mergeTrackingData(id1, id2, isSaveHistory, handles)
     startRow = idx(1);
     endRow = idx(end);
 
-    for i=1:8
+    for i=1:length(sharedInst.keep_data)
         sharedInst.keep_data{i}(startRow:endRow,id1) = sharedInst.keep_data{i}(startRow:endRow,id2);
         sharedInst.keep_data{i}(:,id2) = [];
     end
