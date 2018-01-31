@@ -1278,19 +1278,9 @@ function showDetectResultInAxes(hObject, handles, frameImage)
 
         % show wings
         if ~isempty(keep_wings)
-            leftWingDir = nan(length(keep_wings), 2);
-            rightWingDir = nan(length(keep_wings), 2);
             wingLength = median(blobMajorAxis) * 0.6;
-            for i=1:length(keep_wings)
-                ph = keep_wings(1,i)/180 * pi;
-                cosph =  cos(ph);
-                sinph =  sin(ph);
-                rightWingDir(i,:) = [wingLength*cosph, wingLength*sinph];
-                ph = keep_wings(2,i)/180 * pi;
-                cosph =  cos(ph);
-                sinph =  sin(ph);
-                leftWingDir(i,:) = [wingLength*cosph, wingLength*sinph];
-            end
+            leftWingDir = angleToDirection(keep_wings(2,:), wingLength);
+            rightWingDir = angleToDirection(keep_wings(1,:), wingLength);
             quiver(blobPointX(:), blobPointY(:), leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
             quiver(blobPointX(:), blobPointY(:), rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
             sharedInst.detectedLeftWing = leftWingDir;

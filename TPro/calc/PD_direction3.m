@@ -12,6 +12,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
     radiusRate = 0.55;
     range = 1;
     step = 10;
+    ignoreEccTh = 0.75;
 
     %
     wingImage = grayImage;
@@ -40,7 +41,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
         keep_angle(:,i) = angle;
 
         % check ecc - ignore at jumping / climbing
-        if blobEcc(i) < 0.85
+        if blobEcc(i) < ignoreEccTh
             continue;
         end
 

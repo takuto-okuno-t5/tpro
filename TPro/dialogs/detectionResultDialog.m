@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 13-Dec-2017 23:39:59
+% Last Modified by GUIDE v2.5 31-Jan-2018 13:35:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -92,6 +92,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load detection & tracking
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
+    load(strcat(confPath,'multi/detect_',filename,'keep_count.mat'));
 
     % initialize GUI
     sharedInst = struct; % allocate shared instance
@@ -108,6 +109,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.frameNum = sharedInst.startFrame;
     sharedInst.stepTime = 0.03;
     sharedInst.showDetectResult = 1;
+    sharedInst.showDirection = 1;
     sharedInst.showIndexNumber = 0;
     sharedInst.backMode = 1; % movie
     sharedInst.mmPerPixel = records{9};
@@ -129,6 +131,12 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_direction_sorted = keep_direction_sorted;
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_ecc_sorted = keep_ecc_sorted;
+    if exist('keep_wings_sorted', 'var')
+        sharedInst.keep_wings_sorted = keep_wings_sorted;
+        sharedInst.wingLength = nanmean(keep_mean_blobmajor) * 0.6;
+    else
+        sharedInst.keep_wings_sorted = [];
+    end
     sharedInst.selectX = {};
     sharedInst.selectY = {};
     sharedInst.selectFrame = sharedInst.frameNum;
@@ -143,6 +151,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
     set(handles.edit1, 'String', sharedInst.frameNum);
     set(handles.checkbox2, 'Value', sharedInst.showDetectResult);
+    set(handles.checkbox3, 'Value', sharedInst.showDirection);
 
     set(handles.pushbutton3, 'Enable', 'off');
     set(handles.pushbutton6, 'Enable', 'off');
@@ -673,6 +682,17 @@ function checkbox2_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     sharedInst.showDetectResult = get(hObject,'Value');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --- Executes on button press in checkbox3.
+function checkbox3_Callback(hObject, eventdata, handles)
+    % hObject    handle to checkbox3 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.showDirection = get(hObject,'Value');
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
@@ -1812,8 +1832,18 @@ function showFrameInAxes(hObject, handles, frameNum)
                 plot(sharedInst.selectY{i},sharedInst.selectX{i},'or','Color', [.3 1 .3]);
             end
         end
-%        keep_direction = sharedInst.keep_direction_sorted{t}(:,:);
-%        quiver(Y, X, keep_direction(1,:)', keep_direction(2,:)', 0.3, 'r', 'MaxHeadSize',0.2, 'LineWidth',0.2)  %arrow
+        if sharedInst.showDirection
+            keep_direction = sharedInst.keep_direction_sorted{t}(:,:);
+            quiver(Y, X, keep_direction(1,:)', keep_direction(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+            % show wings
+            if ~isempty(sharedInst.keep_wings_sorted)
+                keep_wings = sharedInst.keep_wings_sorted{t}(:,:);
+                leftWingDir = angleToDirection(keep_wings(2,:), sharedInst.wingLength);
+                rightWingDir = angleToDirection(keep_wings(1,:), sharedInst.wingLength);
+                quiver(Y, X, leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                quiver(Y, X, rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            end
+        end
     end
     % show number
     if sharedInst.showIndexNumber
@@ -1867,3 +1897,5 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
+
+

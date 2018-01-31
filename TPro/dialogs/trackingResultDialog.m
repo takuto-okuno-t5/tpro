@@ -2376,6 +2376,15 @@ function showFrameInAxes(hObject, handles, frameNum)
         if sharedInst.listMode == 1
             plot(Y,X,'or'); % the actual detecting
             quiver(keepY, keepX, keepDirY, keepDirX, 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+
+            % show wings
+            if length(sharedInst.keep_data) > 8
+                wingLength = sharedInst.mean_blobmajor * 0.6;
+                leftWingDir = angleToDirection(sharedInst.keep_data{10}(t,:), wingLength);
+                rightWingDir = angleToDirection(sharedInst.keep_data{9}(t,:), wingLength);
+                quiver(keepY, keepX, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                quiver(keepY, keepX, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            end
         else
             fy = keepY(listFly);
             fx = keepX(listFly);
