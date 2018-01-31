@@ -93,6 +93,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load detection & tracking
     load(strcat(confPath,'multi/detect_',filename,'.mat'));
+    load(strcat(confPath,'multi/detect_',filename,'keep_count.mat'));
     load(strcat(confPath,'multi/track_',filename,'.mat'));
     
     % load annotation file
@@ -148,6 +149,9 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
     sharedInst.annotation = annotation;
+    if exist('keep_mean_blobmajor', 'var')
+        sharedInst.wingLength = nanmean(keep_mean_blobmajor) * 0.6;
+    end
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -240,6 +244,13 @@ function calcVelocitys(handles, keep_data)
     sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
     sharedInst.av = abs(calcAngularVelocity(keep_data{8}));
     sharedInst.ecc = keep_data{7};
+    if length(keep_data) > 8
+        sharedInst.rWingAngle = 180 - mod(sharedInst.dir + 360 - angleAxis2def(keep_data{9}), 360);
+        sharedInst.lWingAngle = mod(sharedInst.dir + 360 - angleAxis2def(keep_data{10}), 360) - 180;
+    else
+        sharedInst.rWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
+        sharedInst.lWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
+    end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
 
@@ -901,12 +912,18 @@ function Untitled_18_Callback(hObject, eventdata, handles)
         data = sharedInst.keep_data{2};
     case 'y'
         data = sharedInst.keep_data{1};
-    case 'angle'
+    case 'body angle'
         data = sharedInst.keep_data{8};
     case 'angle velocity'
         data = sharedInst.av;
     case 'circularity'
         data = sharedInst.keep_data{7};
+    case 'head angle'
+        data = sharedInst.dir;
+    case 'right wing angle'
+        data = sharedInst.rWingAngle;
+    case 'left wing angle'
+        data = sharedInst.lWingAngle;
     otherwise
         data = getappdata(handles.figure1, sharedInst.axesType1);
     end
@@ -958,12 +975,18 @@ function Untitled_19_Callback(hObject, eventdata, handles)
         data = sharedInst.keep_data{2};
     case 'y'
         data = sharedInst.keep_data{1};
-    case 'angle'
+    case 'body angle'
         data = sharedInst.keep_data{8};
     case 'angle velocity'
         data = sharedInst.av;
     case 'circularity'
         data = sharedInst.keep_data{7};
+    case 'head angle'
+        data = sharedInst.dir;
+    case 'right wing angle'
+        data = sharedInst.rWingAngle;
+    case 'left wing angle'
+        data = sharedInst.lWingAngle;
     otherwise
         data = getappdata(handles.figure1, sharedInst.axesType2);
     end
@@ -1210,6 +1233,15 @@ function showFrameInAxes(hObject, handles, frameNum)
     if sharedInst.showDetectResult
         plot(sharedInst.Y{t}(:),sharedInst.X{t}(:),'or', 'color', [0.7 0.3 0.3]); % the actual detecting
         plot(fy,fx,'or'); % the actual detecting
+        quiver(fy, fx, sharedInst.keep_data{5}(t,listFly), sharedInst.keep_data{6}(t,listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+
+        % show wings
+        if length(sharedInst.keep_data) > 8
+            leftWingDir = angleToDirection(sharedInst.keep_data{10}(t,listFly), sharedInst.wingLength);
+            rightWingDir = angleToDirection(sharedInst.keep_data{9}(t,listFly), sharedInst.wingLength);
+            quiver(fy, fx, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+            quiver(fy, fx, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+        end
     end
 
     active_num = 0;
@@ -1368,7 +1400,7 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
             yval = sharedInst.keep_data{1}(:,listFly);
             ymin = 0;
             ymax = img_h;
-        case 'angle'
+        case 'body angle'
             yval = sharedInst.keep_data{8}(:,listFly);
             ymin = -90;
             ymax = 90;
@@ -1380,6 +1412,18 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
             yval = sharedInst.keep_data{7}(:,listFly);
             ymin = 0;
             ymax = 1;
+        case 'head angle'
+            yval = sharedInst.dir(:,listFly);
+            ymin = 0;
+            ymax = 360;
+        case 'right wing angle'
+            yval = sharedInst.rWingAngle(:,listFly);
+            ymin = -30;
+            ymax = 180;
+        case 'left wing angle'
+            yval = sharedInst.lWingAngle(:,listFly);
+            ymin = -30;
+            ymax = 180;
         case '--'
             yval = [];
             ymin = 0;
@@ -1519,7 +1563,7 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             value = sharedInst.keep_data{1}(t,listFly);
             ymin = 0;
             ymax = img_h;
-        case 'angle'
+        case 'body angle'
             yval = sharedInst.keep_data{8}((t-st):(t+ed),listFly);
             value = sharedInst.keep_data{8}(t,listFly);
             ymin = -90;
@@ -1534,6 +1578,21 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             value = sharedInst.keep_data{7}(t,listFly);
             ymin = 0;
             ymax = 1;
+        case 'head angle'
+            yval = sharedInst.dir((t-st):(t+ed),listFly);
+            value = sharedInst.dir(t,listFly);
+            ymin = 0;
+            ymax = 360;
+        case 'right wing angle'
+            yval = sharedInst.rWingAngle((t-st):(t+ed),listFly);
+            value = sharedInst.rWingAngle(t,listFly);
+            ymin = -30;
+            ymax = 180;
+        case 'left wing angle'
+            yval = sharedInst.lWingAngle((t-st):(t+ed),listFly);
+            value = sharedInst.lWingAngle(t,listFly);
+            ymin = -30;
+            ymax = 180;
         case '--'
             yval = [];
             value = 0;

@@ -153,6 +153,12 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.tmplSepNum = getVideoConfigValue(records, 35, 4);
     sharedInst.tmplSepTh = getVideoConfigValue(records, 36, 0.85);
     sharedInst.overlapTh = getVideoConfigValue(records, 37, 0.17);
+    sharedInst.wingColorMin = getVideoConfigValue(records, 38, 140);
+    sharedInst.wingColorMax = getVideoConfigValue(records, 39, 216);
+    sharedInst.wingRadiusRate = getVideoConfigValue(records, 40, 0.55);
+    sharedInst.wingColorRange = getVideoConfigValue(records, 41, 1);
+    sharedInst.wingCircleStep = getVideoConfigValue(records, 42, 10);
+    sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
 
     % load last detection setting (do not read when local debug)
     lastConfigFile = 'etc/last_detect_config.mat';
@@ -188,6 +194,12 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.tmplSepNum = cf.tmplSepNum;
         sharedInst.tmplSepTh = cf.tmplSepTh;
         sharedInst.overlapTh = cf.overlapTh;
+        sharedInst.wingColorMin = cf.wingColorMin;
+        sharedInst.wingColorMax = cf.wingColorMax;
+        sharedInst.wingRadiusRate = cf.wingRadiusRate;
+        sharedInst.wingColorRange = cf.wingColorRange;
+        sharedInst.wingCircleStep = cf.wingCircleStep;
+        sharedInst.ignoreEccTh = cf.ignoreEccTh;
     end
 
     % deep learning data
@@ -1271,8 +1283,12 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         if sharedInst.useDeepLearning
             [keep_direction, keep_angle, keep_wings] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
+        elseif sharedInst.wingColorMax > 0
+            params = {  sharedInst.wingColorMin, sharedInst.wingColorMax, sharedInst.wingRadiusRate, ...
+                        sharedInst.wingColorRange, sharedInst.wingCircleStep, sharedInst.ignoreEccTh };
+            [keep_direction, keep_angle, keep_wings] = PD_direction3(sharedInst.step2Image, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params);
         else
-            [keep_direction, keep_angle, keep_wings] = PD_direction3(sharedInst.step2Image, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc);
+            [keep_direction, keep_angle, keep_wings] = PD_direction(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
         quiver(blobPointX(:), blobPointY(:), keep_direction(1,:)', keep_direction(2,:)', 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
 

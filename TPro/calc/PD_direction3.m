@@ -1,18 +1,18 @@
 %%
-function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc)
+function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params)
     % init
     areaNumber = size(blobAreas, 1);
     keep_direction = nan(2, areaNumber, 'single'); % allocate memory
     keep_angle = nan(1, areaNumber, 'single'); % allocate memory
     keep_wings = nan(2, areaNumber, 'single'); % allocate memory
 
-    % constant hidden params
-    wingColorMax = 216;
-    wingColorMin = 140;
-    radiusRate = 0.55;
-    range = 1;
-    step = 10;
-    ignoreEccTh = 0.75;
+    % constant params
+    wingColorMin = params{1};
+    wingColorMax = params{2};
+    radiusRate = params{3};
+    range = params{4};
+    step = params{5};
+    ignoreEccTh = params{6};
 
     %
     wingImage = grayImage;
@@ -61,7 +61,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(grayImage, b
         % find right wing
         WING_COL_TH = 80;
         colors = movmean(colors, 3);
-        rstart = floor(50/step) + 1;
+        rstart = floor(60/step) + 1;
         rend = floor(180/step) + 1; % 19 should be 180 degree
         wb = NaN; we = NaN;
         for j=rstart:rend

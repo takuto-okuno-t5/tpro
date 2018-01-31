@@ -13,4 +13,7 @@ function outConf = checkConfigCompatibility(inConf)
     if length(outConf) < 33 % template matching
         outConf = [outConf, 0, 0, 0, 0, 0];
     end
+    if length(outConf) < 38 % wing detection
+        outConf = [outConf, 0, 0, 0, 0, 0, 0];
+    end
 end

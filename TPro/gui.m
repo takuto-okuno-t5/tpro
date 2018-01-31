@@ -786,6 +786,12 @@ for data_th = 1:size(records,1)
     tmplSepNum = getVideoConfigValue(record, 35, 4);
     tmplSepTh = getVideoConfigValue(record, 36, 0.85);
     overlapTh = getVideoConfigValue(record, 37, 0.17);
+    wingColorMin = getVideoConfigValue(record, 38, 140);
+    wingColorMax = getVideoConfigValue(record, 39, 216);
+    wingRadiusRate = getVideoConfigValue(record, 40, 0.55);
+    wingColorRange = getVideoConfigValue(record, 41, 1);
+    wingCircleStep = getVideoConfigValue(record, 42, 10);
+    ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -1141,8 +1147,10 @@ for data_th = 1:size(records,1)
         %%
         if size(netForFrontBack, 1) > 0
             [ keep_direction, keep_angle, keep_wings ] = PD_direction_deepLearning(step2img, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
-        elseif true
-            [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2img, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc);
+        elseif wingColorMax > 0
+            params = {  wingColorMin, wingColorMax, wingRadiusRate, ...
+                        wingColorRange, wingCircleStep, ignoreEccTh };
+            [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2img, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params);
         else
             [ keep_direction, keep_angle, keep_wings ] = PD_direction(step2img, blobAreas, blobCenterPoints, blobBoxes, blobMajorAxis, blobMinorAxis, blobOrient);
         end
@@ -1927,7 +1935,7 @@ for data_th = 1:size(records,1)
     % inverse the angle upside-down
     keep_data{8} = -keep_data{8};
 
-    % fix angle flip
+    % fix angle flip (direction & wing angle, except elliptic angle)
     dir = calcDir(keep_data{5}, keep_data{6});
     dir2 = fixAngleFlip(dir,1,size(keep_data{5},1));
     invMat = dir2 - dir;
@@ -1939,6 +1947,9 @@ for data_th = 1:size(records,1)
     invMat(invMat==1) = 0;
     keep_data{9} = (keep_data{9} + invMat);
     keep_data{10} = (keep_data{10} + invMat);
+    % fix wing angle range
+    keep_data{9} = mod(keep_data{9} + 360, 360);
+    keep_data{10} = mod(keep_data{10} + 360, 360);
 
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');

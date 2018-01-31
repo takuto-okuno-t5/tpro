@@ -2391,6 +2391,15 @@ function showFrameInAxes(hObject, handles, frameNum)
             if ~isnan(fy) && ~isnan(fx) && currentMask(round(fx),round(fy)) > 0
                 plot(fy,fx,'or'); % the actual detecting
                 quiver(fy, fx, keepDirY(listFly), keepDirX(listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+
+                % show wings
+                if length(sharedInst.keep_data) > 8
+                    wingLength = sharedInst.mean_blobmajor * 0.6;
+                    leftWingDir = angleToDirection(sharedInst.keep_data{10}(t,listFly), wingLength);
+                    rightWingDir = angleToDirection(sharedInst.keep_data{9}(t,listFly), wingLength);
+                    quiver(fy, fx, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                    quiver(fy, fx, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                end
             end
         end
         % show selected point

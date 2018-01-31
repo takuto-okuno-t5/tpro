@@ -1838,10 +1838,12 @@ function showFrameInAxes(hObject, handles, frameNum)
             % show wings
             if ~isempty(sharedInst.keep_wings_sorted)
                 keep_wings = sharedInst.keep_wings_sorted{t}(:,:);
-                leftWingDir = angleToDirection(keep_wings(2,:), sharedInst.wingLength);
-                rightWingDir = angleToDirection(keep_wings(1,:), sharedInst.wingLength);
-                quiver(Y, X, leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
-                quiver(Y, X, rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                if ~isempty(keep_wings)
+                    leftWingDir = angleToDirection(keep_wings(2,:), sharedInst.wingLength);
+                    rightWingDir = angleToDirection(keep_wings(1,:), sharedInst.wingLength);
+                    quiver(Y, X, leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                    quiver(Y, X, rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                end
             end
         end
     end
