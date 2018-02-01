@@ -16,6 +16,13 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
 
     %
     wingImage = applyWingFilter(step2Image, wingColorMin, wingColorMax);
+    
+    % label image (for mask blob)
+    img2 = imgaussfilt(step2Image,1);
+    img2(img2>=wingColorMax) = 255;
+    img2 = 255 - img2;
+    img2 = im2bw(img2, 0.01);
+    labeledImage = uint8(bwlabel(img2));   % label the image
 
     % find direction for every blobs
     for i = 1:areaNumber
@@ -36,10 +43,16 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
             continue;
         end
 
+        % get masked wingImage
+        label = labeledImage(floor(cy),floor(cx));
+        label_mask = labeledImage==label;
+        maskedWingImage = wingImage .* uint8(label_mask);
+%        maskedWingImage = wingImage;
+
         % get around color (maybe wing) colors
-        colors(1,:) = getCircleColors(wingImage, cx, cy, ph, majlen * (radiusRate-0.1), range, step);
-        colors(2,:) = getCircleColors(wingImage, cx, cy, ph, majlen * radiusRate, range, step);
-        colors(3,:) = getCircleColors(wingImage, cx, cy, ph, majlen * (radiusRate+0.1), range, step);
+        colors(1,:) = getCircleColors(maskedWingImage, cx, cy, ph, majlen * (radiusRate-0.1), range, step);
+        colors(2,:) = getCircleColors(maskedWingImage, cx, cy, ph, majlen * radiusRate, range, step);
+        colors(3,:) = getCircleColors(maskedWingImage, cx, cy, ph, majlen * (radiusRate+0.1), range, step);
         colLen = size(colors,2);
 
         frontTotal = sum(sum(colors(:,1:floor(colLen/4)))) + sum(sum(colors(:,floor(colLen/4*3)+1:colLen)));
