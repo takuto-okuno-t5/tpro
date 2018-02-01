@@ -53,7 +53,9 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
 
         % find right wing
         WING_COL_TH = 80;
-        colors = movmean(colors, 3);
+        for k=1:size(colors,1)
+            colors(k,:) = smooth(colors(k,:), 3, 'moving');
+        end
         rstart = floor(60/step) + 1;
         rend = floor(180/step) + 1; % 19 should be 180 degree
         wb = nan(1,3); we = nan(1,3);
