@@ -137,7 +137,7 @@ end
 guidata(hObject, handles);
 
 % set window title
-versionNumber = '1.4.7';
+versionNumber = '1.4.8';
 set(gcf, 'name', ['TPro version ', versionNumber]);
 set(handles.text14, 'String', ['TPro ', versionNumber])
 set(handles.text2, 'String', ['TPro', versionNumber])
