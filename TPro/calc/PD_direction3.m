@@ -13,12 +13,13 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
     range = params{4};
     step = params{5};
     ignoreEccTh = params{6};
+    wingColorTh = [90, 130, 130]; % circle wing color detection threshold
 
     %
     wingImage = applyWingFilter(step2Image, wingColorMin, wingColorMax);
     
     % label image (for mask blob)
-    img2 = imgaussfilt(step2Image,1);
+    img2 = imgaussfilt(step2Image,2);
     img2(img2>=wingColorMax) = 255;
     img2 = 255 - img2;
     img2 = im2bw(img2, 0.01);
@@ -81,15 +82,17 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         keep_direction(:,i) = vec;
 
         % find right wing
-        WING_COL_TH = 80;
         for k=1:size(colors,1)
             colors(k,:) = smooth(colors(k,:), 3, 'moving');
         end
-        rstart = floor(60/step) + 1;
+        rstart(1) = floor(80/step) + 1;
+        rstart(2) = floor(70/step) + 1;
+        rstart(3) = floor(60/step) + 1;
         rend = floor(180/step) + 1; % 19 should be 180 degree
         wb = nan(1,3); we = nan(1,3);
-        for k=1:size(colors,1)
-            for j=rstart:rend
+        for k=1:3
+            WING_COL_TH = wingColorTh(k);
+            for j=rstart(k):rend
                 if((colors(k,j) >= WING_COL_TH) && (colors(k,j+1) >= WING_COL_TH))
                     if isnan(wb(k))
                         wb(k) = j;
@@ -108,7 +111,8 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         lend = colLen +2 - rend;
         wb = nan(1,3); we = nan(1,3);
         for k=1:size(colors,1)
-            for j=lstart:-1:lend
+            WING_COL_TH = wingColorTh(k);
+            for j=lstart(k):-1:lend
                 if((colors(k,j) >= WING_COL_TH) && (colors(k,j-1) >= WING_COL_TH))
                     if isnan(wb(k))
                         wb(k) = j;
