@@ -22,7 +22,7 @@ function varargout = annotationDialog(varargin)
 
 % Edit the above text to modify the response to help annotationDialog
 
-% Last Modified by GUIDE v2.5 22-Oct-2017 21:33:27
+% Last Modified by GUIDE v2.5 04-Feb-2018 02:09:29
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 0;
@@ -128,6 +128,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.annoStart = 0;
     sharedInst.annoKey = -1;
     sharedInst.mmPerPixel = records{9};
+    sharedInst.findType = 0;
 
     sharedInst.roiNum = records{10};
     sharedInst.gaussH = records{13};
@@ -344,6 +345,14 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
               'numpad6','numpad7','numpad8','numpad9','numpad0', ...
               'delete','escape','return'}
             recodeAnnotation(handles, eventdata.Key);
+        case 'n' % find next
+            if sharedInst.findType == 1
+                findAxesValueNext(handles, eventdata, sharedInst.findAxes, sharedInst.findCondition, sharedInst.findValue);
+            end
+        case 'p' % find prev
+            if sharedInst.findType == 1
+                findAxesValuePrev(handles, eventdata, sharedInst.findAxes, sharedInst.findCondition, sharedInst.findValue);
+            end
         end
     end
 end
@@ -895,38 +904,9 @@ function Untitled_18_Callback(hObject, eventdata, handles)
     end
 
     outputFileName = [path fileName];
+
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    % get data
-    switch sharedInst.axesType1
-    case 'velocity'
-        data = sharedInst.vxy;
-    case 'x velocity'
-        data = sharedInst.keep_data{4};
-    case 'y velocity'
-        data = sharedInst.keep_data{3};
-    case 'sideways'
-        data = sharedInst.sideways;
-    case 'sideways velocity'
-        data = sharedInst.sidewaysVelocity;
-    case 'x'
-        data = sharedInst.keep_data{2};
-    case 'y'
-        data = sharedInst.keep_data{1};
-    case 'body angle'
-        data = sharedInst.keep_data{8};
-    case 'angle velocity'
-        data = sharedInst.av;
-    case 'circularity'
-        data = sharedInst.keep_data{7};
-    case 'head angle'
-        data = sharedInst.dir;
-    case 'right wing angle'
-        data = sharedInst.rWingAngle;
-    case 'left wing angle'
-        data = sharedInst.lWingAngle;
-    otherwise
-        data = getappdata(handles.figure1, sharedInst.axesType1);
-    end
+    data = getAxesData(handles, sharedInst.axesType1);
     if isempty(data)
         errordlg('can not get current axes data.', 'Error');
         return;
@@ -958,9 +938,30 @@ function Untitled_19_Callback(hObject, eventdata, handles)
     end
 
     outputFileName = [path fileName];
+
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    data = getAxesData(handles, sharedInst.axesType2);
+    if isempty(data)
+        errordlg('can not get current axes data.', 'Error');
+        return;
+    end
+    if size(data,1) < size(data,2)
+        data = data';
+    end
+
+    try
+        T = array2table(data);
+        writetable(T,outputFileName,'WriteVariableNames',false);
+    catch e
+        errordlg('can not export a csv file.', 'Error');
+        return;
+    end
+end
+
+function data = getAxesData(handles, axesType)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % get data
-    switch sharedInst.axesType2
+    switch axesType
     case 'velocity'
         data = sharedInst.vxy;
     case 'x velocity'
@@ -988,22 +989,7 @@ function Untitled_19_Callback(hObject, eventdata, handles)
     case 'left wing angle'
         data = sharedInst.lWingAngle;
     otherwise
-        data = getappdata(handles.figure1, sharedInst.axesType2);
-    end
-    if isempty(data)
-        errordlg('can not get current axes data.', 'Error');
-        return;
-    end
-    if size(data,1) < size(data,2)
-        data = data';
-    end
-
-    try
-        T = array2table(data);
-        writetable(T,outputFileName,'WriteVariableNames',false);
-    catch e
-        errordlg('can not export a csv file.', 'Error');
-        return;
+        data = getappdata(handles.figure1, axesType);
     end
 end
 
@@ -1190,6 +1176,33 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     trapezoidFindChase(handles, @addClusteringResult2Axes);
+end
+
+% --------------------------------------------------------------------
+function Untitled_23_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_23 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    while true 
+        [dlg, op, type, axesType, condition, value] = findAnnotationDialog({});
+        if op > 0
+            sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+            sharedInst.findType = str2num(type);
+            sharedInst.findAxes = axesType;
+            sharedInst.findCondition = condition;
+            sharedInst.findValue = str2num(value);
+            setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        end
+        switch(op)
+        case 0
+            delete(dlg);
+            break;
+        case 1
+            findAxesValueNext(handles, eventdata, sharedInst.findAxes, condition, sharedInst.findValue)
+        case 2
+            findAxesValuePrev(handles, eventdata, sharedInst.findAxes, condition, sharedInst.findValue)
+        end
+    end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1797,5 +1810,107 @@ function addClusteringResult2Axes(handles, result, itemName)
     if idx > 0
         set(handles.popupmenu5,'Value',idx);
         popupmenu5_Callback(handles.popupmenu5,0,handles);
+    end
+end
+
+%% find functions
+
+function findAxesValueNext(handles, eventdata, axesType, condition, value)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    flyId = sharedInst.listFly;
+    switch axesType
+    case 'axes1'
+        type = sharedInst.axesType1;
+    case 'axes2'
+        type = sharedInst.axesType2;
+    end
+    data = getAxesData(handles, type);
+    if ~isempty(data)
+        isFound = false;
+        for i=(t+1):size(data,1)
+            if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                yval = data(i,flyId);
+            elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                yval = nanmean(data(i,:));
+            else
+                yval = data(i);
+            end
+            switch condition
+            case 'bigger'
+                if yval >= value
+                    isFound = true;
+                end
+            case 'equal'
+                if yval == value
+                    isFound = true;
+                end
+            case 'smaller'
+                if yval <= value
+                    isFound = true;
+                end
+            end
+            if isFound
+                break;
+            end
+        end
+        frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+        if isFound && ~isempty(frame) && frame <= sharedInst.endFrame
+            set(handles.slider1, 'value', frame);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        else
+            axes(handles.axes1); % set drawing area
+            text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+        end
+    end
+end
+
+function findAxesValuePrev(handles, eventdata, axesType, condition, value)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    flyId = sharedInst.listFly;
+    switch axesType
+    case 'axes1'
+        type = sharedInst.axesType1;
+    case 'axes2'
+        type = sharedInst.axesType2;
+    end
+    data = getAxesData(handles, type);
+    if ~isempty(data)
+        isFound = false;
+        for i=(t-1):-1:1
+            if ~isempty(flyId) && flyId > 0 && size(data,1)~=1 && size(data,2)~=1
+                yval = data(i,flyId);
+            elseif ~isempty(flyId) && flyId == 0 && size(data,2)~=1
+                yval = nanmean(data(i,:));
+            else
+                yval = data(i);
+            end
+            switch condition
+            case 'bigger'
+                if yval >= value
+                    isFound = true;
+                end
+            case 'equal'
+                if yval == value
+                    isFound = true;
+                end
+            case 'smaller'
+                if yval <= value
+                    isFound = true;
+                end
+            end
+            if isFound
+                break;
+            end
+        end
+        frame = (i-1)*sharedInst.frameSteps + sharedInst.startFrame;
+        if isFound && ~isempty(frame) && frame >= 1
+            set(handles.slider1, 'value', frame);
+            slider1_Callback(handles.slider1, eventdata, handles)
+        else
+            axes(handles.axes1); % set drawing area
+            text(6, 30, 'can not find a frame.', 'Color',[1 .2 .2])
+        end
     end
 end
