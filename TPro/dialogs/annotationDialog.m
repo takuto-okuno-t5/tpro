@@ -136,6 +136,7 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.binaryTh = records{8} * 100;
     sharedInst.binaryAreaPixel = records{15};
     sharedInst.blobSeparateRate = records{17};
+    sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
 
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
@@ -246,6 +247,10 @@ function calcVelocitys(handles, keep_data)
     sharedInst.av = abs(calcAngularVelocity(keep_data{8}));
     sharedInst.ecc = keep_data{7};
     if length(keep_data) > 8
+        %beJumpLv = readTproConfig('beJumpLv', 63);
+        %[headAngle, keep_data] = fixHeadAndWingAngle(sharedInst.vxy, sharedInst.ecc, sharedInst.dir, keep_data, beJumpLv, sharedInst.ignoreEccTh, sharedInst.fpsNum, sharedInst.startFrame);
+        %sharedInst.dir = headAngle;
+        %sharedInst.keep_data = keep_data;
         sharedInst.rWingAngle = 180 - mod(sharedInst.dir + 360 - angleAxis2def(keep_data{9}), 360);
         sharedInst.lWingAngle = mod(sharedInst.dir + 360 - angleAxis2def(keep_data{10}), 360) - 180;
     else
@@ -1475,7 +1480,7 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
 %        xticks(0); % from 2016b
     end
     type = strrep(type, '_', ' ');
-    text(10, (ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
+    text(10, double(ymax*0.9+ymin*0.1), type, 'Color',[.6 .6 1], 'FontWeight','bold')
     hold off;
 end
 

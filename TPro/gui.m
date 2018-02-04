@@ -1397,6 +1397,7 @@ for data_th = 1:size(records,1)
     reject_dist = record{11} / mmPerPixel / fpsNum;
     fixedTrackNum = getVideoConfigValue(record, 27, 0);
     fixedTrackDir = getVideoConfigValue(record, 28, 0);
+    ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
 
     shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
 
@@ -1936,20 +1937,10 @@ for data_th = 1:size(records,1)
     keep_data{8} = -keep_data{8};
 
     % fix angle flip (direction & wing angle, except elliptic angle)
-    dir = calcDir(keep_data{5}, keep_data{6});
-    dir2 = fixAngleFlip(dir,1,size(keep_data{5},1));
-    invMat = dir2 - dir;
-    invMat(invMat > -170 & invMat < 170) = 1;
-    invMat(invMat <= -170 | invMat >= 170) = -1;
-    keep_data{5} = keep_data{5} .* invMat;
-    keep_data{6} = keep_data{6} .* invMat;
-    invMat(invMat==-1) = 180;
-    invMat(invMat==1) = 0;
-    keep_data{9} = (keep_data{9} + invMat);
-    keep_data{10} = (keep_data{10} + invMat);
-    % fix wing angle range
-    keep_data{9} = mod(keep_data{9} + 360, 360);
-    keep_data{10} = mod(keep_data{10} + 360, 360);
+    beJumpLv = readTproConfig('beJumpLv', 63);
+    vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
+    headAngle = calcDir(keep_data{5}, keep_data{6});
+    [headAngle, keep_data] = fixHeadAndWingAngle(vxy, keep_data{7}, headAngle, keep_data, beJumpLv, ignoreEccTh, fpsNum, start_frame);
 
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');
