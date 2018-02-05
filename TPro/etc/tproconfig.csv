@@ -23,7 +23,7 @@ beWalkLv,8
 beWalkGap,0.083
 beSWalkLv,4
 beSWalkGap,0.083
-beClimb,0.92
+beClimb,0.89
 beClimbLv,11
 beClimbGap,0.133
 bePivot,11

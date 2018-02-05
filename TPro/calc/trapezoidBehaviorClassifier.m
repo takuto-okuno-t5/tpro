@@ -7,6 +7,8 @@ function annotation = trapezoidBehaviorClassifier(handles)
     av = sharedInst.av;
     ecc = sharedInst.ecc;
     side = sharedInst.sidewaysVelocity;
+    rWingAngle = sharedInst.rWingAngle;
+    lWingAngle = sharedInst.lWingAngle;
 
     accSide = calcDifferential2(side);
     bin = calcBinarize(accSide, 0);
@@ -36,6 +38,9 @@ function annotation = trapezoidBehaviorClassifier(handles)
     bePivotGap = round(readTproConfig('bePivotGap', 5/60) * fps);
     beSharpSlope = readTproConfig('beSharpSlope', 19);
     beSmallSlope = readTproConfig('beSmallSlope', 99);
+    beGrooming = 30;
+    beGroomingGap = round(1.5 * fps);
+    beDurationGm = round(0.1 * fps);
 
     lv(lv <= beMinLv) = 0;  % need to cut noise ...
 
@@ -74,6 +79,11 @@ function annotation = trapezoidBehaviorClassifier(handles)
     smove = beWalkFilter(lv, updown, beSWalkLv, beMinLv, beSmallSlope);
     smove = beDurationFilter(smove, beDurationSM); % duration filter: >= 5 frames
 
+    % ----- grooming -----
+    groom = beGroomingFilter(rWingAngle, lWingAngle, lv, beGrooming, beSWalkLv);
+    groom = beDurationFilter(groom, beDurationGm); % duration filter
+    groom = beGapFilter(groom, beGroomingGap); % long gap filter
+
     % ----- classifying -----
     annotation(smove==1) = 8; % BE_SMALL_MOVE
     annotation(swalk==1) = 7; % BE_SMALL_WALK
@@ -81,6 +91,7 @@ function annotation = trapezoidBehaviorClassifier(handles)
     annotation(sharp==1) = 6; % BE_SHARP_MOVE
     annotation(pivot==1) = 5; % BE_PIVOT
     annotation(climb==1) = 4; % BE_CLIBM
+    annotation(groom==1) = 9; % BE_GROOMING
     annotation(right==1) = 3; % BE_RIGHT
     annotation(jump==1)  = 1; % BE_JUMP
 end
