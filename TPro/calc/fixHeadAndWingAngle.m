@@ -36,26 +36,30 @@ function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_
     lwflip = lwflip .* mask;
     for i=1:fly_num
         st = 1;
-        haflipFly = haflip(:,i);
+        haFlipFly = haflip(:,i);
         while true
             if st >= frame_num
                 break; % out of frame
             end
             % find first flip
-            flipIdx = find(haflipFly(st:end)>0, 1, 'first');
+            flipIdx = find(haFlipFly(st:end)>0, 1, 'first');
             if isempty(flipIdx)
                 break; % no more flip. finish this fly.
             end
             flipIdx = st - 1 + flipIdx;
+            endIdx = (flipIdx+range);
+            if length(haFlipFly) < endIdx
+                endIdx = length(haFlipFly);
+            end
             % find next flip
-            flipEndIdx = find(haflipFly((flipIdx+1):(flipIdx+range))>0, 1, 'first');
+            flipEndIdx = find(haFlipFly((flipIdx+1):endIdx)>0, 1, 'first');
             if isempty(flipEndIdx)
                 % not found a flip in the range. find next flip
                 st = flipIdx+range+1;
                 continue;
             end
             flipEndIdx = flipIdx + flipEndIdx;
-            nanIdx = find(isnan(haflipFly(flipIdx:flipEndIdx)), 1);
+            nanIdx = find(isnan(haFlipFly(flipIdx:flipEndIdx)), 1);
             if ~isempty(nanIdx)
                 st = flipEndIdx+1;
                 continue;
