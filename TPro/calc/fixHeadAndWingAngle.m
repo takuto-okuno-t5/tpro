@@ -69,7 +69,7 @@ function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_
             headAngle(flipRange,i) = mod(headAngle(flipRange,i)+180,360);
             keep_data{5}(flipRange,i) = -keep_data{5}(flipRange,i);
             keep_data{6}(flipRange,i) = -keep_data{6}(flipRange,i);
-            if rwflip(flipIdx) && lwflip(flipIdx)
+            if (isnan(rwflip(flipIdx)) || rwflip(flipIdx)) && (isnan(lwflip(flipIdx)) || lwflip(flipIdx))
                 rWingAngle(flipRange,i) = mod(rWingAngle(flipRange,i)+180,360);
                 lWingAngle(flipRange,i) = mod(lWingAngle(flipRange,i)+180,360);
             else
