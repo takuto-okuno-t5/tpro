@@ -253,9 +253,13 @@ function calcVelocitys(handles, keep_data)
         %sharedInst.keep_data = keep_data;
         sharedInst.rWingAngle = 180 - mod(sharedInst.dir + 360 - angleAxis2def(keep_data{9}), 360);
         sharedInst.lWingAngle = mod(sharedInst.dir + 360 - angleAxis2def(keep_data{10}), 360) - 180;
+        sharedInst.rWingAngleV = [nan(1,size(keep_data{1},2)); diff(sharedInst.rWingAngle)];
+        sharedInst.lWingAngleV = [nan(1,size(keep_data{1},2)); diff(sharedInst.lWingAngle)];
     else
         sharedInst.rWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
         sharedInst.lWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
+        sharedInst.rWingAngleV = sharedInst.rWingAngle;
+        sharedInst.lWingAngleV = sharedInst.lWingAngle;
     end
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
@@ -993,6 +997,10 @@ function data = getAxesData(handles, axesType)
         data = sharedInst.rWingAngle;
     case 'left wing angle'
         data = sharedInst.lWingAngle;
+    case 'right wing angle v'
+        data = sharedInst.rWingAngleV;
+    case 'left wing angle v'
+        data = sharedInst.lWingAngleV;
     otherwise
         data = getappdata(handles.figure1, axesType);
     end
@@ -1442,6 +1450,14 @@ function showLongAxes(hObject, handles, listFly, type, xtickOff)
             yval = sharedInst.lWingAngle(:,listFly);
             ymin = -30;
             ymax = 180;
+        case 'right wing angle v'
+            yval = sharedInst.rWingAngleV(:,listFly);
+            ymin = -90;
+            ymax = 90;
+        case 'left wing angle v'
+            yval = sharedInst.lWingAngleV(:,listFly);
+            ymin = -90;
+            ymax = 90;
         case '--'
             yval = [];
             ymin = 0;
@@ -1611,6 +1627,16 @@ function value = showShortAxes(hObject, handles, t, listFly, type, xtickOff)
             value = sharedInst.lWingAngle(t,listFly);
             ymin = -30;
             ymax = 180;
+        case 'right wing angle v'
+            yval = sharedInst.rWingAngleV((t-st):(t+ed),listFly);
+            value = sharedInst.rWingAngleV(t,listFly);
+            ymin = -90;
+            ymax = 90;
+        case 'left wing angle v'
+            yval = sharedInst.lWingAngleV((t-st):(t+ed),listFly);
+            value = sharedInst.lWingAngleV(t,listFly);
+            ymin = -90;
+            ymax = 90;
         case '--'
             yval = [];
             value = 0;
