@@ -29,6 +29,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
     wingImage(wingImage>0) = 1;
     labelWingImage = single(wingImage .* labeledImage);
     labelWingImage(labelWingImage==0) = NaN;
+    labeledImage(labeledImage==0) = NaN;
 
     % find direction for every blobs
     for i = 1:areaNumber
@@ -72,6 +73,22 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         end
         colLen = size(colors,2);
 
+        % to decrease touched blob error, most out circle colors are
+        % subtracted by far side circle colors
+        box = getCircleColors(labeledImage, cx, cy, ph, majlen * 0.95, range, step);
+        box(box~=label) = 0;
+        box(box==label) = 255;
+        if sum(sum(box)) > 0
+            farColors = zeros(1,stepNum);
+            for k=1:stepNum
+                colBox1 = box(1:width, width*(k-1)+1:width*k);
+                farColors(1,k) = sum(sum(colBox1)) / area;
+            end
+            colors = colors - [farColors; farColors; farColors];
+            colors(colors < 0) = 0;
+        end
+
+        % decide front & back side
         frontTotal = sum(sum(colors(:,1:floor(colLen/4)))) + sum(sum(colors(:,floor(colLen/4*3)+1:colLen)));
         backTotal = sum(sum(colors(:,floor(colLen/4)+1:floor(colLen/4*3))));
         if frontTotal > backTotal
@@ -82,7 +99,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         keep_direction(:,i) = vec;
 
         % find right wing
-        for k=1:size(colors,1)
+        for k=1:3
             colors(k,:) = smooth(colors(k,:), 3, 'moving');
         end
         rstart(1) = floor(80/step) + 1;
@@ -110,7 +127,7 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         lstart = colLen + 2 - rstart;
         lend = colLen +2 - rend;
         wb = nan(1,3); we = nan(1,3);
-        for k=1:size(colors,1)
+        for k=1:3
             WING_COL_TH = wingColorTh(k);
             for j=lstart(k):-1:lend
                 if((colors(k,j) >= WING_COL_TH) && (colors(k,j-1) >= WING_COL_TH))
