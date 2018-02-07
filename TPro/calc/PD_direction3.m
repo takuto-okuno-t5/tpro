@@ -84,7 +84,9 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
                 colBox1 = box(1:width, width*(k-1)+1:width*k);
                 farColors(1,k) = sum(sum(colBox1)) / area;
             end
-            colors = colors - [farColors; farColors; farColors];
+            farColors0 = [0, farColors(1,2:stepNum-1), 0];
+            farColors0(1,floor(colLen/2):floor(colLen/2)+1) = 0;
+            colors = colors - [farColors0; farColors; farColors];
             colors(colors < 0) = 0;
         end
 
