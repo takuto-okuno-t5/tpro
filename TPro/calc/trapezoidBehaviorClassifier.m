@@ -40,10 +40,10 @@ function annotation = trapezoidBehaviorClassifier(handles)
     bePivotGap = round(readTproConfig('bePivotGap', 5/60) * fps);
     beSharpSlope = readTproConfig('beSharpSlope', 19);
     beSmallSlope = readTproConfig('beSmallSlope', 99);
-    beWingAngle = 12.5;
-    beWingAngleV = 7.5;
-    beGroomingGap = round(1.0 * fps);
-    beDurationGm = round(0.2 * fps);
+    beWingAngle = readTproConfig('beWingAngle', 12.5);
+    beWingAngleV = readTproConfig('beWingAngleV', 7.5);
+    beGroomingGap = round(readTproConfig('beGroomingGap', 1.0) * fps);
+    beDurationGm = round(readTproConfig('beDurationGm', 0.2) * fps);
 
     lv(lv <= beMinLv) = 0;  % need to cut noise ...
 
