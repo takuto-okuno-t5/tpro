@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 31-Jan-2018 13:35:26
+% Last Modified by GUIDE v2.5 12-Feb-2018 01:18:09
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -184,6 +184,10 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.img_w = 1024;
     end
 
+    sharedInst.zoomRate = 1.0;
+    sharedInst.xlimit = [1, sharedInst.img_w];
+    sharedInst.ylimit = [1, sharedInst.img_h];
+
     % load roi image file
     roiMaskImage = [];
     roiMasks = {};
@@ -315,6 +319,7 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
     %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    refresh = false;
     % shift + key
     if size(eventdata.Modifier,2) > 0 && strcmp(eventdata.Modifier{:}, 'shift')
         switch eventdata.Key
@@ -398,6 +403,41 @@ function figure1_KeyPressFcn(hObject, eventdata, handles)
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         set(handles.Untitled_16, 'Enable', 'off'); % edit mode:1
         set(handles.Untitled_17, 'Enable', 'on'); % edit mode:2
+        showFrameInAxes(hObject, handles, sharedInst.frameNum);
+    case {'numpad9' '9'}
+        sharedInst.zoomRate = sharedInst.zoomRate + 0.1;
+        if sharedInst.zoomRate > 5
+            sharedInst.zoomRate = 5;
+        end
+        [sharedInst.xlimit, sharedInst.ylimit] = getXYlimit(sharedInst.img_h, sharedInst.img_w, sharedInst.xlimit, sharedInst.ylimit, sharedInst.zoomRate);
+        refresh = true;
+    case {'numpad5' '5'}
+        sharedInst.zoomRate = 1;
+        sharedInst.xlimit = [1, sharedInst.img_w];
+        sharedInst.ylimit = [1, sharedInst.img_h];
+        refresh = true;
+    case {'numpad1' '1'}
+        sharedInst.zoomRate = sharedInst.zoomRate - 0.1;
+        if sharedInst.zoomRate < 1
+            sharedInst.zoomRate = 1;
+        end
+        [sharedInst.xlimit, sharedInst.ylimit] = getXYlimit(sharedInst.img_h, sharedInst.img_w, sharedInst.xlimit, sharedInst.ylimit, sharedInst.zoomRate);
+        refresh = true;
+    case {'numpad8' '8'}
+        [sharedInst.ylimit] = moveXYlimit(sharedInst.img_h, sharedInst.ylimit, -1);
+        refresh = true;
+    case {'numpad2' '2'}
+        [sharedInst.ylimit] = moveXYlimit(sharedInst.img_h, sharedInst.ylimit, 1);
+        refresh = true;
+    case {'numpad4' '4'}
+        [sharedInst.xlimit] = moveXYlimit(sharedInst.img_w, sharedInst.xlimit, -1);
+        refresh = true;
+    case {'numpad6' '6'}
+        [sharedInst.xlimit] = moveXYlimit(sharedInst.img_w, sharedInst.xlimit, 1);
+        refresh = true;
+    end
+    if refresh
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
         showFrameInAxes(hObject, handles, sharedInst.frameNum);
     end
 end
@@ -1678,6 +1718,56 @@ function Untitled_28_Callback(hObject, eventdata, handles)
     disp(['done!     t =' num2str(time) 's']);
 end
 
+% --------------------------------------------------------------------
+function Untitled_29_Callback(hObject, eventdata, handles)
+% hObject    handle to Untitled_29 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_30_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_30 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.zoomRate = sharedInst.zoomRate + 0.1;
+    if sharedInst.zoomRate > 5
+        sharedInst.zoomRate = 5;
+    end
+    [sharedInst.xlimit, sharedInst.ylimit] = getXYlimit(sharedInst.img_h, sharedInst.img_w, sharedInst.xlimit, sharedInst.ylimit, sharedInst.zoomRate);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_31_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_31 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.zoomRate = sharedInst.zoomRate - 0.1;
+    if sharedInst.zoomRate < 1
+        sharedInst.zoomRate = 1;
+    end
+    [sharedInst.xlimit, sharedInst.ylimit] = getXYlimit(sharedInst.img_h, sharedInst.img_w, sharedInst.xlimit, sharedInst.ylimit, sharedInst.zoomRate);
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
+% --------------------------------------------------------------------
+function Untitled_32_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_32 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    sharedInst.zoomRate = 1;
+    sharedInst.xlimit = [1, sharedInst.img_w];
+    sharedInst.ylimit = [1, sharedInst.img_h];
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -1882,6 +1972,10 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     hold off;
 
+    % set axis offset
+    xlim(sharedInst.xlimit);
+    ylim(sharedInst.ylimit);
+
     % show long params
     showLongAxesTimeLine(handles.axes3, handles, t);
 
@@ -1899,5 +1993,3 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
-
-
