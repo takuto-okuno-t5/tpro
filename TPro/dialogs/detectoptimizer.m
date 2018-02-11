@@ -22,7 +22,7 @@ function varargout = detectoptimizer(varargin)
 
     % Edit the above text to modify the response to help detectoptimizer
 
-    % Last Modified by GUIDE v2.5 31-Dec-2017 17:58:02
+    % Last Modified by GUIDE v2.5 10-Feb-2018 18:08:25
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -1127,6 +1127,36 @@ function Untitled_11_Callback(hObject, eventdata, handles) % template matching o
     end
 end
 
+% --------------------------------------------------------------------
+function Untitled_12_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_12 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
+        img = sharedInst.step2Image;
+    else
+        img = applyBackgroundSub(handles, sharedInst.originalImage);
+    end
+    [dlg, colMin, colMax, rate] = wingDetectionOptionDialog({ 
+        num2str(sharedInst.wingColorMin), num2str(sharedInst.wingColorMax), num2str(sharedInst.wingRadiusRate), ...
+        img, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.blobAreas, ...
+        sharedInst.blobCenterPoints, sharedInst.blobMajorAxis, sharedInst.blobOrient, sharedInst.blobEcc ...
+        });
+    delete(dlg);
+
+    sharedInst.wingColorMin = str2num(colMin);
+    sharedInst.wingColorMax = str2num(colMax);
+    sharedInst.wingRadiusRate = str2num(rate);
+    if ~isempty(colMax)
+        sharedInst.isModified = true;
+        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+        set(handles.pushbutton4, 'Enable', 'on');
+        set(handles.Untitled_6, 'Enable', 'on');
+    end
+    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1317,6 +1347,11 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     sharedInst.detectedPointX = blobPointX;
     sharedInst.detectedPointY = blobPointY;
     sharedInst.detectedBoxes = blobBoxes;
+    sharedInst.blobAreas = blobAreas;
+    sharedInst.blobCenterPoints = blobCenterPoints;
+    sharedInst.blobMajorAxis = blobMajorAxis;
+    sharedInst.blobOrient = blobOrient;
+    sharedInst.blobEcc = blobEcc;
     if sharedInst.showDirection
         sharedInst.detectedDirection = keep_direction;
     end
@@ -1326,4 +1361,3 @@ function showDetectResultInAxes(hObject, handles, frameImage)
     set(handles.text16, 'String', size(blobPointX,1));
     guidata(hObject, handles);  % Update handles structure
 end
-
