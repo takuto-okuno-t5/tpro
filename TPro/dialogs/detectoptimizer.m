@@ -1329,6 +1329,9 @@ function showFrameInAxes(hObject, handles, imageMode, frameNum)
     else
         cla;
         imshow(img);
+        % set axis offset
+        xlim(sharedInst.xlimit);
+        ylim(sharedInst.ylimit);
     end
 end
 

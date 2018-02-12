@@ -75,6 +75,8 @@ handles.autodetect = 0;
 handles.autotracking = 0;
 handles.autofinish = 0;
 handles.autodcd = 0;
+handles.pi = [];
+handles.piexport = [];
 
 % load command line input
 i = 1;
@@ -113,6 +115,12 @@ while true
             i = i + 1;
         case {'--chase'}
             handles.autochase = 1;
+        case {'--pi'}
+            handles.pi = [handles.pi; [str2num(varargin{i+1}) str2num(varargin{i+2})]];
+            i = i + 2;
+        case {'--piexport'}
+            handles.piexport = varargin{i+1};
+            i = i + 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
             disp('  -b, --batch file    batch csv [file]');
@@ -127,6 +135,8 @@ while true
             disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
             disp('  --chase             export chase behavior after tracking');
+            disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] after detection');
+            disp('  --piexport path     export PI files on [path]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
         otherwise
@@ -350,6 +360,9 @@ if handles.autotracking
 end
 if handles.autodcd
     cmdCalcDcDAndExportResult(handles)
+end
+if ~isempty(handles.pi)
+    cmdCalcPIAndExportResult(handles)
 end
 if handles.autofinish
     delete(hObject);
