@@ -7,5 +7,5 @@ function dir = calcDir(dy, dx)
         v1(:,check_v1==0) = NaN;
         dir(i,:) = atan2d(v1(2,:),v1(1,:));
     end
-    dir = mod(dir + 360, 360);
+    dir = single(mod(dir + 360, 360));
 end

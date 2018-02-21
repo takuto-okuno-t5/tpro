@@ -1,5 +1,5 @@
 %%
-function cmdCalcChaseAndExportResult(handles)
+function cmdCalcBehaviorAndExportResult(handles)
     inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
@@ -24,7 +24,7 @@ function cmdCalcChaseAndExportResult(handles)
         records = [records; C];
     end
 
-    disp('start to export Chase');
+    disp('start to export behavior');
     tic;
     % calc ewd score
     for data_th = 1:size(records,1)
@@ -77,19 +77,23 @@ function cmdCalcChaseAndExportResult(handles)
             load(matFile);
         end
 
-        % calc chase
+        % calc velocity etc
+        [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fpsNum, mmPerPixel);
         trackingInfo = struct;
         trackingInfo.fpsNum = fpsNum;
-        trackingInfo.mmPerPixel = mmPerPixel;
-        trackingInfo.keep_data = keep_data;
-        trackingInfo.vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
-        trackingInfo.accVxy = calcDifferential2(trackingInfo.vxy);
-        bin = calcBinarize(trackingInfo.accVxy, 0);
-        updownVxy = calcDifferential(bin);
-        updownVxy(isnan(updownVxy)) = 0;
+        trackingInfo.vxy = vxy;
+        trackingInfo.accVxy = accVxy;
         trackingInfo.updownVxy = updownVxy;
-        trackingInfo.dir = calcDir(keep_data{5}, keep_data{6});
-        chase = trapezoidFindChase(trackingInfo, []);
+        trackingInfo.dir = dir;
+        trackingInfo.sideways = sideways;
+        trackingInfo.sidewaysVelocity = sidewaysVelocity;
+        trackingInfo.av = av;
+        trackingInfo.ecc = ecc;
+        trackingInfo.rWingAngle = rWingAngle;
+        trackingInfo.lWingAngle = lWingAngle;
+        trackingInfo.rWingAngleV = rWingAngleV;
+        trackingInfo.lWingAngleV = lWingAngleV;
+        behavior = trapezoidBehaviorClassifier(trackingInfo);
 
         % save data as text
         for i=1:roiNum
@@ -102,9 +106,9 @@ function cmdCalcChaseAndExportResult(handles)
                 dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
             end
             disp(['exporting a file : ' dataFileName]);
-            saveTrackingTableResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, chase, 'chase');
+            saveTrackingTableResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, behavior, 'be');
         end
     end
     time = toc;
-    disp(['exporting Chase ... done : ' num2str(time) 's']);
+    disp(['exporting behavior ... done : ' num2str(time) 's']);
 end

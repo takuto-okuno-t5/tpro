@@ -235,35 +235,21 @@ end
 
 function calcVelocitys(handles, keep_data)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    sharedInst.vxy = calcVxy(keep_data{3}, keep_data{4}) * sharedInst.fpsNum * sharedInst.mmPerPixel;
-    sharedInst.accVxy = calcDifferential2(sharedInst.vxy);
-    bin = calcBinarize(sharedInst.accVxy, 0);
-    updownVxy = calcDifferential(bin);
-    updownVxy(isnan(updownVxy)) = 0;
+    [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, sharedInst.fpsNum, sharedInst.mmPerPixel);
+    sharedInst.vxy = vxy;
+    sharedInst.accVxy = accVxy;
     sharedInst.updownVxy = updownVxy;
-    sharedInst.dir = calcDir(keep_data{5}, keep_data{6});
-    sharedInst.sideways = calcSideways(keep_data{2}, keep_data{1}, keep_data{8});
-    sharedInst.sidewaysVelocity = calcSidewaysVelocity(sharedInst.vxy, sharedInst.sideways);
-    sharedInst.av = abs(calcAngularVelocity(keep_data{8}));
-    sharedInst.ecc = keep_data{7};
-    if length(keep_data) > 8
-        %beJumpLv = readTproConfig('beJumpLv', 63);
-        %[headAngle, keep_data] = fixHeadAndWingAngle(sharedInst.vxy, sharedInst.ecc, sharedInst.dir, keep_data, beJumpLv, sharedInst.ignoreEccTh, sharedInst.fpsNum, sharedInst.startFrame);
-        %sharedInst.dir = headAngle;
-        %sharedInst.keep_data = keep_data;
-        sharedInst.rWingAngle = 180 - mod(sharedInst.dir + 360 - angleAxis2def(keep_data{9}), 360);
-        sharedInst.lWingAngle = mod(sharedInst.dir + 360 - angleAxis2def(keep_data{10}), 360) - 180;
-        sharedInst.rWingAngleV = [nan(1,size(keep_data{1},2)); diff(sharedInst.rWingAngle)];
-        sharedInst.lWingAngleV = [nan(1,size(keep_data{1},2)); diff(sharedInst.lWingAngle)];
-    else
-        sharedInst.rWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
-        sharedInst.lWingAngle = nan(size(keep_data{1},1), size(keep_data{1},2));
-        sharedInst.rWingAngleV = sharedInst.rWingAngle;
-        sharedInst.lWingAngleV = sharedInst.lWingAngle;
-    end
+    sharedInst.dir = dir;
+    sharedInst.sideways = sideways;
+    sharedInst.sidewaysVelocity = sidewaysVelocity;
+    sharedInst.av = av;
+    sharedInst.ecc = ecc;
+    sharedInst.rWingAngle = rWingAngle;
+    sharedInst.lWingAngle = lWingAngle;
+    sharedInst.rWingAngleV = rWingAngleV;
+    sharedInst.lWingAngleV = lWingAngleV;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 end
-
 
 % --- Outputs from this function are returned to the command line.
 function varargout = annotationDialog_OutputFcn(hObject, eventdata, handles) 

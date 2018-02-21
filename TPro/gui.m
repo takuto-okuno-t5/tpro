@@ -77,6 +77,7 @@ handles.autotracking = 0;
 handles.autofinish = 0;
 handles.autochase = 0;
 handles.autodcd = 0;
+handles.behavior = 0;
 handles.pi = [];
 handles.export = [];
 
@@ -117,6 +118,8 @@ while true
             i = i + 1;
         case {'--chase'}
             handles.autochase = 1;
+        case {'--behavior'}
+            handles.behavior = 1;
         case {'--pi'}
             handles.pi = [handles.pi; [str2num(varargin{i+1}) str2num(varargin{i+2})]];
             i = i + 2;
@@ -134,10 +137,11 @@ while true
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
+            disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
             disp('  --dcd               export DCD using detection or tracking data');
             disp('  --dcdp file         set dcd percetile map [file]');
+            disp('  --behavior          export single fly behavior using tracking data');
             disp('  --chase             export chase behavior using tracking data');
-            disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
             disp('  --export path       export files on [path]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
@@ -360,14 +364,17 @@ end
 if handles.autotracking
     pushbutton5_Callback(handles.pushbutton5, eventdata, handles)
 end
+if ~isempty(handles.pi)
+    cmdCalcPIAndExportResult(handles)
+end
 if handles.autodcd
     cmdCalcDcdAndExportResult(handles)
 end
+if handles.behavior
+    cmdCalcBehaviorAndExportResult(handles)
+end
 if handles.autochase
     cmdCalcChaseAndExportResult(handles)
-end
-if ~isempty(handles.pi)
-    cmdCalcPIAndExportResult(handles)
 end
 if handles.autofinish
     delete(hObject);

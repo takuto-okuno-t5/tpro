@@ -1,6 +1,6 @@
-%% save tracking chase result files
-function saveTrackingChaseResultText(dataFileName, keep_data, img_h, img_w, roiMask, chase)
-    write_file_cha = fopen([dataFileName '_chase.txt'],'wt');
+%% save tracking table result files
+function saveTrackingTableResultText(dataFileName, keep_data, img_h, img_w, roiMask, flydata, name)
+    write_file_cha = fopen([dataFileName '_' name '.txt'],'wt');
 
     % cook raw data before saving
     end_row = size(keep_data{2}, 1) - 2;
@@ -17,7 +17,7 @@ function saveTrackingChaseResultText(dataFileName, keep_data, img_h, img_w, roiM
         nanIdx = unique([nanIdxY, nanIdxX, roiIdx2]);
 
         % make save string
-        chaseRow = chase(row_count, :);
+        chaseRow = flydata(row_count, :);
         chaseRow(nanIdx) = NaN;
         roiFlyNum = length(chaseRow);
         fmtString = generatePrintFormatDString(roiFlyNum);

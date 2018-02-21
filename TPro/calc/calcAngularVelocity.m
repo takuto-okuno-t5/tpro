@@ -3,7 +3,7 @@ function av = calcAngularVelocity(angle)
     frame_num = size(angle, 1);
     fly_num = size(angle, 2);
 
-    av = zeros(frame_num,fly_num);
+    av = single(zeros(frame_num,fly_num));
     for fly_n=1:fly_num
         for j=1:(frame_num-1)
             a1 = angle(j,   fly_n);

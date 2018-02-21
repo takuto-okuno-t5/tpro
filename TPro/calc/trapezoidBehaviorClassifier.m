@@ -1,16 +1,29 @@
 %%
 function annotation = trapezoidBehaviorClassifier(handles)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    fps = sharedInst.fpsNum;
-    lv = sharedInst.vxy;
-    updown = sharedInst.updownVxy;
-    av = sharedInst.av;
-    ecc = sharedInst.ecc;
-    side = sharedInst.sidewaysVelocity;
-    rWingAngle = sharedInst.rWingAngle;
-    lWingAngle = sharedInst.lWingAngle;
-    rwav = sharedInst.rWingAngleV;
-    lwav = sharedInst.lWingAngleV;
+    if isfield(handles, 'figure1')
+        sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+        fps = sharedInst.fpsNum;
+        lv = sharedInst.vxy;
+        updown = sharedInst.updownVxy;
+        av = sharedInst.av;
+        ecc = sharedInst.ecc;
+        side = sharedInst.sidewaysVelocity;
+        rWingAngle = sharedInst.rWingAngle;
+        lWingAngle = sharedInst.lWingAngle;
+        rwav = sharedInst.rWingAngleV;
+        lwav = sharedInst.lWingAngleV;
+    else
+        fps = handles.fpsNum;
+        lv = handles.vxy;
+        updown = handles.updownVxy;
+        av = handles.av;
+        ecc = handles.ecc;
+        side = handles.sidewaysVelocity;
+        rWingAngle = handles.rWingAngle;
+        lWingAngle = handles.lWingAngle;
+        rwav = handles.rWingAngleV;
+        lwav = handles.lWingAngleV;
+    end
 
     accSide = calcDifferential2(side);
     bin = calcBinarize(accSide, 0);
