@@ -3,10 +3,10 @@ function saveDetectionDcdResultText(dataFileName, X, Y, i, roiMasks, r, cnr)
     write_file_dcd = fopen([dataFileName '_dcd.txt'], 'wt');
 
     % cook raw data before saving
-    end_row = size(X, 1) - 2;
+    end_row = size(X, 2);
     for row_count = 1:end_row
-        fy = X(row_count,:);
-        fx = Y(row_count,:);
+        fy = X{row_count};
+        fx = Y{row_count};
         flyNum = length(fx);
         for j = flyNum:-1:1
             y = round(fy(j));

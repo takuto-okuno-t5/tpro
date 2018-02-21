@@ -59,6 +59,7 @@ function gui_OpeningFcn(hObject, eventdata, handles, varargin)
 if exist('./io','dir')
     addpath('./io');
     addpath('./gui');
+    addpath('./cmd');
     addpath('./calc');
     addpath('./util');
     addpath('./dialogs');
@@ -74,9 +75,10 @@ handles.autobackground = 0;
 handles.autodetect = 0;
 handles.autotracking = 0;
 handles.autofinish = 0;
+handles.autochase = 0;
 handles.autodcd = 0;
 handles.pi = [];
-handles.piexport = [];
+handles.export = [];
 
 % load command line input
 i = 1;
@@ -118,8 +120,8 @@ while true
         case {'--pi'}
             handles.pi = [handles.pi; [str2num(varargin{i+1}) str2num(varargin{i+2})]];
             i = i + 2;
-        case {'--piexport'}
-            handles.piexport = varargin{i+1};
+        case {'--export','--piexport'}
+            handles.export = varargin{i+1};
             i = i + 1;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
@@ -131,12 +133,12 @@ while true
             disp('  -d, --detect        force to start detection');
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
-            disp('  --dcd               force to start dcd calculation');
-            disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
-            disp('  --chase             export chase behavior after tracking');
-            disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] after detection');
-            disp('  --piexport path     export PI files on [path]');
+            disp('  --dcd               export DCD using detection or tracking data');
+            disp('  --dcdp file         set dcd percetile map [file]');
+            disp('  --chase             export chase behavior using tracking data');
+            disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
+            disp('  --export path       export files on [path]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
         otherwise
@@ -359,7 +361,10 @@ if handles.autotracking
     pushbutton5_Callback(handles.pushbutton5, eventdata, handles)
 end
 if handles.autodcd
-    cmdCalcDcDAndExportResult(handles)
+    cmdCalcDcdAndExportResult(handles)
+end
+if handles.autochase
+    cmdCalcChaseAndExportResult(handles)
 end
 if ~isempty(handles.pi)
     cmdCalcPIAndExportResult(handles)
@@ -1961,26 +1966,11 @@ for data_th = 1:size(records,1)
     % optional data export
     mdparam = [];
     dcdparam = [];
-    chaseparam = [];
     if exportDcd
         dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
     end
     if exportMd
         mdparam = [mmPerPixel];
-    end
-    if isfield(handles, 'autochase')
-        trackingInfo = struct;
-        trackingInfo.fpsNum = fpsNum;
-        trackingInfo.mmPerPixel = mmPerPixel;
-        trackingInfo.keep_data = keep_data;
-        trackingInfo.vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
-        trackingInfo.accVxy = calcDifferential2(trackingInfo.vxy);
-        bin = calcBinarize(trackingInfo.accVxy, 0);
-        updownVxy = calcDifferential(bin);
-        updownVxy(isnan(updownVxy)) = 0;
-        trackingInfo.updownVxy = updownVxy;
-        trackingInfo.dir = calcDir(keep_data{5}, keep_data{6});
-        chaseparam = trapezoidFindChase(trackingInfo, []);
     end
 
     % save data as text
@@ -1989,7 +1979,7 @@ for data_th = 1:size(records,1)
         dataFileName = [outputDataPath shuttleVideo.name '_' filename];
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, chaseparam);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
 
         % save input data used for generating this result
         record = {records{data_th,:}};

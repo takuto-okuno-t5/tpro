@@ -24,7 +24,9 @@ function cmdCalcPIAndExportResult(handles)
         records = [records; C];
     end
 
-    % calc ewd score
+    disp('start to export PI');
+    tic;
+    % calc PI
     for data_th = 1:size(records,1)
         if ~records{data_th, 1}
             continue;
@@ -66,13 +68,15 @@ function cmdCalcPIAndExportResult(handles)
             % calc PI
             result = calcPI(X, Y, {roiMasks{roi1}, roiMasks{roi2}});
             % export file
-            if isempty(handles.piexport)
+            if isempty(handles.export)
                 outputPath = [confPath 'detect_output/'];
             else
-                outputPath = [handles.piexport '/'];
+                outputPath = [handles.export '/'];
             end
             dataFileName = [outputPath name '_' filename '_pi_roi_' num2str(handles.pi(i,1)) '_vs_' num2str(handles.pi(i,2))];
             saveDetectionPIResultText(dataFileName, result);
         end
     end
+    time = toc;
+    disp(['exporting PI ... done : ' num2str(time) 's']);
 end

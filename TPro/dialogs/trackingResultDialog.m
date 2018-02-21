@@ -2154,7 +2154,7 @@ function Untitled_25_Callback(hObject, eventdata, handles)
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam, []);
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);

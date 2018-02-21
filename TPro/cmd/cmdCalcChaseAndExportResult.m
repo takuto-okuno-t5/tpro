@@ -1,5 +1,5 @@
 %%
-function cmdCalcDcdAndExportResult(handles)
+function cmdCalcChaseAndExportResult(handles)
     inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
@@ -8,10 +8,6 @@ function cmdCalcDcdAndExportResult(handles)
     vl = load(inputListFile);
     videoPath = vl.videoPath;
     videoFiles = vl.videoFiles;
-
-    % read tpro configuration
-    dcdRadius = readTproConfig('dcdRadius', 7.5);
-    dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -28,16 +24,17 @@ function cmdCalcDcdAndExportResult(handles)
         records = [records; C];
     end
 
+    disp('start to export Chase');
+    tic;
     % calc ewd score
     for data_th = 1:size(records,1)
         if ~records{data_th, 1}
             continue;
         end
         name = records{data_th, 2};
+        fpsNum = records{data_th, 7};
         roiNum = records{data_th, 10};
         mmPerPixel = records{data_th, 9};
-        r = dcdRadius / mmPerPixel;
-        cnr = dcdCnRadius / mmPerPixel;
 
         % get path of output folder
         confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -53,7 +50,7 @@ function cmdCalcDcdAndExportResult(handles)
             img_h = 1024;
             img_w = 1024;
         end
-    
+
         % load roi image file
         roiMasks = {};
         csvFileName = [confPath 'roi.csv'];
@@ -75,17 +72,39 @@ function cmdCalcDcdAndExportResult(handles)
         end
 
         % load detection & tracking result
-        load(strcat(confPath,'multi/track_',filename,'.mat'));
+        matFile = [confPath 'multi/track_' filename,'.mat'];
+        if exist(matFile,'file')
+            load(matFile);
+        end
+
+        % calc chase
+        trackingInfo = struct;
+        trackingInfo.fpsNum = fpsNum;
+        trackingInfo.mmPerPixel = mmPerPixel;
+        trackingInfo.keep_data = keep_data;
+        trackingInfo.vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
+        trackingInfo.accVxy = calcDifferential2(trackingInfo.vxy);
+        bin = calcBinarize(trackingInfo.accVxy, 0);
+        updownVxy = calcDifferential(bin);
+        updownVxy(isnan(updownVxy)) = 0;
+        trackingInfo.updownVxy = updownVxy;
+        trackingInfo.dir = calcDir(keep_data{5}, keep_data{6});
+        chase = trapezoidFindChase(trackingInfo, []);
 
         % save data as text
         for i=1:roiNum
-            outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
-            dataFileName = [outputPath name '_' filename];
-            saveDetectionDcdResultText(dataFileName, keep_data{1}, keep_data{2}, i, roiMasks, r, cnr);
-
-            outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-            dataFileName = [outputPath name '_' filename];
-            saveTrackingDcdResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, r, cnr);
+            % export file
+            if isempty(handles.export)
+                outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+                dataFileName = [outputPath name '_' filename];
+            else
+                outputPath = [handles.export '/'];
+                dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
+            end
+            disp(['exporting a file : ' dataFileName]);
+            saveTrackingChaseResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, chase);
         end
     end
+    time = toc;
+    disp(['exporting Chase ... done : ' num2str(time) 's']);
 end

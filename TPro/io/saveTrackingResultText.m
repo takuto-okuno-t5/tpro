@@ -1,16 +1,13 @@
 %% save tracking result files
-function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam, chaseparam)
+function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam)
     write_file_x = fopen([dataFileName '_x.txt'],'wt');
     write_file_y = fopen([dataFileName '_y.txt'],'wt');
     write_file_vx = fopen([dataFileName '_vx.txt'],'wt');
     write_file_vy = fopen([dataFileName '_vy.txt'],'wt');
     write_file_vxy = fopen([dataFileName '_vxy.txt'],'wt');
     write_file_dir = fopen([dataFileName '_dir.txt'],'wt');    % head angle 0 to 360 2016-11-10
-%    write_file_dd = fopen([dataFileName '_dd.txt'],'wt');    % direction 2016-11-10
-%    write_file_dd2 = fopen([dataFileName '_dd2.txt'],'wt');    % direction 2016-11-11
     write_file_ecc = fopen([dataFileName '_ecc.txt'],'wt');    % body ecc
     write_file_angle = fopen([dataFileName '_angle.txt'],'wt');    % body angle -90 to 90
-%    write_file_dis = fopen([dataFileName '_dis.txt'],'wt');
 %    write_file_svxy = fopen([dataFileName '_svxy.txt'],'wt');
     if length(keep_data) > 8
         write_file_rwdir = fopen([dataFileName '_rwdir.txt'],'wt');    % right wing angle 0 to 360
@@ -21,9 +18,6 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     end
     if ~isempty(mdparam)
         write_file_md = fopen([dataFileName '_md.txt'], 'wt');
-    end
-    if ~isempty(chaseparam)
-        write_file_cha = fopen([dataFileName '_chase.txt'], 'wt');
     end
 
     % pre process
@@ -46,9 +40,7 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             rwdir = rightWingAngle(row_count, :);
             lwdir = leftWingAngle(row_count, :);
         end
-%        if row_count > 1
-%            distance_travel = sqrt((fx - keep_data{2}(row_count-1, :)).^2 + (fy - keep_data{1}(row_count-1, :)).^2);
-%        end
+
         Y = round(fy);
         X = round(fx);
         nanIdxY = find((Y > img_h) | (Y < 1));
@@ -72,9 +64,6 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
 
         fprintf(write_file_x, fmtString, fx);
         fprintf(write_file_y, fmtString, img_h - fy);
-%        if row_count > 1
-%            fprintf(write_file_dis, fmtString, distance_travel);
-%        end
         fprintf(write_file_vy, fmtString, (-1).*vy);
         fprintf(write_file_vx, fmtString, vx);
         vxy = sqrt( vy.^2 +  vx.^2 );
@@ -90,33 +79,6 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         v1(:,check_v1==0) = NaN;
         angle_v1 = atan2d(v1(2,:),v1(1,:));
 
-        %{
-        if row_count == 1
-            fprintf(write_file_dd, fmtString, (0).*ddy );
-            fprintf(write_file_dd2, fmtString, (0).*ddy );
-        else
-            angle_v0 = atan2d(v0(2,:),v0(1,:));
-            angle_v1_v0 = angle_v1 - angle_v0;  % in degree
-            for i_angle_mo = 1:size(angle_v1_v0,2)
-                if angle_v1_v0(i_angle_mo) > 180
-                    angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)-360;
-                elseif angle_v1_v0(i_angle_mo) < -180
-                    angle_v1_v0(i_angle_mo) = angle_v1_v0(i_angle_mo)+360;
-                end
-            end
-            angle_v1_v0_2 = angle_v1_v0;
-            for i_angle_mo = 1:size(angle_v1_v0_2,2)
-                if angle_v1_v0_2(i_angle_mo) > 90
-                    angle_v1_v0_2(i_angle_mo) = 180 - angle_v1_v0_2(i_angle_mo);
-                elseif angle_v1_v0_2(i_angle_mo) < -90
-                    angle_v1_v0_2(i_angle_mo) = 180 + angle_v1_v0_2(i_angle_mo);
-                end
-                angle_v1_v0_2(i_angle_mo) = abs(angle_v1_v0_2(i_angle_mo));
-            end
-            fprintf(write_file_dd, fmtString, angle_v1_v0 );
-            fprintf(write_file_dd2, fmtString, angle_v1_v0_2 );
-        end
-        %}
         fprintf(write_file_dir, fmtString, angle_v1 );
         fprintf(write_file_ecc, fmtString, ecc);
         fprintf(write_file_angle, fmtString, angle);
@@ -164,14 +126,6 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             fmtString = generatePrintFormatString(roiFlyNum);
             fprintf(write_file_md, fmtString, mdfly);
         end
-        if ~isempty(chaseparam)
-            % make save string
-            chaseRow = chaseparam(row_count, :);
-            chaseRow(nanIdx) = NaN;
-            roiFlyNum = length(chaseRow);
-            fmtString = generatePrintFormatDString(roiFlyNum);
-            fprintf(write_file_cha, fmtString, chaseRow);
-        end
     end
 
     fclose(write_file_x);
@@ -180,23 +134,17 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
     fclose(write_file_vy);
     fclose(write_file_vxy);
     fclose(write_file_dir);
-%    fclose(write_file_dd);
-%    fclose(write_file_dd2);
     fclose(write_file_ecc);
     fclose(write_file_angle);
     if length(keep_data) > 8
         fclose(write_file_rwdir);
         fclose(write_file_lwdir);
     end
-%    fclose(write_file_dis);
 %    fclose(write_file_svxy);
     if ~isempty(dcdparam)
         fclose(write_file_dcd);
     end
     if ~isempty(mdparam)
         fclose(write_file_md);
-    end
-    if ~isempty(chaseparam)
-        fclose(write_file_cha);
     end
 end
