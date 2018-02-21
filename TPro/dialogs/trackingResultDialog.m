@@ -1658,7 +1658,7 @@ function moveTrackingPoint(id, frameNum, x, y, isSaveHistory, handles)
 
     % update edit history
     if isSaveHistory
-        if size(sharedInst.editHistory,2) < 7
+        if ~isempty(sharedInst.editHistory) && size(sharedInst.editHistory,2) < 7
             sharedInst.editHistory{size(sharedInst.editHistory,1),7} = [];
         end
         sharedInst.editHistory = [sharedInst.editHistory; {'pmove', id, frameNum, x, y, px, py}];

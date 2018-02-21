@@ -131,12 +131,20 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_direction_sorted = keep_direction_sorted;
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_ecc_sorted = keep_ecc_sorted;
+    if exist('keep_major_axis', 'var')
+        sharedInst.keep_major_axis = keep_major_axis;
+        sharedInst.keep_minor_axis = keep_minor_axis;
+    else
+        sharedInst.keep_major_axis = [];
+        sharedInst.keep_minor_axis = [];
+    end
     if exist('keep_wings_sorted', 'var')
         sharedInst.keep_wings_sorted = keep_wings_sorted;
         sharedInst.wingLength = nanmean(keep_mean_blobmajor) * 0.6;
     else
         sharedInst.keep_wings_sorted = [];
     end
+
     sharedInst.selectX = {};
     sharedInst.selectY = {};
     sharedInst.selectFrame = sharedInst.frameNum;
@@ -1663,14 +1671,19 @@ function Untitled_27_Callback(hObject, eventdata, handles)
     keep_direction_sorted = sharedInst.keep_direction_sorted;
     keep_areas = sharedInst.keep_areas;
     keep_ecc_sorted = sharedInst.keep_ecc_sorted;
-    save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+    keep_major_axis = sharedInst.keep_major_axis;
+    keep_minor_axis = sharedInst.keep_minor_axis;
+    keep_wings_sorted = sharedInst.keep_wings_sorted;
+    save(dataFileName,  'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas', 'keep_major_axis', 'keep_minor_axis', 'keep_wings_sorted');
+
     % save keep_count
-    keep_count = zeros(1,length(X));
+    dataFileName = [sharedInst.confPath 'multi/detect_' filename 'keep_count.mat'];
+    load(dataFileName);
+    keep_count = zeros(1,length(X)); % update keep_count
     for i=1:length(X)
         keep_count(i) = length(X{i}(:));
     end
-    dataFileName = [sharedInst.confPath 'multi/detect_' filename 'keep_count.mat'];
-    save(dataFileName, 'keep_count');
+    save(dataFileName, 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
 
     sharedInst.isModified = false;
     set(handles.pushbutton6, 'Enable', 'off');
