@@ -1,10 +1,9 @@
 %% save NxN mat result files
-function saveNxNmatRoiText2(dataFileName, CX, CY, img_h, img_w, roiMask, flydata, typename)
+function saveNxNmatRoiText2(dataFileName, CX, CY, img_h, img_w, roiMask, flydata, startRow, endRow, typename)
     write_file_cha = fopen([dataFileName '_' typename '.txt'],'wt');
 
     % cook raw data before saving
-    end_row = size(CX, 2);
-    for row_count = 1:end_row
+    for row_count = startRow:endRow
         fy = CX{row_count};
         fx = CY{row_count};
         Y = round(fy);

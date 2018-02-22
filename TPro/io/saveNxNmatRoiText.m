@@ -1,12 +1,11 @@
 %% save NxN mat result files
-function saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMask, flydata, typename)
+function saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMask, flydata, startRow, endRow, typename)
     write_file_cha = fopen([dataFileName '_' typename '.txt'],'wt');
 
     % cook raw data before saving
-    end_row = size(keep_data{2}, 1) - 2;
-    for row_count = 1:end_row
-        fx = keep_data{2}(row_count, :);
-        fy = keep_data{1}(row_count, :);
+    for i = startRow:endRow
+        fx = keep_data{2}(i, :);
+        fy = keep_data{1}(i, :);
         Y = round(fy);
         X = round(fx);
         nanIdxY = find((Y > img_h) | (Y < 1));
@@ -17,7 +16,7 @@ function saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMask, flyda
         nanIdx = unique([nanIdxY, nanIdxX, roiIdx2]);
 
         % make save string
-        dataRow = flydata(row_count, :);
+        dataRow = flydata(i, :);
         dataRow(nanIdx) = NaN;
         roiFlyNum = length(dataRow);
         fmtString = generatePrintFormatDString(roiFlyNum);

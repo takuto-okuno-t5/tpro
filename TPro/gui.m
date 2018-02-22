@@ -81,12 +81,11 @@ handles.autobackground = 0;
 handles.autodetect = 0;
 handles.autotracking = 0;
 handles.autofinish = 0;
-handles.autochase = 0;
 handles.autodcd = 0;
-handles.behavior = 0;
-handles.group = 0;
 handles.pi = [];
 handles.export = [];
+handles.analyseSrc = [];
+handles.range = {};
 
 % load command line input
 i = 1;
@@ -123,18 +122,18 @@ while true
         case {'--dcdp'}
             handles.dcdpfile = varargin{i+1};
             i = i + 1;
-        case {'--chase'}
-            handles.autochase = 1;
-        case {'--behavior'}
-            handles.behavior = 1;
-        case {'--group'}
-            handles.group = 1;
         case {'--pi'}
             handles.pi = [handles.pi; [str2num(varargin{i+1}) str2num(varargin{i+2})]];
             i = i + 2;
         case {'--export','--piexport'}
             handles.export = varargin{i+1};
             i = i + 1;
+        case {'--src'}
+            handles.analyseSrc = varargin{i+1};
+            i = i + 1;
+        case {'--range'}
+            handles.range = {varargin{i+1} varargin{i+2}};
+            i = i + 2;
         case {'-h','--help'}
             disp('usage: gui [options] movies ...');
             disp('  -b, --batch file    batch csv [file]');
@@ -149,14 +148,20 @@ while true
             disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
             disp('  --dcd               export DCD using detection or tracking data');
             disp('  --dcdp file         set dcd percetile map [file]');
-            disp('  --behavior          export single fly behavior using tracking data');
-            disp('  --chase             export chase behavior using tracking data');
-            disp('  --group             export group number using tracking data');
+            disp('  --src type          specify analysing data source (tracking data)');
+            disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcd,group,gcount,be,chase');
+            disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --export path       export files on [path]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
         otherwise
-            handles.movies = [handles.movies varargin{i}];
+            if strcmp(varargin{i}(1), '-')
+                disp(['bad option : ' varargin{i}]);
+                i = size(varargin, 2);
+                handles.autofinish = 1;
+            else
+                handles.movies = [handles.movies varargin{i}];
+            end
     end
     i = i + 1;
 end
@@ -380,14 +385,8 @@ end
 if handles.autodcd
     cmdCalcDcdAndExportResult(handles)
 end
-if handles.behavior
-    cmdCalcBehaviorAndExportResult(handles)
-end
-if handles.group
-    cmdCalcGroupAndExportResult(handles)
-end
-if handles.autochase
-    cmdCalcChaseAndExportResult(handles)
+if ~isempty(handles.analyseSrc)
+    cmdAnalyseDataAndExportResult(handles)
 end
 if handles.autofinish
     delete(hObject);
