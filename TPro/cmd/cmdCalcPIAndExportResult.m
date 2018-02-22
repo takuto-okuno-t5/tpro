@@ -74,7 +74,7 @@ function cmdCalcPIAndExportResult(handles)
                 outputPath = [handles.export '/'];
             end
             dataFileName = [outputPath name '_' filename '_pi_roi_' num2str(handles.pi(i,1)) '_vs_' num2str(handles.pi(i,2))];
-            saveDetectionPIResultText(dataFileName, result);
+            saveNx1matText(dataFileName, result);
         end
     end
     time = toc;

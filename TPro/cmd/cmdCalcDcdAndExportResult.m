@@ -101,7 +101,7 @@ function cmdCalcDcdAndExportResult(handles)
                     dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
                 end
                 disp(['exporting a file : ' dataFileName]);
-                saveNxNmatText2(dataFileName, X, Y, img_h, img_w, roiMasks{i}, means, 'dcd');
+                saveNxNmatRoiText2(dataFileName, X, Y, img_h, img_w, roiMasks{i}, means, 'dcd');
             end
 
             % export file
@@ -114,7 +114,7 @@ function cmdCalcDcdAndExportResult(handles)
                     dataFileName = [outputPath name '_' filename '_track_roi' num2str(i)];
                 end
                 disp(['exporting a file : ' dataFileName]);
-                saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, results, 'dcd');
+                saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, results, 'dcd');
             end
         end
     end

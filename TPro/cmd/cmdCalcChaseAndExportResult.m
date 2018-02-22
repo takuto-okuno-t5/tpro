@@ -102,7 +102,7 @@ function cmdCalcChaseAndExportResult(handles)
                 dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
             end
             disp(['exporting a file : ' dataFileName]);
-            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, chase, 'chase');
+            saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, chase, 'chase');
         end
     end
     time = toc;

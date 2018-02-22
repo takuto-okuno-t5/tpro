@@ -98,8 +98,8 @@ function cmdCalcGroupAndExportResult(handles)
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
 
             % export file
-            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, result, 'group');
-            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, groupCount, 'group_num');
+            saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, result, 'group');
+            saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, groupCount, 'group_num');
         end
     end
     time = toc;
