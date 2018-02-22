@@ -69,7 +69,7 @@ end
 global exePath;
 global exeName;
 [exePath, exeName] = exeFilename();
-disp(["tpro exepath : " exePath]);
+disp(['tpro exepath : ' exePath]);
 
 % init command line input
 handles.movies = {};

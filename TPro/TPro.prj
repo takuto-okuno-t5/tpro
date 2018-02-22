@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="2077926231" file="D:\Okuno\TPro_for_Okuno\program\TPro\TPro.prj" location="D:\Okuno\TPro_for_Okuno\program\TPro" name="TPro" preferred-package-location="D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+  <configuration build-checksum="2251512554" file="D:\tools\tprowork\program\TPro\TPro.prj" location="D:\tools\tprowork\program\TPro" name="TPro" preferred-package-location="D:\tools\tprowork\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="アプリケーション コンパイラ">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
@@ -70,6 +70,7 @@
     </fileset.main>
     <fileset.resources>
       <file>${PROJECT_ROOT}\calc</file>
+      <file>${PROJECT_ROOT}\cmd</file>
       <file>${PROJECT_ROOT}\dialogs</file>
       <file>${PROJECT_ROOT}\gui</file>
       <file>${PROJECT_ROOT}\gui.fig</file>
@@ -81,9 +82,9 @@
       <file>${PROJECT_ROOT}\ui</file>
     </fileset.package>
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\readme.txt</file>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="splash.png" optional="false">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\splash.png</file>
-      <file location="${PROJECT_ROOT}\TPro\for_testing" name="TPro.exe" optional="false">D:\Okuno\TPro_for_Okuno\program\TPro\TPro\for_testing\TPro.exe</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="readme.txt" optional="true">D:\tools\tprowork\program\TPro\TPro\for_testing\readme.txt</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="splash.png" optional="false">D:\tools\tprowork\program\TPro\TPro\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\TPro\for_testing" name="TPro.exe" optional="false">D:\tools\tprowork\program\TPro\TPro\for_testing\TPro.exe</file>
     </build-deliverables>
     <workflow />
     <matlab>
