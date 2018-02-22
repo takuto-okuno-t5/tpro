@@ -1,6 +1,6 @@
-%% save tracking dcd result files
-function saveTrackingDcdResultText(dataFileName, keep_data, img_h, img_w, roiMask, r, cnr)
-    write_file_dcd = fopen([dataFileName '_dcd.txt'],'wt');
+%% save NxN mat result files
+function saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMask, flydata, typename)
+    write_file_cha = fopen([dataFileName '_' typename '.txt'],'wt');
 
     % cook raw data before saving
     end_row = size(keep_data{2}, 1) - 2;
@@ -15,18 +15,14 @@ function saveTrackingDcdResultText(dataFileName, keep_data, img_h, img_w, roiMas
         roiIdx(isnan(roiIdx)) = 1; % TOOD: set dummy. this might be bad with empty ROI.
         roiIdx2 = find(roiMask(roiIdx) <= 0);
         nanIdx = unique([nanIdxY, nanIdxX, roiIdx2]);
-        if ~isempty(nanIdx)
-            fx(nanIdx) = NaN; fy(nanIdx) = NaN;
-        end
-        % calc dcd
-        [dcd, dcdfly] = calcLocalDensityDcdFrame(fy,fx,r,cnr);
 
         % make save string
-        roiFlyNum = length(dcdfly);
+        dataRow = flydata(row_count, :);
+        dataRow(nanIdx) = NaN;
+        roiFlyNum = length(dataRow);
         fmtString = generatePrintFormatDString(roiFlyNum);
-        
-        fprintf(write_file_dcd, fmtString, dcdfly);
+        fprintf(write_file_cha, fmtString, dataRow);
     end
 
-    fclose(write_file_dcd);
+    fclose(write_file_cha);
 end

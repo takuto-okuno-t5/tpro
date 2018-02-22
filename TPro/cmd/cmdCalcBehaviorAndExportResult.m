@@ -106,7 +106,7 @@ function cmdCalcBehaviorAndExportResult(handles)
                 dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
             end
             disp(['exporting a file : ' dataFileName]);
-            saveTrackingTableResultText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, behavior, 'be');
+            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, behavior, 'be');
         end
     end
     time = toc;

@@ -1,5 +1,5 @@
 %%
-function cmdCalcDcdAndExportResult(handles)
+function cmdCalcGroupAndExportResult(handles)
     inputListFile = 'etc/input_videos.mat';
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
@@ -10,8 +10,8 @@ function cmdCalcDcdAndExportResult(handles)
     videoFiles = vl.videoFiles;
 
     % read tpro configuration
-    dcdRadius = readTproConfig('dcdRadius', 7.5);
-    dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+    nnHeight = readTproConfig('nnHeight', 5);
+    nnAlgorithm = readTproConfig('nnAlgorithm', 'single');
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -28,7 +28,7 @@ function cmdCalcDcdAndExportResult(handles)
         records = [records; C];
     end
 
-    disp('start to export DCD');
+    disp('start to export Groups');
     tic;
     % calc ewd score
     for data_th = 1:size(records,1)
@@ -38,8 +38,8 @@ function cmdCalcDcdAndExportResult(handles)
         name = records{data_th, 2};
         roiNum = records{data_th, 10};
         mmPerPixel = records{data_th, 9};
-        r = dcdRadius / mmPerPixel;
-        cnr = dcdCnRadius / mmPerPixel;
+        height = nnHeight / mmPerPixel;
+        algorithm = nnAlgorithm; 
 
         % get path of output folder
         confPath = [videoPath videoFiles{data_th} '_tpro/'];
@@ -76,48 +76,32 @@ function cmdCalcDcdAndExportResult(handles)
             end
         end
 
-        % load detection & tracking result
-        matFile = [confPath 'multi/detect_' filename,'.mat'];
-        if exist(matFile,'file')
-            load(matFile);
-            means = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
-            means = means';
-        end
+        % load tracking result
         matFile = [confPath 'multi/track_' filename,'.mat'];
-        if exist(matFile,'file')
-            load(matFile);
-            [means, results] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
-        end
+        load(matFile);
 
         % save data as text
         for i=1:roiNum
-            % export file
-            if exist('X', 'var')
-                if isempty(handles.export)
-                    outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
-                    dataFileName = [outputPath name '_' filename];
-                else
-                    outputPath = [handles.export '/'];
-                    dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
-                end
-                disp(['exporting a file : ' dataFileName]);
-                saveNxNmatText2(dataFileName, X, Y, img_h, img_w, roiMasks{i}, means, 'dcd');
+            % get file path
+            if isempty(handles.export)
+                outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+                dataFileName = [outputPath name '_' filename];
+            else
+                outputPath = [handles.export '/'];
+                dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
             end
+            disp(['exporting a file : ' dataFileName]);
+
+            % calculate top num of distances and variance / TODO : roi is not supported
+            result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, roiMasks{i}, algorithm, height);
+
+            [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
 
             % export file
-            if exist('keep_data', 'var')
-                if isempty(handles.export)
-                    outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-                    dataFileName = [outputPath name '_' filename];
-                else
-                    outputPath = [handles.export '/'];
-                    dataFileName = [outputPath name '_' filename '_track_roi' num2str(i)];
-                end
-                disp(['exporting a file : ' dataFileName]);
-                saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, results, 'dcd');
-            end
+            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, result, 'group');
+            saveNxNmatText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, groupCount, 'group_num');
         end
     end
     time = toc;
-    disp(['exporting DCD ... done : ' num2str(time) 's']);
+    disp(['exporting Groups ... done : ' num2str(time) 's']);
 end

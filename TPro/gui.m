@@ -78,6 +78,7 @@ handles.autofinish = 0;
 handles.autochase = 0;
 handles.autodcd = 0;
 handles.behavior = 0;
+handles.group = 0;
 handles.pi = [];
 handles.export = [];
 
@@ -120,6 +121,8 @@ while true
             handles.autochase = 1;
         case {'--behavior'}
             handles.behavior = 1;
+        case {'--group'}
+            handles.group = 1;
         case {'--pi'}
             handles.pi = [handles.pi; [str2num(varargin{i+1}) str2num(varargin{i+2})]];
             i = i + 2;
@@ -142,6 +145,7 @@ while true
             disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --behavior          export single fly behavior using tracking data');
             disp('  --chase             export chase behavior using tracking data');
+            disp('  --group             export group number using tracking data');
             disp('  --export path       export files on [path]');
             disp('  -h, --help          show tpro command line help');
             handles.autofinish = 1;
@@ -153,7 +157,7 @@ end
 guidata(hObject, handles);
 
 % set window title
-versionNumber = '1.4.8';
+versionNumber = '1.4.9';
 set(gcf, 'name', ['TPro version ', versionNumber]);
 set(handles.text14, 'String', ['TPro ', versionNumber])
 set(handles.text2, 'String', ['TPro', versionNumber])
@@ -372,6 +376,9 @@ if handles.autodcd
 end
 if handles.behavior
     cmdCalcBehaviorAndExportResult(handles)
+end
+if handles.group
+    cmdCalcGroupAndExportResult(handles)
 end
 if handles.autochase
     cmdCalcChaseAndExportResult(handles)
