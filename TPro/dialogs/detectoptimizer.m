@@ -70,7 +70,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     if isempty(rowNum), rowNum = 1; end
 
     % load video list
-    inputListFile = 'etc/input_videos.mat';
+    inputListFile = getInputListFile();
     if ~exist(inputListFile, 'file')
         errordlg('please select movies before operation.', 'Error');
         return;
@@ -166,7 +166,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
 
     % load last detection setting (do not read when local debug)
-    lastConfigFile = 'etc/last_detect_config.mat';
+    lastConfigFile = getTproEtcFile('last_detect_config.mat');
     if exist(lastConfigFile, 'file') && handles.isArgin
         cf = load(lastConfigFile);
         sharedInst.frameSteps = cf.frameSteps;

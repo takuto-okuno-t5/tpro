@@ -1,6 +1,6 @@
 %%
 function result = readTproConfig(itemName, defaultValue)
-    tproConfig = 'etc/tproconfig.csv';
+    tproConfig = getTproEtcFile('tproconfig.csv');
     result = defaultValue;
     if exist(tproConfig, 'file')
         tproConfTable = readtable(tproConfig,'ReadRowNames',true);

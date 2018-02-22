@@ -71,7 +71,7 @@ function startEndDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(hObject, 'name', handles.name); % set window title
 
     % set mode-select list box
-    modeFileName = 'etc/mode_template.csv';
+    modeFileName = getTproEtcFile('mode_template.csv');
     if ~exist(modeFileName, 'file')
         errordlg(['mode template file not found : ' modeFileName], 'Error');
         return;

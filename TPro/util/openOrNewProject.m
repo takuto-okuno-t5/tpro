@@ -141,7 +141,8 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
     end
 
     videoFiles = openFiles;
-    save('etc/input_videos.mat', 'videoPath', 'videoFiles');
+    inputListFile = getInputListFile();
+    save(inputListFile, 'videoPath', 'videoFiles');
     for n = 1:length(videoFiles)
         row = {videoFiles{n}, videoPath};
         tebleItems = [tebleItems; row];

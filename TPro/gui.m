@@ -65,6 +65,12 @@ if exist('./io','dir')
     addpath('./dialogs');
 end
 
+% get exe file full path
+global exePath;
+global exeName;
+[exePath, exeName] = exeFilename();
+disp(["tpro exepath : " exePath]);
+
 % init command line input
 handles.movies = {};
 handles.template = [];
@@ -212,7 +218,7 @@ runCommandLineMode(hObject, eventdata, handles);
 
 %% 
 function initFileUITable(handles)
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     return;
 end
@@ -471,7 +477,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -536,7 +542,7 @@ for data_th = 1:size(records,1)
         end
 
         % update configuration with mode template
-        modeFileName = 'etc/mode_template.csv';
+        modeFileName = getTproEtcFile('mode_template.csv');
         if ~exist(modeFileName, 'file')
             errordlg(['mode template file not found : ' modeFileName], 'Error');
             return;
@@ -668,7 +674,7 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -702,7 +708,7 @@ pause(0.01);
 addpath(videoPath);
 
 % delete last config cache
-lastConfigFile = 'etc/last_detect_config.mat';
+lastConfigFile = getTproEtcFile('last_detect_config.mat');
 if exist(lastConfigFile, 'file')
     delete(lastConfigFile);
 end
@@ -726,7 +732,7 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -1329,7 +1335,7 @@ function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -2051,7 +2057,7 @@ disableAllButtons(handles)
 % button1 is always on
 set(handles.pushbutton1, 'Enable', 'on');
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     return; % no input files
 end
@@ -2127,7 +2133,7 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -2239,7 +2245,7 @@ function pushbutton10_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -2278,7 +2284,7 @@ function pushbutton11_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
@@ -2317,7 +2323,7 @@ function pushbutton12_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = 'etc/input_videos.mat';
+inputListFile = getInputListFile();
 if ~exist(inputListFile, 'file')
     errordlg('please select movies before operation.', 'Error');
     return;
