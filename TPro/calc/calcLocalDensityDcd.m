@@ -3,7 +3,7 @@ function result = calcLocalDensityDcd(CX, CY, roiMask, r, cnR)
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
     xsize = length(CX);
-    result = zeros(length(xsize),1);
+    result = zeros(xsize,1);
     tic;
     for row_count = 1:xsize
         % get detected points and roi points

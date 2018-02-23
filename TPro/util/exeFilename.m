@@ -1,5 +1,5 @@
 %%
-function [exedir, filename] = exeFilename()
+function [exedir, exename, ext] = exeFilename()
     % Determine full path to calling file
     % In a deployed program, this will point to the application exe.
     % In regular Matlab, it will be the calling m-file.
@@ -17,5 +17,4 @@ function [exedir, filename] = exeFilename()
         relpath = st(ind+1).file;
         [exedir,exename,ext] = fileparts(relpath);
     end
-    filename = [exename,ext];
 end

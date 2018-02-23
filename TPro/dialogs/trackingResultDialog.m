@@ -1867,9 +1867,16 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
 
     [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-    save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum');
+    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.roiMaskImage, height);
+    areas = areas * sharedInst.mmPerPixel * sharedInst.mmPerPixel;
+    groupAreas = groupAreas * sharedInst.mmPerPixel * sharedInst.mmPerPixel;
+
+    save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
+        'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
     addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
     addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
+    addResult2Axes(handles, areas, 'nn_areas', handles.popupmenu8);
+    addResult2Axes(handles, groupAreas, 'nn_groupAreas', handles.popupmenu8);
     addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
     addResult2Axes(handles, singleFlyNum, 'nn_singleFlyNum', handles.popupmenu8);
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
@@ -2378,7 +2385,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
        strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking') || ...
        strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
-       strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
+       strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
         major = sharedInst.mean_blobmajor * 0.9;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
@@ -2409,7 +2416,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         % nn clustered groups
         data = getappdata(handles.figure1, 'nn_groups');
         if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
-             strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
+             strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
             height = sharedInst.nnHeight;
             if height > 10, height = 10; end
             height = height / sharedInst.mmPerPixel;

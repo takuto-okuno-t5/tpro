@@ -1969,7 +1969,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             end
         end
         if length(vY) > 2
-            DT = delaunayTriangulation(vY,vX);
+            DT = delaunayTriangulation(double(vY),double(vX));
             voronoi(DT);
         end
     end

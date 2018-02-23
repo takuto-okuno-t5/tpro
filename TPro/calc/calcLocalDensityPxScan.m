@@ -2,7 +2,7 @@ function result = calcLocalDensityPxScan(X, Y, roiMask, r, hWaitBar, areaMap)
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
     xsize = length(X);
-    result = zeros(length(xsize),1);
+    result = zeros(xsize,1);
     % for calc circle
     [rr cc] = meshgrid(1:img_w, 1:img_h);
     roiIdx = find(roiMask==1);

@@ -68,8 +68,8 @@ end
 % get exe file full path
 global exePath;
 global exeName;
-[exePath, exeName] = exeFilename();
-disp(['tpro exepath : ' exePath]);
+[exePath, exeName, ext] = exeFilename();
+%disp(['tpro exepath : ' exePath]);
 
 % init command line input
 handles.movies = {};
@@ -77,6 +77,7 @@ handles.template = [];
 handles.batch = [];
 handles.path = [];
 handles.rois = {};
+handles.commandError = 0;
 handles.autobackground = 0;
 handles.autodetect = 0;
 handles.autotracking = 0;
@@ -135,7 +136,7 @@ while true
             handles.range = {varargin{i+1} varargin{i+2}};
             i = i + 2;
         case {'-h','--help'}
-            disp('usage: gui [options] movies ...');
+            disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
             disp('  -p, --path path     movie [path] for batch process');
             disp('  -c, --conf file     detection and tracking configuration template [file]');
@@ -153,12 +154,13 @@ while true
             disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --export path       export files on [path]');
             disp('  -h, --help          show tpro command line help');
-            handles.autofinish = 1;
+            i = size(varargin, 2);
+            handles.commandError = 1;
         otherwise
             if strcmp(varargin{i}(1), '-')
                 disp(['bad option : ' varargin{i}]);
                 i = size(varargin, 2);
-                handles.autofinish = 1;
+                handles.commandError = 1;
             else
                 handles.movies = [handles.movies varargin{i}];
             end
@@ -287,6 +289,10 @@ handles.uitable2.Data = tebleItems;
 
 %% TPro command line mode
 function runCommandLineMode(hObject, eventdata, handles)
+if handles.commandError > 0
+    delete(hObject);
+    return;
+end
 % start batch process
 if length(handles.batch) > 0
     % load batch file

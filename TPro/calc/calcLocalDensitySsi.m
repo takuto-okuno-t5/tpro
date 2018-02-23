@@ -1,7 +1,7 @@
 % calculate local density (SSI)
 function result = calcLocalDensitySsi(X, Y, roiMask, binSize, binNum)
     xsize = length(X);
-    result = zeros(length(xsize),1);
+    result = zeros(xsize,1);
     tic;
     for row_count = 1:xsize
         % get detected points and roi points

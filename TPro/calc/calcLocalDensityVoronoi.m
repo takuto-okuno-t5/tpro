@@ -1,7 +1,7 @@
 % calculate local density (voronoi)
 function result = calcLocalDensityVoronoi(X, Y, roiMask, roiX, roiY)
     xsize = length(X);
-    result = zeros(length(xsize),1);
+    result = zeros(xsize,1);
     tic;
     % calc roi unique points
     if ~isempty(roiX)
@@ -22,7 +22,7 @@ function result = calcLocalDensityVoronoi(X, Y, roiMask, roiX, roiY)
             fx = [fx; roiY(:)];
         end
         
-        DT = delaunayTriangulation(fy,fx);
+        DT = delaunayTriangulation(double(fy),double(fx));
         [V,R] = voronoiDiagram(DT);
 %        sharedInst.V{row_count} = V;
 %        sharedInst.R{row_count} = R;

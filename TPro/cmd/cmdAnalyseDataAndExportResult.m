@@ -85,9 +85,17 @@ function cmdAnalyseDataAndExportResult(handles)
             continue;
         end
         load(matFile);
+        % load group analysing result
+        matFile = [confPath 'multi/nn_groups.mat'];
+        if exist(matFile,'file')
+            grp = load(matFile);
+        else
+            grp = [];
+        end
 
         % calc velocity etc
         [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fpsNum, mmPerPixel);
+        data = [];
 
         % get data
         switch(handles.analyseSrc)
@@ -138,13 +146,33 @@ function cmdAnalyseDataAndExportResult(handles)
             cnr = dcdCnRadius / mmPerPixel;
             [means, data] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
         case 'group'
-            result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
-            [data, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            if isempty(grp)
+                result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+                [data, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            else
+                data = grp.result;
+            end
         case 'gcount'
+            if isempty(grp)
+                result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+                [result, data, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            else
+                data = grp.groupCount;
+            end
+        case 'gcalc'
             result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
-            [result, data, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] = calcGroupArea(keep_data{1}, keep_data{2}, result, roiMasks{1}, height); % dummy roiMask
+            areas = areas * mmPerPixel * mmPerPixel;
+            groupAreas = groupAreas * mmPerPixel * mmPerPixel;
+            save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
+            continue;
+        end
+        
+        if isempty(data)
             continue;
         end
 
@@ -176,5 +204,5 @@ function cmdAnalyseDataAndExportResult(handles)
         end
     end
     time = toc;
-    disp(['exporting analysed data ... done : ' num2str(time) 's']);
+    disp(['analysing data ... done : ' num2str(time) 's']);
 end

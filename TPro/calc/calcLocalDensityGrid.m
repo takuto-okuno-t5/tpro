@@ -3,7 +3,7 @@ function result = calcLocalDensityGrid(X, Y, roiMask, width, height)
     img_h = size(roiMask, 1);
     img_w = size(roiMask, 2);
     xsize = length(X);
-    result = zeros(length(xsize),1);
+    result = zeros(xsize,1);
     tic;
     % calcurate grid list
     gridAreas = getGridAreas(roiMask, img_w, img_h, width, height);
