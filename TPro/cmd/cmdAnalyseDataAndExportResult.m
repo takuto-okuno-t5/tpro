@@ -32,7 +32,9 @@ function cmdAnalyseDataAndExportResult(handles)
 
     disp('start to analyse data');
     tic;
-    % calc ewd score
+    % analysing process
+    joinHeader = {};
+    joinData = [];
     for data_th = 1:size(records,1)
         if ~records{data_th, 1}
             continue;
@@ -167,6 +169,10 @@ function cmdAnalyseDataAndExportResult(handles)
             groupAreas = groupAreas * mmPerPixel * mmPerPixel;
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
                 'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
+        case 'garea'
+            if ~isempty(grp)
+                data = grp.areas;
+            end
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;
@@ -187,22 +193,53 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % process data
-
+        %{
+        frameNum = size(data,1);
+        procData = nan(frameNum,1);
+        for i=1:frameNum
+            procData(i) = length(find(data(i,:)>0));
+        end
+        data = procData;
+        %}
 
         % save data as text
-        for i=1:roiNum
-            % export file
-            if isempty(handles.export)
-                outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-                dataFileName = [outputPath name '_' filename];
-            else
-                outputPath = [handles.export '/'];
-                dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
+        if isempty(handles.join)
+            for i=1:roiNum
+                % export file
+                if isempty(handles.export)
+                    outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+                    dataFileName = [outputPath name '_' filename];
+                else
+                    outputPath = [handles.export '/'];
+                    dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
+                end
+                disp(['exporting a file : ' dataFileName]);
+                saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, data, startRow, endRow, handles.analyseSrc);
             end
-            disp(['exporting a file : ' dataFileName]);
-            saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, data, startRow, endRow, handles.analyseSrc);
+        else
+            disp(['joining a data : ' name]);
+            joinHeader = [joinHeader, name];
+            if ~isempty(joinData)
+                if size(joinData,1) > size(data,1)
+                    data(size(joinData,1),1) = NaN;
+                elseif size(joinData,1) < size(data,1)
+                    joinData(size(data,1),1) = NaN;
+                end
+            end
+            joinData = [joinData, data];
         end
     end
+
+    % save joined data as text
+    if ~isempty(handles.join) && ~isempty(handles.export)
+        if handles.join == 0
+            joinHeader = {};
+        end
+        outputPath = [handles.export '/'];
+        dataFileName = [outputPath name '_' handles.analyseSrc '_joined'];
+        saveNxNmatText(dataFileName, joinHeader, joinData);
+    end
+
     time = toc;
     disp(['analysing data ... done : ' num2str(time) 's']);
 end

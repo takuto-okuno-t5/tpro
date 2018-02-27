@@ -303,6 +303,19 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
             addResult2Axes(handles, result, resultNames{i}, handles.popupmenu8);
         end
     end
+    % load group data
+    fname = [sharedInst.confPath 'multi/nn_groups.mat'];
+    if exist(fname, 'file')
+        load(fname);
+        sharedInst.groupCenterX = groupCenterX;
+        sharedInst.groupCenterY = groupCenterY;
+
+        addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
+        addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
+        addResult2Axes(handles, areas, 'nn_areas', handles.popupmenu8);
+        addResult2Axes(handles, groupAreas, 'nn_groupAreas', handles.popupmenu8);
+        addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
+    end
     set(handles.popupmenu8,'Value',1);
 
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -1873,6 +1886,12 @@ function Untitled_17_Callback(hObject, eventdata, handles)
 
     save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
         'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
+
+    sharedInst.groupCenterX = groupCenterX;
+    sharedInst.groupCenterY = groupCenterY;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    % update axes
     addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
     addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
     addResult2Axes(handles, areas, 'nn_areas', handles.popupmenu8);
@@ -2428,6 +2447,8 @@ function showFrameInAxes(hObject, handles, frameNum)
             fx2(idxs) = [];
             culster(idxs) = [];
             scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
+            % group center
+            plot(sharedInst.groupCenterX(t,:),sharedInst.groupCenterY(t,:),'or','Color', [1 .3 1], 'Marker','x');
         end
         % local densities
         if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
