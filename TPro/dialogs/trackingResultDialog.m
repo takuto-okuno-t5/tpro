@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 12-Feb-2018 01:00:35
+    % Last Modified by GUIDE v2.5 27-Feb-2018 17:52:25
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -2322,6 +2322,38 @@ function Untitled_32_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
+% --------------------------------------------------------------------
+function Untitled_33_Callback(hObject, eventdata, handles)
+% hObject    handle to Untitled_33 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_34_Callback(hObject, eventdata, handles)
+% hObject    handle to Untitled_34 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+end
+
+% --------------------------------------------------------------------
+function Untitled_35_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_35 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    axes(handles.axes1); % set drawing area
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    % show center points
+    cla;
+    imshow(sharedInst.bgImage);
+    % group center
+    hold on;
+    for t=1:size(sharedInst.groupCenterX,1)
+        plot(sharedInst.groupCenterX(t,:),sharedInst.groupCenterY(t,:),'or','Color', [1 .3 1], 'Marker','x');
+    end
+    hold off;
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -2655,3 +2687,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     % show detected count
     guidata(hObject, handles);    % Update handles structure
 end
+
