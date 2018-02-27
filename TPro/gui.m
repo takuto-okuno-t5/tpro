@@ -88,6 +88,7 @@ handles.export = [];
 handles.analyseSrc = [];
 handles.range = {};
 handles.join = [];
+handles.procOps = {};
 
 % load command line input
 i = 1;
@@ -139,6 +140,9 @@ while true
         case {'--join'}
             handles.join = str2num(varargin{i+1});
             i = i + 1;
+        case {'--proc'}
+            handles.procOps = [handles.procOps, varargin{i+1}];
+            i = i + 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
@@ -154,9 +158,11 @@ while true
             disp('  --dcd               export DCD using detection or tracking data');
             disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --src type          specify analysing data source (tracking data)');
-            disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcd,group,gcount,gcalc,be,chase');
+            disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcd,group,gcount,gcalc,be,chase, ...');
             disp('  --range start end   analysing range of source data from [start] to [end]');
-            disp('  --export path       export files on [path]');
+            disp('  --proc op           process analysed data by [op] operation');
+            disp('                      [op] : mean,max,min,count==N,nancount, ...');
+            disp('  --export path       export analysed data files on [path]');
             disp('  --join 0|1          join columns of export data [0:without, 1:with] header');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);

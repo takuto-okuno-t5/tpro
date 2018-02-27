@@ -193,14 +193,9 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % process data
-        %{
-        frameNum = size(data,1);
-        procData = nan(frameNum,1);
-        for i=1:frameNum
-            procData(i) = length(find(data(i,:)>0));
+        if ~isempty(handles.procOps)
+            data = processDataByCommand(handles.procOps, data);
         end
-        data = procData;
-        %}
 
         % save data as text
         if isempty(handles.join)
