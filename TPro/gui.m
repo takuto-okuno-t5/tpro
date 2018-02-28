@@ -161,7 +161,7 @@ while true
             disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcd,group,gcount,gcalc,be,chase, ...');
             disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --proc op           process analysed data by [op] operation');
-            disp('                      [op] : mean,max,min,count==N,nancount, ...');
+            disp('                      [op] : sum,mean,max,min,count==N,nancount, ...');
             disp('  --export path       export analysed data files on [path]');
             disp('  --join 0|1          join columns of export data [0:without, 1:with] header');
             disp('  -h, --help          show tpro command line help');
