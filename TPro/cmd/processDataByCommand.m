@@ -87,22 +87,21 @@ function data = processDataByCommand(ops, data, fpsNum)
                     if en > frameNum
                         en = frameNum;
                     end
-                    for fn=1:flyNum
-                        switch colop
-                        case 'sum'
-                            procData(i,fn) = nansum(data(bg:en,fn));
-                        case 'mean'
-                            procData(i,fn) = nanmean(data(bg:en,fn));
-                        case 'min'
-                            procData(i,fn) = nanmin(data(bg:en,fn));
-                        case 'max'
-                            procData(i,fn) = nanmax(data(bg:en,fn));
-                        case 'nancount'
+                    switch colop
+                    case 'sum'
+                        procData(i,:) = nansum(data(bg:en,:));
+                    case 'mean'
+                        procData(i,:) = nanmean(data(bg:en,:));
+                    case 'min'
+                        procData(i,:) = nanmin(data(bg:en,:));
+                    case 'max'
+                        procData(i,:) = nanmax(data(bg:en,:));
+                    case 'nancount'
+                        for fn=1:flyNum
                             procData(i,fn) = length(find(isnan(data(bg:en,fn))));
-                        otherwise
-                            procData = [];
-                            break;
                         end
+                    otherwise
+                        procData = [];
                     end
                 end
             end
@@ -135,23 +134,22 @@ function data = processDataByCommand(ops, data, fpsNum)
             end
         else
             % check row operation
-            procData = nan(frameNum,1);
-            for i=1:frameNum
-                switch op
-                case 'sum'
-                    procData(i) = nansum(data(i,:));
-                case 'mean'
-                    procData(i) = nanmean(data(i,:));
-                case 'min'
-                    procData(i) = nanmin(data(i,:));
-                case 'max'
-                    procData(i) = nanmax(data(i,:));
-                case 'nancount'
+            switch op
+            case 'sum'
+                procData = nansum(data,2);
+            case 'mean'
+                procData = nanmean(data,2);
+            case 'min'
+                procData = nanmin(data,2);
+            case 'max'
+                procData = nanmax(data,2);
+            case 'nancount'
+                procData = nan(frameNum,1);
+                for i=1:frameNum
                     procData(i) = length(find(isnan(data(i,:))));
-                otherwise
-                    procData = [];
-                    break;
                 end
+            otherwise
+                procData = [];
             end
         end
         if ~isempty(procData)
