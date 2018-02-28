@@ -182,6 +182,17 @@ function cmdAnalyseDataAndExportResult(handles)
             continue;
         end
 
+        % set each ROI data
+        if roiNum > 1
+            roiData = {};
+            for i=1:roiNum
+                rd = processDataByRoi(keep_data, img_h, img_w, roiMask{i}, data);
+                roiData = [roiData, rd];
+            end
+        else
+            roiData = {data};
+        end
+
         % set range
         startRow = 1;
         endRow = size(data,1);
@@ -191,10 +202,15 @@ function cmdAnalyseDataAndExportResult(handles)
                 endRow = str2num(handles.range{2});
             end
         end
+        for i=1:roiNum
+            roiData{i} = roiData{i}(startRow:endRow,:);
+        end
 
-        % process data
+        % process data each ROI
         if ~isempty(handles.procOps)
-            data = processDataByCommand(handles.procOps, data);
+            for i=1:roiNum
+                roiData{i} = processDataByCommand(handles.procOps, roiData{i}, fpsNum);
+            end
         end
 
         % save data as text
@@ -203,25 +219,27 @@ function cmdAnalyseDataAndExportResult(handles)
                 % export file
                 if isempty(handles.export)
                     outputPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-                    dataFileName = [outputPath name '_' filename];
+                    dataFileName = [outputPath name '_' filename '_' handles.analyseSrc];
                 else
                     outputPath = [handles.export '/'];
-                    dataFileName = [outputPath name '_' filename '_roi' num2str(i)];
+                    dataFileName = [outputPath name '_' filename '_roi' num2str(i) '_' handles.analyseSrc];
                 end
                 disp(['exporting a file : ' dataFileName]);
-                saveNxNmatRoiText(dataFileName, keep_data, img_h, img_w, roiMasks{i}, data, startRow, endRow, handles.analyseSrc);
+                saveNxNmatText(dataFileName, [], roiData{i});
             end
         else
             disp(['joining a data : ' name]);
             joinHeader = [joinHeader, name];
-            if ~isempty(joinData)
-                if size(joinData,1) > size(data,1)
-                    data(size(joinData,1),1) = NaN;
-                elseif size(joinData,1) < size(data,1)
-                    joinData(size(data,1),1) = NaN;
+            for i=1:roiNum
+                if ~isempty(joinData)
+                    if size(joinData,1) > size(roiData{i},1)
+                        roiData{i}(size(joinData,1),1) = NaN;
+                    elseif size(joinData,1) < size(roiData{i},1)
+                        joinData(size(roiData{i},1),1) = NaN;
+                    end
                 end
+                joinData = [joinData, roiData{i}];
             end
-            joinData = [joinData, data];
         end
     end
 
