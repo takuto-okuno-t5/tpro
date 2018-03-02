@@ -27,7 +27,7 @@ function varargout = gui(varargin)
 
 % Edit the above text to modify the response to help gui
 
-% Last Modified by GUIDE v2.5 13-Jul-2017 13:54:47
+% Last Modified by GUIDE v2.5 03-Mar-2018 01:30:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -72,6 +72,7 @@ global exeName;
 %disp(['tpro exepath : ' exePath]);
 
 % init command line input
+handles.addFileMode = false;
 handles.movies = {};
 handles.template = [];
 handles.batch = [];
@@ -285,7 +286,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, true);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, handles.addFileMode);
 
 time = toc;
 
@@ -417,6 +418,7 @@ if handles.autofinish
     delete(hObject);
 end
 
+
 %% --- Outputs from this function are returned to the command line.
 function varargout = gui_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -427,6 +429,31 @@ function varargout = gui_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = [];
 
+
+% --- Executes on key press with focus on figure1 and none of its controls.
+function figure1_KeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+
+
+%% open or add file mode
+function togglebutton1_Callback(hObject, eventdata, handles)
+% hObject    handle to togglebutton1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+val = get(hObject,'Value');
+if val > 0
+    handles.addFileMode = true;
+    set(handles.pushbutton1,'String','Add movie files');
+else
+    handles.addFileMode = false;
+    set(handles.pushbutton1,'String','Open movie files');
+end
+guidata(hObject, handles);
 
 %% prepare--- Executes on button press in pushbutton1.
 function pushbutton1_Callback(hObject, eventdata, handles)
@@ -465,7 +492,6 @@ end
 % process all selected files
 videoPaths = {};
 videoFiles = {};
-tebleItems = {};
 
 for i = 1:fileCount
     if fileCount > 1
@@ -474,13 +500,13 @@ for i = 1:fileCount
         fileName = fileNames;
     end
     videoFiles = [videoFiles; fileName];
-    videoPaths = [videoPaths; [videoPath '/']];
+    videoPaths = [videoPaths; videoPath];
 end
 % sort input files
 videoFiles = sort(videoFiles);
 
 % create config files if possible
-[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, handles.addFileMode);
 
 time = toc;
 
