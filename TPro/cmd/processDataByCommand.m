@@ -6,7 +6,7 @@ function data = processDataByCommand(ops, data, fpsNum)
         flyNum = size(data,2);
         op = ops{j};
         prestr3 = extractBefore(op,4);
-        if length(op) > 3
+        if length(op) > 5
             prestr5 = extractBefore(op,6);
         else
             prestr5 = [];
@@ -26,6 +26,8 @@ function data = processDataByCommand(ops, data, fpsNum)
                 colop = extractBefore(af,4);
             elseif strfind(af,'count') > 0
                 colop = extractBefore(af,6);
+            elseif strfind(af,'median') > 0
+                colop = extractBefore(af,7);
             else
                 continue;
             end
@@ -92,6 +94,8 @@ function data = processDataByCommand(ops, data, fpsNum)
                         procData(i,:) = nansum(data(bg:en,:));
                     case 'mean'
                         procData(i,:) = nanmean(data(bg:en,:));
+                    case 'median'
+                        procData(i,:) = nanmedian(data(bg:en,:));
                     case 'min'
                         procData(i,:) = nanmin(data(bg:en,:));
                     case 'max'
@@ -139,6 +143,8 @@ function data = processDataByCommand(ops, data, fpsNum)
                 procData = nansum(data,2);
             case 'mean'
                 procData = nanmean(data,2);
+            case 'median'
+                procData = nanmedian(data,2);
             case 'min'
                 procData = nanmin(data,2);
             case 'max'

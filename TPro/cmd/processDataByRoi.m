@@ -1,6 +1,6 @@
 %%
 function data = processDataByRoi(keep_data, img_h, img_w, roiMask, data)
-    for i = startRow:endRow
+    for i = 1:size(data,1)
         fx = keep_data{2}(i, :);
         fy = keep_data{1}(i, :);
         Y = round(fy);
