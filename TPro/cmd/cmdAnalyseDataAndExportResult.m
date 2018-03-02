@@ -6,7 +6,7 @@ function cmdAnalyseDataAndExportResult(handles)
         return;
     end
     vl = load(inputListFile);
-    videoPath = vl.videoPath;
+    videoPaths = vl.videoPaths;
     videoFiles = vl.videoFiles;
 
     % read tpro configuration
@@ -19,7 +19,7 @@ function cmdAnalyseDataAndExportResult(handles)
     videoFileNum = size(videoFiles,1);
     records = {};
     for i = 1:videoFileNum
-        confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+        confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
         if ~exist(confFileName, 'file')
             errordlg(['configuration file not found : ' confFileName], 'Error');
             return;
@@ -47,7 +47,7 @@ function cmdAnalyseDataAndExportResult(handles)
         algorithm = nnAlgorithm; 
 
         % get path of output folder
-        confPath = [videoPath videoFiles{data_th} '_tpro/'];
+        confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
         filename = [sprintf('%05d',records{data_th,4}) '_' sprintf('%05d',records{data_th,5})];
 
         % load background image
@@ -93,6 +93,13 @@ function cmdAnalyseDataAndExportResult(handles)
             grp = load(matFile);
         else
             grp = [];
+        end
+        % load dcd result
+        matFile = [confPath 'multi/aggr_dcd_result_tracking.mat'];
+        if exist(matFile,'file')
+            dcd = load(matFile);
+        else
+            dcd = [];
         end
 
         % calc velocity etc
@@ -143,10 +150,21 @@ function cmdAnalyseDataAndExportResult(handles)
             trackingInfo.rWingAngleV = rWingAngleV;
             trackingInfo.lWingAngleV = lWingAngleV;
             data = trapezoidBehaviorClassifier(trackingInfo);
-        case 'dcd'
+        case 'dcdcalc'
             r = dcdRadius / mmPerPixel;
             cnr = dcdCnRadius / mmPerPixel;
-            [means, data] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
+            [means, result] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
+            save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
+        case 'dcd'
+            if isempty(dcd)
+                r = dcdRadius / mmPerPixel;
+                cnr = dcdCnRadius / mmPerPixel;
+                [means, data] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
+                result = data;
+                save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
+            else
+                data = dcd.result;
+            end
         case 'group'
             if isempty(grp)
                 result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
@@ -186,7 +204,7 @@ function cmdAnalyseDataAndExportResult(handles)
         if roiNum > 1
             roiData = {};
             for i=1:roiNum
-                rd = processDataByRoi(keep_data, img_h, img_w, roiMask{i}, data);
+                rd = processDataByRoi(keep_data, img_h, img_w, roiMasks{i}, data);
                 roiData = [roiData, rd];
             end
         else
@@ -229,7 +247,6 @@ function cmdAnalyseDataAndExportResult(handles)
             end
         else
             disp(['joining a data : ' name]);
-            joinHeader = [joinHeader, name];
             for i=1:roiNum
                 if ~isempty(joinData)
                     if size(joinData,1) > size(roiData{i},1)
@@ -239,6 +256,7 @@ function cmdAnalyseDataAndExportResult(handles)
                     end
                 end
                 joinData = [joinData, roiData{i}];
+                joinHeader = [joinHeader, name];
             end
         end
     end

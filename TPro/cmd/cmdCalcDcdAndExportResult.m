@@ -6,7 +6,7 @@ function cmdCalcDcdAndExportResult(handles)
         return;
     end
     vl = load(inputListFile);
-    videoPath = vl.videoPath;
+    videoPaths = vl.videoPaths;
     videoFiles = vl.videoFiles;
 
     % read tpro configuration
@@ -17,7 +17,7 @@ function cmdCalcDcdAndExportResult(handles)
     videoFileNum = size(videoFiles,1);
     records = {};
     for i = 1:videoFileNum
-        confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+        confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
         if ~exist(confFileName, 'file')
             errordlg(['configuration file not found : ' confFileName], 'Error');
             return;
@@ -42,7 +42,7 @@ function cmdCalcDcdAndExportResult(handles)
         cnr = dcdCnRadius / mmPerPixel;
 
         % get path of output folder
-        confPath = [videoPath videoFiles{data_th} '_tpro/'];
+        confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
         filename = [sprintf('%05d',records{data_th,4}) '_' sprintf('%05d',records{data_th,5})];
 
         % load background image

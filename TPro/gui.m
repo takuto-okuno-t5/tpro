@@ -241,12 +241,15 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+if ~isfield(vl, 'videoPaths')
+    return;
+end
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 tebleItems = {};
 
 for i = 1:size(videoFiles,1)
-    row = {videoFiles{i}, videoPath};
+    row = {videoFiles{i}, videoPaths{i}};
     tebleItems = [tebleItems; row];
 end
 % update uitable
@@ -255,12 +258,14 @@ handles.uitable2.Data = tebleItems;
 
 %% Callback function
 function onDropFile(hObject, eventdata)
+videoPaths = {};
 videoFiles = {};
 switch eventdata.DropType
     case 'file'
         % process all dragged files
         for n = 1:numel(eventdata.Data)
-            [videoPath, name, ext] = fileparts(eventdata.Data{n});
+            [path, name, ext] = fileparts(eventdata.Data{n});
+            videoPaths = [videoPaths; [path '/']];
             videoFiles = [videoFiles; [name ext]];
         end
     case 'string'
@@ -280,12 +285,12 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
 
 time = toc;
 
 % show result message
-if status 
+if status
     set(handles.text14, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
     set(handles.text9,'String','Ready','BackgroundColor','green');
 else
@@ -315,15 +320,16 @@ if length(handles.batch) > 0
 
     confTable = readtable(handles.batch);
     batches = table2cell(confTable);
-    
-    videoPath = handles.path;
+
+    videoPaths = {};
     videoFiles = {};
     for i=1:size(batches,1)
+        videoPaths = [videoPaths; [handles.path '/']];
         videoFiles = [videoFiles; batches{i,2}];
     end
 
     % create config files if possible
-    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.batch);
+    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.batch, false);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -334,15 +340,17 @@ end
 % start to load movie files
 if length(handles.movies) > 0
     videoFiles = {};
+    videoPaths = {};
     for i=1:length(handles.movies)
-        [videoPath, name, ext] = fileparts(handles.movies{i});
+        [path, name, ext] = fileparts(handles.movies{i});
+        videoPaths = [videoPaths; [path '/']];
         videoFiles = [videoFiles; [name ext]];
     end
     % sort input files
     videoFiles = sort(videoFiles);
 
     % create config files if possible
-    [status, tebleItems] = openOrNewProject([videoPath '/'], videoFiles, handles.template);
+    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -363,7 +371,7 @@ if length(handles.rois) > 0
     end
 
     for i=1:length(videoFiles)
-        confPath = [videoPath '/' videoFiles{i} '_tpro/'];
+        confPath = [videoPaths{i} '/' videoFiles{i} '_tpro/'];
         csvFileName = [confPath 'roi.csv'];
         confFileName = [confPath 'input_video_control.csv'];
 
@@ -455,6 +463,7 @@ else
 end
 
 % process all selected files
+videoPaths = {};
 videoFiles = {};
 tebleItems = {};
 
@@ -465,22 +474,23 @@ for i = 1:fileCount
         fileName = fileNames;
     end
     videoFiles = [videoFiles; fileName];
+    videoPaths = [videoPaths; [videoPath '/']];
 end
 % sort input files
 videoFiles = sort(videoFiles);
 
 % create config files if possible
-[status, tebleItems] = openOrNewProject(videoPath, videoFiles, handles.template);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
 
 time = toc;
 
 % show result message
 if status 
     set(handles.text14, 'String',strcat('creating configuration file (csv) ... done!     t =',num2str(time),'s'));
-    set(handles.text9,'String','Ready','BackgroundColor','green');
+    set(handles.text9, 'String','Ready','BackgroundColor','green');
 else
     set(handles.text14, 'String',strcat('can not output configuration file (csv)'));
-    set(handles.text9,'String','Failed','BackgroundColor','red');
+    set(handles.text9, 'String','Failed','BackgroundColor','red');
 end
 checkAllButtons(handles);
 % update uitable
@@ -499,14 +509,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -524,7 +534,10 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(videoPath);
+uniquePaths = unique(videoPaths);
+for i=1:length(uniquePaths)
+    addpath(uniquePaths{i});
+end
 
 tic % start timer
 
@@ -535,13 +548,13 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
 
     % show detecting message
     set(handles.text14, 'String', ['detecting background for ', shuttleVideo.name]);
 
     % set output file name
-    pathName = strcat(videoPath, shuttleVideo.name, '_tpro/');
+    pathName = strcat(videoPaths{data_th}, shuttleVideo.name, '_tpro/');
     backgroundFileName = [pathName 'background.png'];
 
     % show startEndDialog or command line auto start
@@ -696,14 +709,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -721,7 +734,10 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(videoPath);
+uniquePaths = unique(videoPaths);
+for i=1:length(uniquePaths)
+    addpath(uniquePaths{i});
+end
 
 % delete last config cache
 lastConfigFile = getTproEtcFile('last_detect_config.mat');
@@ -754,14 +770,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -784,7 +800,10 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(videoPath);
+uniquePaths = unique(videoPaths);
+for i=1:length(uniquePaths)
+    addpath(uniquePaths{i});
+end
 
 % parameters setting
 tic % start timer
@@ -848,12 +867,12 @@ for data_th = 1:size(records,1)
     ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
-    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'multi'], 'dir')
         mkdir([confPath 'multi']);
     end
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
 
     % ROI
     roi_mask = [];
@@ -1357,14 +1376,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -1376,7 +1395,10 @@ for i = 1:videoFileNum
     records = [records; C];
 end
 
-addpath(videoPath);
+uniquePaths = unique(videoPaths);
+for i=1:length(uniquePaths)
+    addpath(uniquePaths{i});
+end
 
 % show start text
 set(handles.text14, 'String','tracking ...')
@@ -1453,10 +1475,10 @@ for data_th = 1:size(records,1)
     fixedTrackDir = getVideoConfigValue(record, 28, 0);
     ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
 
-    shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
 
     % make output folder
-    confPath = [videoPath videoFiles{data_th} '_tpro/'];
+    confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
     if ~exist([confPath 'output'], 'dir')
         mkdir([confPath 'output']);
     end
@@ -2078,7 +2100,10 @@ if ~exist(inputListFile, 'file')
     return; % no input files
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+if ~isfield(vl, 'videoPaths')
+    return; % bad old files
+end
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 videoFileNum = size(videoFiles,1);
@@ -2086,7 +2111,7 @@ if videoFileNum == 0
     return; % no video files
 end
 
-confFileName = [videoPath videoFiles{1} '_tpro/input_video_control.csv'];
+confFileName = [videoPaths{1} videoFiles{1} '_tpro/input_video_control.csv'];
 if ~exist(confFileName, 'file')
     return; % no config file
 end
@@ -2098,7 +2123,7 @@ end_frame = record{5};
 % background button
 set(handles.pushbutton2, 'Enable', 'on');
 
-confPath = [videoPath videoFiles{1} '_tpro/'];
+confPath = [videoPaths{1} videoFiles{1} '_tpro/'];
 backgroundFileName = [confPath 'background.png'];
 if ~exist(backgroundFileName, 'file')
     return; % no background image file
@@ -2143,7 +2168,7 @@ set(handles.pushbutton11, 'Enable', 'on');
 
 
 
-% --- Executes on button press in RIO.
+% --- Executes on button press in ROI.
 function pushbutton6_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton6 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -2155,14 +2180,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -2180,12 +2205,16 @@ set(handles.text9, 'String','Running','BackgroundColor','red');
 disableAllButtons(handles);
 pause(0.01);
 
-addpath(videoPath);
+uniquePaths = unique(videoPaths);
+for i=1:length(uniquePaths)
+    addpath(uniquePaths{i});
+end
 
 % select roi for every movie
 data_th = 1;
 while data_th <= size(records,1)
     if records{data_th, 1}
+        videoPath = videoPaths{data_th};
         shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
         frameImage = TProRead(shuttleVideo,1);
         if size(frameImage,3) == 1
@@ -2267,14 +2296,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -2306,14 +2335,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -2345,14 +2374,14 @@ if ~exist(inputListFile, 'file')
     return;
 end
 vl = load(inputListFile);
-videoPath = vl.videoPath;
+videoPaths = vl.videoPaths;
 videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
 records = {};
 for i = 1:videoFileNum
-    confFileName = [videoPath videoFiles{i} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{i} videoFiles{i} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;

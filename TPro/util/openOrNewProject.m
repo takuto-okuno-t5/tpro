@@ -1,5 +1,5 @@
 %%
-function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, templateFile)
+function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, templateFile, isAdd)
     status = true;
     tmpl = {};
     openFiles = {};
@@ -13,6 +13,7 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
 
     % write config files if it is empty
     for i = 1:size(videoFiles, 1)
+        videoPath = videoPaths{i};
         fileName = videoFiles{i};
         matName = [];
 
@@ -26,7 +27,7 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
             fileName = matName;
         end
 
-        outPathName = [videoPath fileName '_tpro'];
+        outPathName = [videoPath '/' fileName '_tpro'];
         outputFileName = [outPathName '/input_video_control.csv'];
 
         % make control file if not exist
@@ -139,12 +140,17 @@ function [status, tebleItems] = openOrNewProject(videoPath, videoFiles, template
 
         openFiles = [openFiles; fileName];
     end
-
+    % save video list file
     videoFiles = openFiles;
     inputListFile = getInputListFile();
-    save(inputListFile, 'videoPath', 'videoFiles');
+    if isAdd
+        vl = load(inputListFile);
+        videoPaths = {vl.videoPaths; videoPaths};
+        videoFiles = {vl.videoFiles; videoFiles};
+    end
+    save(inputListFile, 'videoPaths', 'videoFiles');
     for n = 1:length(videoFiles)
-        row = {videoFiles{n}, videoPath};
+        row = {videoFiles{n}, videoPaths{n}};
         tebleItems = [tebleItems; row];
     end
 end

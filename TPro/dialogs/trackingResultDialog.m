@@ -74,11 +74,11 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         return;
     end
     vl = load(inputListFile);
-    videoPath = vl.videoPath;
+    videoPaths = vl.videoPaths;
     videoFiles = vl.videoFiles;
 
     % load configuration files
-    confFileName = [videoPath videoFiles{rowNum} '_tpro/input_video_control.csv'];
+    confFileName = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/input_video_control.csv'];
     if ~exist(confFileName, 'file')
         errordlg(['configuration file not found : ' confFileName], 'Error');
         return;
@@ -88,7 +88,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     records = table2cell(confTable);
     
     % make output folder
-    confPath = [videoPath videoFiles{rowNum} '_tpro/'];
+    confPath = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/'];
     filename = [sprintf('%05d',records{4}) '_' sprintf('%05d',records{5})];
 
     % load detection & tracking
@@ -98,10 +98,10 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % initialize GUI
     sharedInst = struct; % allocate shared instance
-    sharedInst.videoPath = videoPath;
-    sharedInst.confPath = [videoPath videoFiles{rowNum} '_tpro/'];
+    sharedInst.videoPath = videoPaths{rowNum};
+    sharedInst.confPath = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = TProVideoReader(videoPath, records{2}, records{6});
+    sharedInst.shuttleVideo = TProVideoReader(videoPaths{rowNum}, records{2}, records{6});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};
