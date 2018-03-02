@@ -285,7 +285,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, true);
 
 time = toc;
 

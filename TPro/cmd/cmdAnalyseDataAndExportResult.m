@@ -101,6 +101,13 @@ function cmdAnalyseDataAndExportResult(handles)
         else
             dcd = [];
         end
+        % load be result
+        annoFileName = [confPath 'multi/annotation_' filename '.mat'];
+        if exist(annoFileName, 'file')
+            be = load(annoFileName);
+        else
+            be = [];
+        end
 
         % calc velocity etc
         [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fpsNum, mmPerPixel);
@@ -134,7 +141,7 @@ function cmdAnalyseDataAndExportResult(handles)
             trackingInfo.updownVxy = updownVxy;
             trackingInfo.dir = dir;
             data = trapezoidFindChase(trackingInfo, []);
-        case 'be'
+        case 'becalc'
             trackingInfo = struct;
             trackingInfo.fpsNum = fpsNum;
             trackingInfo.vxy = vxy;
@@ -149,20 +156,21 @@ function cmdAnalyseDataAndExportResult(handles)
             trackingInfo.lWingAngle = lWingAngle;
             trackingInfo.rWingAngleV = rWingAngleV;
             trackingInfo.lWingAngleV = lWingAngleV;
-            data = trapezoidBehaviorClassifier(trackingInfo);
+            annotation = trapezoidBehaviorClassifier(trackingInfo);
+            save(annoFileName, 'annotation');
+            disp(['calc behavior : ' name]);
+        case 'be'
+            if ~isempty(be)
+                data = be.annotation;
+            end
         case 'dcdcalc'
             r = dcdRadius / mmPerPixel;
             cnr = dcdCnRadius / mmPerPixel;
             [means, result] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
             save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
+            disp(['calc DCD : ' name]);
         case 'dcd'
-            if isempty(dcd)
-                r = dcdRadius / mmPerPixel;
-                cnr = dcdCnRadius / mmPerPixel;
-                [means, data] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
-                result = data;
-                save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
-            else
+            if ~isempty(dcd)
                 data = dcd.result;
             end
         case 'group'
@@ -182,14 +190,19 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'gcalc'
             result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] = calcGroupArea(keep_data{1}, keep_data{2}, result, roiMasks{1}, height); % dummy roiMask
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, roiMasks{1}, height); % dummy roiMask
             areas = areas * mmPerPixel * mmPerPixel;
             groupAreas = groupAreas * mmPerPixel * mmPerPixel;
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc', 'groupFlyNum');
+            disp(['calc group : ' name]);
         case 'garea'
             if ~isempty(grp)
                 data = grp.areas;
+            end
+        case 'gfly'
+            if ~isempty(grp)
+                data = grp.groupFlyNum;
             end
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);

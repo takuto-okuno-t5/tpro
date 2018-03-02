@@ -143,10 +143,10 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
     % save video list file
     videoFiles = openFiles;
     inputListFile = getInputListFile();
-    if isAdd
+    if isAdd && exist(inputListFile, 'file')
         vl = load(inputListFile);
-        videoPaths = {vl.videoPaths; videoPaths};
-        videoFiles = {vl.videoFiles; videoFiles};
+        videoPaths = [vl.videoPaths; videoPaths];
+        videoFiles = [vl.videoFiles; videoFiles];
     end
     save(inputListFile, 'videoPaths', 'videoFiles');
     for n = 1:length(videoFiles)

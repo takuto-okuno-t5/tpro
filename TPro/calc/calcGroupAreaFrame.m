@@ -1,5 +1,5 @@
 % calculate group area
-function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] = calcGroupAreaFrame(X, Y, group, roiMask, height, hBlobAnls)
+function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, groupFlyNum] = calcGroupAreaFrame(X, Y, group, roiMask, height, hBlobAnls)
     fn = length(X);
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
@@ -11,6 +11,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] =
     groupCenterY = nan(1,fn);
     groupOrient = nan(1,fn);
     groupEcc = nan(1,fn);
+    groupFlyNum = nan(1,fn);
 
     for j=1:maxGroup
         img = zeros(img_h, img_w);
@@ -18,7 +19,8 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] =
         if isempty(idx)
             continue;
         end
-        for i=1:length(idx)
+        flyNum = length(idx);
+        for i=1:flyNum
             circlePixels = (rowsInImage - X(idx(i))).^2 + (columnsInImage - Y(idx(i))).^2 <= height.^2;
             img = img | circlePixels';
         end
@@ -29,6 +31,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] =
         groupCenterY(j) = CENTROID(2);
         groupOrient(j) = ORIENTATION;
         groupEcc(j) = ECCENTRICITY;
+        groupFlyNum(j) = groupFlyNum;
 
         frameImage = frameImage | img;
     end
