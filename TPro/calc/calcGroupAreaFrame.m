@@ -31,7 +31,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, g
         groupCenterY(j) = CENTROID(2);
         groupOrient(j) = ORIENTATION;
         groupEcc(j) = ECCENTRICITY;
-        groupFlyNum(j) = groupFlyNum;
+        groupFlyNum(j) = flyNum;
 
         frameImage = frameImage | img;
     end

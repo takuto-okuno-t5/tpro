@@ -159,7 +159,7 @@ while true
             disp('  --dcd               export DCD using detection or tracking data');
             disp('  --dcdp file         set dcd percetile map [file]');
             disp('  --src type          specify analysing data source (tracking data)');
-            disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcd,group,gcount,gcalc,be,chase, ...');
+            disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcdcalc,dcd,gcalc,group,gcount,becalc,be,chase, ...');
             disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --proc op           process analysed data by [op] operation');
             disp('                      [op] : sum,mean,max,min,count==N,nancount, ...');
