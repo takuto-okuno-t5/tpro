@@ -4,6 +4,8 @@ function [paths, files, items] = getInputList()
     global gVideoFiles;
     global gTebleItems;
     paths = {};
+    files = {};
+    items = {};
     if isempty(gVideoPaths)
         inputListFile = getInputListFile();
         if ~exist(inputListFile, 'file')
