@@ -68,14 +68,11 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if isempty(rowNum), rowNum = 1; end
 
     % load video list
-    inputListFile = getInputListFile();
-    if ~exist(inputListFile, 'file')
+    [videoPaths, videoFiles, tebleItems] = getInputList();
+    if isempty(videoPaths)
         errordlg('please select movies before operation.', 'Error');
         return;
     end
-    vl = load(inputListFile);
-    videoPaths = vl.videoPaths;
-    videoFiles = vl.videoFiles;
 
     % load configuration files
     confFileName = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/input_video_control.csv'];

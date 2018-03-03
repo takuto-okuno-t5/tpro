@@ -3,6 +3,7 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
     status = true;
     tmpl = {};
     openFiles = {};
+    openPaths = {};
     tebleItems = {};
     if ~isempty(templateFile)
         if exist(templateFile, 'file')
@@ -33,6 +34,7 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         % make control file if not exist
         if exist(outputFileName, 'file')
             openFiles = [openFiles; fileName];
+            openPaths = [openPaths; videoPath];
             continue;
         end
 
@@ -139,9 +141,11 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         end
 
         openFiles = [openFiles; fileName];
+        openPaths = [openPaths; videoPath];
     end
     % save video list file
     videoFiles = openFiles;
+    videoPaths = openPaths;
     inputListFile = getInputListFile();
     if isAdd && exist(inputListFile, 'file')
         vl = load(inputListFile);
@@ -153,4 +157,11 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         row = {videoFiles{n}, videoPaths{n}};
         tebleItems = [tebleItems; row];
     end
+    % set to global value
+    global gVideoPaths;
+    global gVideoFiles;
+    global gTebleItems;
+    gVideoPaths = videoPaths;
+    gVideoFiles = videoFiles;
+    gTebleItems = tebleItems;
 end

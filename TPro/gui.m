@@ -237,21 +237,9 @@ runCommandLineMode(hObject, eventdata, handles);
 
 %% 
 function initFileUITable(handles)
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     return;
-end
-vl = load(inputListFile);
-if ~isfield(vl, 'videoPaths')
-    return;
-end
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
-tebleItems = {};
-
-for i = 1:size(videoFiles,1)
-    row = {videoFiles{i}, videoPaths{i}};
-    tebleItems = [tebleItems; row];
 end
 % update uitable
 handles.uitable2.Data = tebleItems;
@@ -529,14 +517,11 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -729,14 +714,11 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -790,14 +772,11 @@ function pushbutton4_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -1396,14 +1375,11 @@ function pushbutton5_Callback(hObject, eventdata, handles)  % tracker
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -2121,20 +2097,9 @@ disableAllButtons(handles)
 % button1 is always on
 set(handles.pushbutton1, 'Enable', 'on');
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
-    return; % no input files
-end
-vl = load(inputListFile);
-if ~isfield(vl, 'videoPaths')
-    return; % bad old files
-end
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
-
-videoFileNum = size(videoFiles,1);
-if videoFileNum == 0
-    return; % no video files
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
+    return;
 end
 
 confFileName = [videoPaths{1} videoFiles{1} '_tpro/input_video_control.csv'];
@@ -2200,14 +2165,11 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -2316,14 +2278,11 @@ function pushbutton10_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -2355,14 +2314,11 @@ function pushbutton11_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);
@@ -2394,14 +2350,11 @@ function pushbutton12_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-inputListFile = getInputListFile();
-if ~exist(inputListFile, 'file')
+[videoPaths, videoFiles, tebleItems] = getInputList();
+if isempty(videoPaths)
     errordlg('please select movies before operation.', 'Error');
     return;
 end
-vl = load(inputListFile);
-videoPaths = vl.videoPaths;
-videoFiles = vl.videoFiles;
 
 % load configuration files
 videoFileNum = size(videoFiles,1);

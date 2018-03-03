@@ -1,13 +1,10 @@
 %%
 function cmdCalcDcdAndExportResult(handles)
-    inputListFile = getInputListFile();
-    if ~exist(inputListFile, 'file')
+    [videoPaths, videoFiles, tebleItems] = getInputList();
+    if isempty(videoPaths)
         errordlg('please select movies before operation.', 'Error');
         return;
     end
-    vl = load(inputListFile);
-    videoPaths = vl.videoPaths;
-    videoFiles = vl.videoFiles;
 
     % read tpro configuration
     dcdRadius = readTproConfig('dcdRadius', 7.5);

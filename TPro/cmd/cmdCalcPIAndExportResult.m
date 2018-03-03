@@ -1,13 +1,10 @@
 %%
 function cmdCalcPIAndExportResult(handles)
-    inputListFile = getInputListFile();
-    if ~exist(inputListFile, 'file')
+    [videoPaths, videoFiles, tebleItems] = getInputList();
+    if isempty(videoPaths)
         errordlg('please select movies before operation.', 'Error');
         return;
     end
-    vl = load(inputListFile);
-    videoPaths = vl.videoPaths;
-    videoFiles = vl.videoFiles;
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
