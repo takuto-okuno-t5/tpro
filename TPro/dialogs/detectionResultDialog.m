@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 12-Feb-2018 01:18:09
+% Last Modified by GUIDE v2.5 04-Mar-2018 19:21:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1776,6 +1776,22 @@ function Untitled_32_Callback(hObject, eventdata, handles)
     sharedInst.ylimit = [1, sharedInst.img_h];
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+% --------------------------------------------------------------------
+function Untitled_33_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_33 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    dlen = length(sharedInst.X);
+    result = calcPixelIntensity(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps);
+
+    % add result to axes & show in axes
+    cname = 'pixel_intensity_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
