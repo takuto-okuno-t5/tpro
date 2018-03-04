@@ -187,11 +187,9 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'gcalc'
             result = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, roiMasks{1}, height); % dummy roiMask
-            areas = areas * mmPerPixel * mmPerPixel;
-            groupAreas = groupAreas * mmPerPixel * mmPerPixel;
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, mmPerPixel); % dummy roiMask
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc', 'groupFlyNum');
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
             disp(['calc group : ' name]);
         case 'garea'
             if ~isempty(grp)

@@ -1,5 +1,5 @@
 % calculate group area
-function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, groupFlyNum] = calcGroupArea(X, Y, groups, roiMask, height)
+function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(X, Y, groups, mmPerPixel)
     fn = size(X,2);
     frame = size(X,1);
     areas = zeros(frame,1);
@@ -7,9 +7,8 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, 
     groupCenterX = nan(frame,fn);
     groupCenterY = nan(frame,fn);
     groupOrient = nan(frame,fn);
-    groupEcc = nan(frame,fn);
+    groupPerimeter = nan(frame,fn);
     groupFlyNum = nan(frame,fn);
-    hBlobAnls = getVisionBlobAnalysis();
 
     tic;
     for i = 1:frame
@@ -20,11 +19,10 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc, 
         fy(fy==0) = NaN;
         group = groups(i,:);
 
-        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupEcc(i,:), groupFlyNum(i,:)] = calcGroupAreaFrame(fy,fx,group,roiMask,height,hBlobAnls);
-        release(hBlobAnls);
+        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupFlyNum(i,:)] = calcGroupAreaFrame(fy,fx,group,mmPerPixel);
 
-        if mod(i,100)==0
-            rate = i*100 / frame;
+        if mod(i,200)==0
+            rate = i*200 / frame;
             disp(['calcGroupArea : ' num2str(i) '(' num2str(rate) '%)']);
         end
     end

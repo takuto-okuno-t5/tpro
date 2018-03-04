@@ -1877,12 +1877,9 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
 
     [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupEcc] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.roiMaskImage, height);
-    areas = areas * sharedInst.mmPerPixel * sharedInst.mmPerPixel;
-    groupAreas = groupAreas * sharedInst.mmPerPixel * sharedInst.mmPerPixel;
-
+    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.mmPerPixel);
     save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-        'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupEcc');
+        'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter');
 
     sharedInst.groupCenterX = groupCenterX;
     sharedInst.groupCenterY = groupCenterY;
@@ -2465,6 +2462,23 @@ function showFrameInAxes(hObject, handles, frameNum)
         data = getappdata(handles.figure1, 'nn_groups');
         if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
              strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
+            group = data(t,:);
+            maxGroup = max(group);
+            for j=1:maxGroup
+                idx = find(group==j);
+                gx = double(fy(idx))';
+                gy = double(fx(idx))';
+                if length(idx)==2
+                    plot(gx,gy,'Color','blue','LineWidth',0.5);
+                else
+                    dt = delaunayTriangulation(gx,gy);
+                    triplot(dt,'Color',[.3 .3 1],'LineWidth',0.5);
+                    fe = freeBoundary(dt)';
+                    fe = [fe(1,:), fe(1,1)];
+                    plot(gx(fe),gy(fe),'Color','blue','LineWidth',0.5) ; 
+                end
+            end
+%{
             height = sharedInst.nnHeight;
             if height > 10, height = 10; end
             height = height / sharedInst.mmPerPixel;
@@ -2476,8 +2490,9 @@ function showFrameInAxes(hObject, handles, frameNum)
             fx2(idxs) = [];
             culster(idxs) = [];
             scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
+%}
             % group center
-            plot(sharedInst.groupCenterX(t,:),sharedInst.groupCenterY(t,:),'or','Color', [1 .3 1], 'Marker','x');
+            plot(sharedInst.groupCenterX(t,:),sharedInst.groupCenterY(t,:),'or','Color', [.2 .2 1], 'Marker','x');
         end
         % local densities
         if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
