@@ -22,7 +22,7 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerim
         [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupFlyNum(i,:)] = calcGroupAreaFrame(fy,fx,group,mmPerPixel);
 
         if mod(i,200)==0
-            rate = i*200 / frame;
+            rate = i/frame * 100;
             disp(['calcGroupArea : ' num2str(i) '(' num2str(rate) '%)']);
         end
     end
