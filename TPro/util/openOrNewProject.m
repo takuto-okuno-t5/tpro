@@ -1,5 +1,5 @@
 %%
-function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, templateFile, isAdd)
+function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, templateFile, batches, isAdd)
     status = true;
     tmpl = {};
     openFiles = {};
@@ -18,6 +18,12 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         fileName = videoFiles{i};
         matName = [];
 
+        if ~isempty(batches)
+            tmpl = batches(i,:);
+            if batches{i,1} == 0
+                continue;
+            end
+        end
         % check work dir or not
         if length(fileName) > 5 && strcmp(fileName(end-4:end),'_tpro')
             movieName = fileName(1:end-5);

@@ -274,7 +274,7 @@ pause(0.01);
 tic;
 
 % create config files if possible
-[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, handles.addFileMode);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, [], handles.addFileMode);
 
 time = toc;
 
@@ -318,7 +318,7 @@ if length(handles.batch) > 0
     end
 
     % create config files if possible
-    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.batch, false);
+    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, [], batches, false);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -339,7 +339,7 @@ if length(handles.movies) > 0
     videoFiles = sort(videoFiles);
 
     % create config files if possible
-    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, false);
+    [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, [], false);
     if ~status
         disp('failed to create a configuration file');
         delete(hObject);
@@ -494,7 +494,7 @@ end
 videoFiles = sort(videoFiles);
 
 % create config files if possible
-[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, handles.addFileMode);
+[status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, handles.template, [], handles.addFileMode);
 
 time = toc;
 
