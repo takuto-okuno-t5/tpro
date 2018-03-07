@@ -78,7 +78,13 @@ function cmdAnalyseDataAndExportResult(handles)
             end
         end
 
-        % load detection & tracking result
+        % load detection result
+        matFile = [confPath 'multi/detect_' filename,'keep_count.mat'];
+        if ~exist(matFile,'file')
+            continue;
+        end
+        load(matFile);
+        % load tracking result
         matFile = [confPath 'multi/track_' filename,'.mat'];
         if ~exist(matFile,'file')
             continue;
@@ -112,6 +118,8 @@ function cmdAnalyseDataAndExportResult(handles)
 
         % get data
         switch(handles.analyseSrc)
+        case 'count'
+            data = keep_count';
         case 'x'
             data = keep_data{2};
         case 'y'
@@ -195,6 +203,11 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = grp.areas;
             end
+        case 'gsolo'
+            if ~isempty(grp)
+                gfly = nansum(grp.groupFlyNum, 2);
+                data = keep_count' - gfly(1:length(keep_count),1);
+            end
         case 'gfly'
             if ~isempty(grp)
                 data = grp.groupFlyNum;
@@ -222,11 +235,16 @@ function cmdAnalyseDataAndExportResult(handles)
         % set range
         startRow = 1;
         endRow = size(data,1);
+        rangeName = '';
         if ~isempty(handles.range)
             startRow = str2num(handles.range{1});
             if ~strcmp(handles.range{2},'end')
                 endRow = str2num(handles.range{2});
+                if endRow > size(data,1)
+                    endRow = size(data,1);
+                end
             end
+            rangeName = [num2str(startRow) '-' num2str(endRow) '_'];
         end
         for i=1:roiNum
             roiData{i} = roiData{i}(startRow:endRow,:);
@@ -275,7 +293,7 @@ function cmdAnalyseDataAndExportResult(handles)
             joinHeader = {};
         end
         outputPath = [handles.export '/'];
-        dataFileName = [outputPath name '_' handles.analyseSrc '_joined'];
+        dataFileName = [outputPath name '_' rangeName handles.analyseSrc '_joined'];
         saveNxNmatText(dataFileName, joinHeader, joinData);
     end
 

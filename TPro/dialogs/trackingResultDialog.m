@@ -1153,7 +1153,7 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     set(handles.pushbutton14, 'Enable', 'off')
     set(handles.pushbutton15, 'Enable', 'off')
     set(handles.Untitled_24, 'Enable', 'off')
-    
+
     % make output folder
     confPath = sharedInst.confPath;
     if ~exist([confPath 'movie'], 'dir')
@@ -1167,10 +1167,13 @@ function pushbutton14_Callback(hObject, eventdata, handles)
     outputVideo = VideoWriter(fullfile([confPath 'movie'], filename));
     outputVideo.FrameRate = sharedInst.fpsNum / sharedInst.frameSteps;
 
+    sharedInst.editMode = 0;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
     % make video
     open(outputVideo)
 
-    for frameNum = sharedInst.startFrame:sharedInst.frameSteps:sharedInst.endFrame
+    for frameNum = sharedInst.frameNum:sharedInst.frameSteps:sharedInst.endFrame
         set(handles.slider1, 'value', frameNum);
         slider1_Callback(handles.slider1, eventdata, handles)
 
@@ -1189,7 +1192,10 @@ function pushbutton14_Callback(hObject, eventdata, handles)
         pause(0.03);
     end
     close(outputVideo)
-    
+
+    sharedInst.editMode = 1;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
     set(handles.pushbutton1, 'Enable', 'on')
     set(handles.pushbutton2, 'Enable', 'on')
     set(handles.pushbutton4, 'Enable', 'on')
