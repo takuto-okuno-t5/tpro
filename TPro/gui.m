@@ -870,6 +870,10 @@ for data_th = 1:size(records,1)
     wingColorRange = getVideoConfigValue(record, 41, 1);
     wingCircleStep = getVideoConfigValue(record, 42, 10);
     ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
+    auto1st1 = getVideoConfigValue(record, 44, '');
+    auto1st1val = getVideoConfigValue(record, 45, 0);
+    auto1st2 = getVideoConfigValue(record, 46, '');
+    auto1st2val = getVideoConfigValue(record, 47, 0);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
     confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
@@ -935,6 +939,76 @@ for data_th = 1:size(records,1)
             tmplImage = 255 - tmplImage;
             tmplImage = single(tmplImage);
             templateImages = [templateImages, tmplImage];
+        end
+    end
+
+    % finding first frame
+    if ~strcmp(auto1st1, '') && (isempty(start_frame) || strcmp(start_frame,'auto') || start_frame <= 0)
+        disp(['finding first frame : ' shuttleVideo.name]);
+        hWaitBar = waitbar(0,'finding first frame ...','Name',['finding first frame ', shuttleVideo.name],...
+                    'CreateCancelBtn',...
+                    'setappdata(gcbf,''canceling'',1)');
+        setappdata(hWaitBar,'canceling',0)
+
+        type = auto1st1;
+        typeVal = auto1st1val;
+        step = 1;
+
+        roiNanMask = double(roi_mask);
+        roiNanMask(roiNanMask==0) = NaN;
+        for i = 1 : end_frame
+            % Check for Cancel button press
+            isCancel = getappdata(hWaitBar, 'canceling');
+            if isCancel
+                break;
+            end
+
+            % Report current estimate in the waitbar's message field
+            waitbar(i/end_frame, hWaitBar, [num2str(100*i/end_frame) ' %']);
+            pause(0.001);
+
+            % read a frame and process image
+            img = TProRead(shuttleVideo, i);
+            if size(img,3) > 1
+                img = rgb2gray(img);
+            end
+            switch type
+            case 'pxIntensityLess'
+                img = double(img) .* roiNanMask;
+                if nanmean(nanmean(img)) <= typeVal
+                    step = step + 1;
+                end
+            case 'pxIntensityMore'
+                img = double(img) .* roiNanMask;
+                if nanmean(nanmean(img)) >= typeVal
+                    step = step + 1;
+                end
+            end
+            if step == 2
+                if ~strcmp(auto1st2, '')
+                    type = auto1st2;
+                    typeVal = auto1st2val;
+                else
+                    break;
+                end
+            elseif step == 3
+                break;
+            end
+        end
+        % delete dialog bar
+        delete(hWaitBar);
+        if isCancel
+            continue;
+        end
+        % set start frame
+        start_frame = i;
+        % update configuration file
+        record{4} = i;
+        confFileName = [confPath 'input_video_control.csv'];
+        status = saveInputControlFile(confFileName, record);
+        if ~status
+            errordlg(['failed to save a configuration file : ' confFileName], 'Error');
+            continue;
         end
     end
 

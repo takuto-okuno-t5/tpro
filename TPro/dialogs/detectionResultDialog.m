@@ -1785,7 +1785,7 @@ function Untitled_33_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
 
     dlen = length(sharedInst.X);
-    result = calcPixelIntensity(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps);
+    result = calcPixelIntensity(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps, sharedInst.roiMaskImage);
 
     % add result to axes & show in axes
     cname = 'pixel_intensity_result';
