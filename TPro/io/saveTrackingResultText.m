@@ -26,6 +26,7 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         leftWingAngle = angleAxis2def(keep_data{10});
     end
 
+    disp(['saveTrackingResultText : ', dataFileName]);
     % cook raw data before saving
     for row_count = 1:end_row
         fx = keep_data{2}(row_count, :);
@@ -126,7 +127,12 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
             fmtString = generatePrintFormatString(roiFlyNum);
             fprintf(write_file_md, fmtString, mdfly);
         end
+        if mod(row_count,1000)==0
+            rate = row_count/end_row * 100;
+            disp(['write text : ' num2str(row_count) '(' num2str(rate) '%)']);
+        end
     end
+    disp('saveTrackingResultText ... done');
 
     fclose(write_file_x);
     fclose(write_file_y);
