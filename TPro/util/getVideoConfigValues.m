@@ -1,0 +1,33 @@
+%%
+function sharedInst = getVideoConfigValues(sharedInst, records)
+    sharedInst.filterType = getVideoConfigValue(records, 18, 'log');
+    sharedInst.maxSeparate = getVideoConfigValue(records, 19, 4);
+    sharedInst.isSeparate = getVideoConfigValue(records, 20, 1);
+    sharedInst.maxBlobs = getVideoConfigValue(records, 21, 0);
+    sharedInst.delRectOverlap = getVideoConfigValue(records, 22, 0);
+    sharedInst.rRate = getVideoConfigValue(records, 23, 1);
+    sharedInst.gRate = getVideoConfigValue(records, 24, 1);
+    sharedInst.bRate = getVideoConfigValue(records, 25, 1);
+    sharedInst.keepNear = getVideoConfigValue(records, 26, 0);
+    sharedInst.fixedTrackNum = getVideoConfigValue(records, 27, 0);
+    sharedInst.fixedTrackDir = getVideoConfigValue(records, 28, 0);
+    sharedInst.contMin = getVideoConfigValue(records, 29, 0);
+    sharedInst.contMax = getVideoConfigValue(records, 30, 0);
+    sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
+    sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
+    sharedInst.templateCount = getVideoConfigValue(records, 33, 0);
+    sharedInst.tmplMatchTh = getVideoConfigValue(records, 34, 0);
+    sharedInst.tmplSepNum = getVideoConfigValue(records, 35, 4);
+    sharedInst.tmplSepTh = getVideoConfigValue(records, 36, 0.85);
+    sharedInst.overlapTh = getVideoConfigValue(records, 37, 0.17);
+    sharedInst.wingColorMin = getVideoConfigValue(records, 38, 140);
+    sharedInst.wingColorMax = getVideoConfigValue(records, 39, 216);
+    sharedInst.wingRadiusRate = getVideoConfigValue(records, 40, 0.55);
+    sharedInst.wingColorRange = getVideoConfigValue(records, 41, 1);
+    sharedInst.wingCircleStep = getVideoConfigValue(records, 42, 10);
+    sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
+    sharedInst.auto1st1 = getVideoConfigValue(records, 44, '-');
+    sharedInst.auto1st1val = getVideoConfigValue(records, 45, 0);
+    sharedInst.auto1st2 = getVideoConfigValue(records, 46, '-');
+    sharedInst.auto1st2val = getVideoConfigValue(records, 47, 0);
+end

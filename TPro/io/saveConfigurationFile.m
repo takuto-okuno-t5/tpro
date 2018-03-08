@@ -40,10 +40,10 @@ function status = saveConfigurationFile(handles)
     wingColorRange = sharedInst.wingColorRange;
     wingCircleStep = sharedInst.wingCircleStep;
     ignoreEccTh = sharedInst.ignoreEccTh;
-    auto1st1
-    auto1st1val
-    auto1st2
-    auto1st2val ...
+    auto1st1 = sharedInst.auto1st1;
+    auto1st1val = sharedInst.auto1st1val;
+    auto1st2 = sharedInst.auto1st2;
+    auto1st2val = sharedInst.auto1st2val;
 
     B = {1, name, '', sharedInst.startFrame, sharedInst.endFrame, frameNum, frameRate, ...
         (binaryTh / 100), mmPerPixel, sharedInst.roiNum, reject_dist, isInvert, ...

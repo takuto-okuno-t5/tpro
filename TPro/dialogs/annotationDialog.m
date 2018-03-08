@@ -135,6 +135,9 @@ function annotationDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.blobSeparateRate = records{17};
     sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
 
+    % load config values
+    sharedInst = getVideoConfigValues(sharedInst, records);
+
     contents = cellstr(get(handles.popupmenu4,'String'));
     sharedInst.axesType1 = contents{get(handles.popupmenu4,'Value')};
     contents = cellstr(get(handles.popupmenu5,'String'));

@@ -102,7 +102,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.endFrame = records{5};
     sharedInst.maxFrame = sharedInst.shuttleVideo.NumberOfFrames;
     sharedInst.frameSteps = records{16};
-    sharedInst.frameNum = sharedInst.startFrame;
     sharedInst.gaussH = records{13};
     sharedInst.gaussSigma = records{14};
     sharedInst.binaryTh = records{8} * 100;
@@ -135,32 +134,8 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     if sharedInst.mmPerPixel <= 0
         sharedInst.mmPerPixel = 0.1;
     end
-    sharedInst.filterType = getVideoConfigValue(records, 18, 'log');
-    sharedInst.maxSeparate = getVideoConfigValue(records, 19, 4);
-    sharedInst.isSeparate = getVideoConfigValue(records, 20, 1);
-    sharedInst.maxBlobs = getVideoConfigValue(records, 21, 0);
-    sharedInst.delRectOverlap = getVideoConfigValue(records, 22, 0);
-    sharedInst.rRate = getVideoConfigValue(records, 23, 1);
-    sharedInst.gRate = getVideoConfigValue(records, 24, 1);
-    sharedInst.bRate = getVideoConfigValue(records, 25, 1);
-    sharedInst.keepNear = getVideoConfigValue(records, 26, 0);
-    sharedInst.fixedTrackNum = getVideoConfigValue(records, 27, 0);
-    sharedInst.fixedTrackDir = getVideoConfigValue(records, 28, 0);
-    sharedInst.contMin = getVideoConfigValue(records, 29, 0);
-    sharedInst.contMax = getVideoConfigValue(records, 30, 0);
-    sharedInst.sharpRadius = getVideoConfigValue(records, 31, 0);
-    sharedInst.sharpAmount = getVideoConfigValue(records, 32, 0);
-    sharedInst.templateCount = getVideoConfigValue(records, 33, 0);
-    sharedInst.tmplMatchTh = getVideoConfigValue(records, 34, 0);
-    sharedInst.tmplSepNum = getVideoConfigValue(records, 35, 4);
-    sharedInst.tmplSepTh = getVideoConfigValue(records, 36, 0.85);
-    sharedInst.overlapTh = getVideoConfigValue(records, 37, 0.17);
-    sharedInst.wingColorMin = getVideoConfigValue(records, 38, 140);
-    sharedInst.wingColorMax = getVideoConfigValue(records, 39, 216);
-    sharedInst.wingRadiusRate = getVideoConfigValue(records, 40, 0.55);
-    sharedInst.wingColorRange = getVideoConfigValue(records, 41, 1);
-    sharedInst.wingCircleStep = getVideoConfigValue(records, 42, 10);
-    sharedInst.ignoreEccTh = getVideoConfigValue(records, 43, 0.75);
+    % load config values
+    sharedInst = getVideoConfigValues(sharedInst, records);
 
     % load last detection setting (do not read when local debug)
     lastConfigFile = getTproEtcFile('last_detect_config.mat');
@@ -202,6 +177,10 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.wingColorRange = cf.wingColorRange;
         sharedInst.wingCircleStep = cf.wingCircleStep;
         sharedInst.ignoreEccTh = cf.ignoreEccTh;
+        sharedInst.auto1st1 = cf.auto1st1;
+        sharedInst.auto1st1val = cf.auto1st1val;
+        sharedInst.auto1st2 = cf.auto1st2;
+        sharedInst.auto1st2val = cf.auto1st2val;
     end
 
     % deep learning data
@@ -219,9 +198,17 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
     sharedInst.boxSize = findFlyImageBoxSize(sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
 
+    if isnumeric(sharedInst.startFrame) && sharedInst.startFrame >= 1
+        startFrame = sharedInst.startFrame;
+        set(handles.edit1, 'Enable', 'on');
+    else
+        startFrame = 1;
+        set(handles.edit1, 'Enable', 'off');
+    end
+    sharedInst.frameNum = startFrame;
     set(handles.text9, 'String', sharedInst.shuttleVideo.NumberOfFrames);
     set(handles.text11, 'String', sharedInst.shuttleVideo.FrameRate);
-    set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', sharedInst.startFrame);
+    set(handles.slider1, 'Min', 1, 'Max', sharedInst.maxFrame, 'Value', startFrame);
     set(handles.checkbox1, 'Value', sharedInst.showDetectResult);
     if sharedInst.isModified
         set(handles.pushbutton4, 'Enable', 'on')
@@ -322,7 +309,7 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
     guidata(hObject, handles);  % Update handles structure
 
     % show first frame
-    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.startFrame);
+    showFrameInAxes(hObject, handles, sharedInst.imageMode, startFrame);
 
     %% internal function to add a spinner
     function hContainer = addLabeledSpinner(model, pos, callbackFunc)

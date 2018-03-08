@@ -870,9 +870,9 @@ for data_th = 1:size(records,1)
     wingColorRange = getVideoConfigValue(record, 41, 1);
     wingCircleStep = getVideoConfigValue(record, 42, 10);
     ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
-    auto1st1 = getVideoConfigValue(record, 44, '');
+    auto1st1 = getVideoConfigValue(record, 44, '-');
     auto1st1val = getVideoConfigValue(record, 45, 0);
-    auto1st2 = getVideoConfigValue(record, 46, '');
+    auto1st2 = getVideoConfigValue(record, 46, '-');
     auto1st2val = getVideoConfigValue(record, 47, 0);
     isColorFilter = (rRate ~= 1 || gRate ~= 1 || bRate ~= 1);
 
@@ -943,7 +943,7 @@ for data_th = 1:size(records,1)
     end
 
     % finding first frame
-    if ~strcmp(auto1st1, '') && (isempty(start_frame) || strcmp(start_frame,'auto') || start_frame <= 0)
+    if ~strcmp(auto1st1, '-') && (isempty(start_frame) || strcmp(start_frame,'auto') || start_frame <= 0)
         disp(['finding first frame : ' shuttleVideo.name]);
         hWaitBar = waitbar(0,'finding first frame ...','Name',['finding first frame ', shuttleVideo.name],...
                     'CreateCancelBtn',...
@@ -952,7 +952,7 @@ for data_th = 1:size(records,1)
 
         type = auto1st1;
         typeVal = auto1st1val;
-        step = 1;
+        fffStep = 1;
 
         roiNanMask = double(roi_mask);
         roiNanMask(roiNanMask==0) = NaN;
@@ -976,22 +976,22 @@ for data_th = 1:size(records,1)
             case 'pxIntensityLess'
                 img = double(img) .* roiNanMask;
                 if nanmean(nanmean(img)) <= typeVal
-                    step = step + 1;
+                    fffStep = fffStep + 1;
                 end
             case 'pxIntensityMore'
                 img = double(img) .* roiNanMask;
                 if nanmean(nanmean(img)) >= typeVal
-                    step = step + 1;
+                    fffStep = fffStep + 1;
                 end
             end
-            if step == 2
+            if fffStep == 2
                 if ~strcmp(auto1st2, '')
                     type = auto1st2;
                     typeVal = auto1st2val;
                 else
                     break;
                 end
-            elseif step == 3
+            elseif fffStep == 3
                 break;
             end
         end
