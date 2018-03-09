@@ -37,8 +37,8 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         outPathName = [videoPath '/' fileName '_tpro'];
         outputFileName = [outPathName '/input_video_control.csv'];
 
-        % make control file if not exist
-        if exist(outputFileName, 'file')
+        % open current input_video_control.csv if exist (except batch mode)
+        if exist(outputFileName, 'file') && isempty(batches)
             openFiles = [openFiles; fileName];
             openPaths = [openPaths; videoPath];
             continue;
