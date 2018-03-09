@@ -1291,11 +1291,6 @@ for data_th = 1:size(records,1)
             end
         end
 
-        %% working 20170315
-        %                 [ keep_direction, XY_update_to_keep_direction, keep_ecc] = PD_wing( H, img, img_gray, blob_img_logical2, X_update2{i}, Y_update2{i} );
-
-
-
         %%
         if size(netForFrontBack, 1) > 0
             [ keep_direction, keep_angle, keep_wings ] = PD_direction_deepLearning(step2img, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
@@ -1407,27 +1402,30 @@ for data_th = 1:size(records,1)
     save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
 
     % save data as text
-    for i=1:roiNum
-        outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
-        dataFileName = [outputPath shuttleVideo.name '_' filename];
-        
-        dcdparam = {};
-        if exportDcd
-            dcdpfile = [confPath 'multi/aggr_dcd_percent.mat'];
-            if isfield(handles, 'dcdpfile')
-                dcdpfile = handles.dcdpfile;
-            end
-            dcdparam = {dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel, dcdpfile};
-        end
-        saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdparam);
-        %saveDetectionEccAxesResultText(dataFileName, X, Y, i, img_h, roiMasks, keep_ecc_sorted, keep_major_axis, keep_minor_axis);
+    exportDetectionText = readTproConfig('exportDetectionText', 1);
+    if exportDetectionText > 0
+        for i=1:roiNum
+            outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
+            dataFileName = [outputPath shuttleVideo.name '_' filename];
 
-        % open text file with notepad (only windows)
-        % system(['start notepad ' countFileName]);
-        if ~isfield(handles, 'showcount') || handles.showcount
-            countFileName = [dataFileName '_count.txt'];
-            disp(['winopen : ' countFileName]);
-            winopen(countFileName);
+            dcdparam = {};
+            if exportDcd
+                dcdpfile = [confPath 'multi/aggr_dcd_percent.mat'];
+                if isfield(handles, 'dcdpfile')
+                    dcdpfile = handles.dcdpfile;
+                end
+                dcdparam = {dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel, dcdpfile};
+            end
+            saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdparam);
+            %saveDetectionEccAxesResultText(dataFileName, X, Y, i, img_h, roiMasks, keep_ecc_sorted, keep_major_axis, keep_minor_axis);
+
+            % open text file with notepad (only windows)
+            % system(['start notepad ' countFileName]);
+            if ~isfield(handles, 'showcount') || handles.showcount
+                countFileName = [dataFileName '_count.txt'];
+                disp(['winopen : ' countFileName]);
+                winopen(countFileName);
+            end
         end
     end
 
@@ -2097,29 +2095,32 @@ for data_th = 1:size(records,1)
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');
 
-    % optional data export
-    mdparam = [];
-    dcdparam = [];
-    if exportDcd
-        dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
-    end
-    if exportMd
-        mdparam = [mmPerPixel];
-    end
+    exportTrackingText = readTproConfig('exportTrackingText', 1);
+    if exportTrackingText > 0
+        % optional data export
+        mdparam = [];
+        dcdparam = [];
+        if exportDcd
+            dcdparam = [dcdRadius / mmPerPixel, dcdCnRadius / mmPerPixel];
+        end
+        if exportMd
+            mdparam = [mmPerPixel];
+        end
 
-    % save data as text
-    for i=1:roiNum
-        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-        dataFileName = [outputDataPath shuttleVideo.name '_' filename];
+        % save data as text
+        for i=1:roiNum
+            outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+            dataFileName = [outputDataPath shuttleVideo.name '_' filename];
 
-        % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
+            % output text data
+            saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
 
-        % save input data used for generating this result
-        record = {records{data_th,:}};
-        T = cell2table(record);
-        T.Properties.VariableNames = getVideoConfigHeader();
-        writetable(T, [dataFileName '_config.csv']);
+            % save input data used for generating this result
+            record = {records{data_th,:}};
+            T = cell2table(record);
+            T.Properties.VariableNames = getVideoConfigHeader();
+            writetable(T, [dataFileName '_config.csv']);
+        end
     end
 
     % show tracking result
