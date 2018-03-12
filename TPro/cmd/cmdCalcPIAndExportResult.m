@@ -30,7 +30,9 @@ function cmdCalcPIAndExportResult(handles)
             continue;
         end
         name = records{data_th, 2};
+        fpsNum = records{data_th, 7};
         roiNum = records{data_th, 10};
+        mmPerPixel = records{data_th, 9};
 
         % get path of output folder
         confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
@@ -60,19 +62,41 @@ function cmdCalcPIAndExportResult(handles)
         load(strcat(confPath,'multi/detect_',filename,'.mat'));
 
         % calc and save PI result
-        for i=1:size(handles.pi,1)
-            roi1 = handles.pi(i,1);
-            roi2 = handles.pi(i,2);
+        for j=1:size(handles.pi,1)
+            roi1 = handles.pi(j,1);
+            roi2 = handles.pi(j,2);
             % calc PI
-            result = calcPI(X, Y, {roiMasks{roi1}, roiMasks{roi2}});
+            data = calcPI(X, Y, {roiMasks{roi1}, roiMasks{roi2}});
+
+            % set range
+            startRow = 1;
+            endRow = size(data,1);
+            rangeName = '';
+            if ~isempty(handles.range)
+                startRow = str2num(handles.range{1});
+                if ~strcmp(handles.range{2},'end')
+                    endRow = str2num(handles.range{2});
+                    if endRow > size(data,1)
+                        endRow = size(data,1);
+                    end
+                end
+                rangeName = [num2str(startRow) '-' num2str(endRow) '_'];
+            end
+            data = data(startRow:endRow,:);
+
+            % process data each ROI
+            if ~isempty(handles.procOps)
+                data = processDataByCommand(handles.procOps, data, fpsNum);
+            end
+            
             % export file
             if isempty(handles.export)
                 outputPath = [confPath 'detect_output/'];
             else
                 outputPath = [handles.export '/'];
             end
-            dataFileName = [outputPath name '_' filename '_pi_roi_' num2str(handles.pi(i,1)) '_vs_' num2str(handles.pi(i,2))];
-            saveNx1matText(dataFileName, result);
+            dataFileName = [outputPath name '_' filename '_pi_roi_' num2str(handles.pi(j,1)) '_vs_' num2str(handles.pi(j,2))];
+            saveNx1matText(dataFileName, data);
         end
     end
     time = toc;
