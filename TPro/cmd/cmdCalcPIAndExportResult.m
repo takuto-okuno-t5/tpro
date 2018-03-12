@@ -18,6 +18,7 @@ function cmdCalcPIAndExportResult(handles)
 
         confTable = readtable(confFileName);
         C = table2cell(confTable);
+        C = checkConfigCompatibility(C);
         records = [records; C];
     end
 
