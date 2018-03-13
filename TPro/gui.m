@@ -2,6 +2,7 @@
 % add total distance output
 % add create movie button
 % standard file name is now '%05d'
+% test
 
 function varargout = gui(varargin)
 % GUI MATLAB code for gui.fig
