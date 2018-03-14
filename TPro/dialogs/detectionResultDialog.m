@@ -96,7 +96,7 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.videoPath = videoPaths{rowNum};
     sharedInst.confPath = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/'];
     sharedInst.confFileName = confFileName;
-    sharedInst.shuttleVideo = TProVideoReader(videoPaths{rowNum}, records{2}, records{6});
+    sharedInst.shuttleVideo = TProVideoReader(videoPaths{rowNum}, records{2}, records{6}, records{7});
     sharedInst.rowNum = rowNum;
     sharedInst.startFrame = records{4};
     sharedInst.endFrame = records{5};

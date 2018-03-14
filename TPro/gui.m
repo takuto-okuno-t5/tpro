@@ -559,7 +559,7 @@ for data_th = 1:size(records,1)
         continue;
     end
 
-    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6}, records{data_th,7});
 
     % show detecting message
     set(handles.text14, 'String', ['detecting background for ', shuttleVideo.name]);
@@ -881,7 +881,7 @@ for data_th = 1:size(records,1)
         mkdir([confPath 'multi']);
     end
 
-    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6}, records{data_th,7});
 
     % ROI
     roi_mask = [];
@@ -1549,7 +1549,7 @@ for data_th = 1:size(records,1)
     fixedTrackDir = getVideoConfigValue(record, 28, 0);
     ignoreEccTh = getVideoConfigValue(record, 43, 0.75);
 
-    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6});
+    shuttleVideo = TProVideoReader(videoPaths{data_th}, records{data_th,2}, records{data_th,6}, records{data_th,7});
 
     % make output folder
     confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
@@ -2283,7 +2283,7 @@ data_th = 1;
 while data_th <= size(records,1)
     if records{data_th, 1}
         videoPath = videoPaths{data_th};
-        shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6});
+        shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6}, records{data_th,7});
         frameImage = TProRead(shuttleVideo,1);
         if size(frameImage,3) == 1
             grayImage = frameImage;

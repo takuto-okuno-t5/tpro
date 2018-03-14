@@ -17,6 +17,7 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         videoPath = videoPaths{i};
         fileName = videoFiles{i};
         matName = [];
+        fps = 30;
 
         if ~isempty(batches)
             tmpl = batches(i,:);
@@ -80,7 +81,7 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
 
         % open video file
         try
-            shuttleVideo = TProVideoReader(videoPath, fileName, 0);
+            shuttleVideo = TProVideoReader(videoPath, fileName, 0, fps);
         catch e
             disp(['failed to open : ' fileName]);
             errordlg('please select movie files or image folders.', 'Error');
