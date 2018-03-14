@@ -819,7 +819,6 @@ blob_center_enable = 1;
 % extrema detection (0)
 extrema_enable = 0;
 
-
 % deep learning data
 netForFrontBack = [];
 classifierFrontBack = [];
@@ -942,6 +941,9 @@ for data_th = 1:size(records,1)
         end
     end
 
+    % get blob analysis
+    hBlobAnls = getVisionBlobAnalysis();
+
     % finding first frame
     if ~strcmp(auto1st1, '-') && (isempty(start_frame) || strcmp(start_frame,'auto') || start_frame <= 0)
         disp(['finding first frame : ' shuttleVideo.name]);
@@ -972,15 +974,29 @@ for data_th = 1:size(records,1)
             if size(img,3) > 1
                 img = rgb2gray(img);
             end
-            switch type
-            case 'pxIntensityLess'
+            if strcmp(type, 'pxIntensityLess') || strcmp(type, 'pxIntensityMore')
                 img = double(img) .* roiNanMask;
-                if nanmean(nanmean(img)) <= typeVal
+                val = nanmean(nanmean(img));
+            elseif strcmp(type, 'maxBlobAreaLess') || strcmp(type, 'maxBlobAreaMore')
+                img = imcomplement(img);
+                img = double(img) .* roi_mask;
+                img = im2bw(uint8(img), 0.8);
+                img = bwareaopen(img, 25); % delete pixels less than 25
+                % blob analysis
+                [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(hBlobAnls, img);
+                if isempty(AREA)
+                    val = 0;
+                else
+                    val = nanmax(AREA);
+                end
+            end
+            switch type
+            case {'pxIntensityLess', 'maxBlobAreaLess'}
+                if val <= typeVal
                     fffStep = fffStep + 1;
                 end
-            case 'pxIntensityMore'
-                img = double(img) .* roiNanMask;
-                if nanmean(nanmean(img)) >= typeVal
+            case {'pxIntensityMore', 'maxBlobAreaMore'}
+                if val >= typeVal
                     fffStep = fffStep + 1;
                 end
             end
@@ -1092,14 +1108,7 @@ for data_th = 1:size(records,1)
         blob_img_logical2 = bwareaopen(img, area_pixel);   % delete blob that has area less than 50
 
         % step
-        H = vision.BlobAnalysis;
-        H.MaximumCount = 100;
-        H.MajorAxisLengthOutputPort = 1;
-        H.MinorAxisLengthOutputPort = 1;
-        H.OrientationOutputPort = 1;
-        H.EccentricityOutputPort = 1;
-        H.ExtentOutputPort = 1; % just dummy for matlab 2015a runtime. if removing this, referense error happens.
-        [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(H, blob_img_logical2);
+        [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(hBlobAnls, blob_img_logical2);
         areas = [areas; AREA];
     end
     % delete dialog bar
@@ -1125,7 +1134,6 @@ for data_th = 1:size(records,1)
     setappdata(hWaitBar,'canceling',0)
 
     % loading instance each PD_Blob_center is slow. so allocate instances first.
-    hBlobAnls = getVisionBlobAnalysis();
     hFindMax = vision.LocalMaximaFinder( 'Threshold', single(-1));
     hConv2D = vision.Convolver('OutputSize','Valid');
 

@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 04-Mar-2018 19:21:21
+% Last Modified by GUIDE v2.5 14-Mar-2018 17:37:48
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -253,7 +253,8 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
 
     % load last time data
-    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_ssi_result', 'aggr_grid_result'};
+    resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_ssi_result', 'aggr_grid_result', ...
+        'pixel_intensity_result', 'max_blobarea_result'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -1789,6 +1790,23 @@ function Untitled_33_Callback(hObject, eventdata, handles)
 
     % add result to axes & show in axes
     cname = 'pixel_intensity_result';
+    addResult2Axes(handles, result, cname, handles.popupmenu4);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
+end
+
+% --------------------------------------------------------------------
+function Untitled_34_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_34 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+
+    dlen = length(sharedInst.X);
+    result = calcMaxBlobArea(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps, sharedInst.roiMaskImage, 0.8);
+
+    % add result to axes & show in axes
+    cname = 'max_blobarea_result';
     addResult2Axes(handles, result, cname, handles.popupmenu4);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
     popupmenu4_Callback(handles.popupmenu4, eventdata, handles)
