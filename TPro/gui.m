@@ -1833,7 +1833,12 @@ for data_th = 1:size(records,1)
             % check 3 - pile-ups
             [m3,mi3] = min(est_dist1,[],2);
             log3 = nan(1,length(asgn));
-            tmp = (mi3' == asgn(invIdx>0));
+            asgnInv = asgn(invIdx>0);
+            if size(mi3,1) == size(asgnInv,1)
+                tmp = (mi3 == asgnInv);
+            else
+                tmp = (mi3' == asgnInv);
+            end
             log3(invIdx>0) = tmp;
             idx3 = find(log3==0);
             for j=1:length(idx3)
