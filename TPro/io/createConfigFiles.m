@@ -1,7 +1,7 @@
 %%
 function [status, B] = createConfigFiles(name, frameNum, frameRate, tmpl, i, outputFileName)
     B = {1, name, '', 1, frameNum, frameNum, frameRate, 0.6, 0.1, 1, 200, 0, 12, 4, 50, 1, 0.4, 'log', 4, 1, 0, 0, ...
-         0, 0, 0, 0, 0, 0, ... % tracking mode
+         1, 1, 1, 0, 0, 0, ... % tracking mode
          0, 0, 0, 0, ... % sharp and contrast
          0, 0, 0, 0, 0, ... % template matching
          0, 0, 0, 0, 0, 0, ... % wing detection

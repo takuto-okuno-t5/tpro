@@ -157,7 +157,7 @@ while true
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
             disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
             disp('  --dcd               export DCD using detection or tracking data');
-            disp('  --dcdp file         set dcd percetile map [file]');
+            disp('  --dcdp file         set dcd percentile map [file]');
             disp('  --src type          specify analysing data source (tracking data)');
             disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcdcalc,dcd,gcalc,group,gcount,becalc,be,chase, ...');
             disp('  --range start end   analysing range of source data from [start] to [end]');
