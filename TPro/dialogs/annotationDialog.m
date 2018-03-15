@@ -366,7 +366,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
         sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
         cp = get(gca,'CurrentPoint');
         pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
-        set(handles.slider1, 'value', sharedInst.startFrame + cp(1));
+        set(handles.slider1, 'value', sharedInst.startFrame + cp(1) * sharedInst.frameSteps);
         slider1_Callback(handles.slider1, eventdata, handles)
     end
 end
