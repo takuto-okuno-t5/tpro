@@ -1,7 +1,7 @@
 %%
 function hBlobAnls = getVisionBlobAnalysis()
     hBlobAnls = vision.BlobAnalysis;
-    hBlobAnls.MaximumCount = 100;
+    hBlobAnls.MaximumCount = 200;
     hBlobAnls.MajorAxisLengthOutputPort = 1;
     hBlobAnls.MinorAxisLengthOutputPort = 1;
     hBlobAnls.OrientationOutputPort = 1;

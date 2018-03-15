@@ -1801,9 +1801,10 @@ function Untitled_34_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    blobTh = readTproConfig('auto1stFrameBlobTh', 0.8);
 
     dlen = length(sharedInst.X);
-    result = calcMaxBlobArea(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps, sharedInst.roiMaskImage, 0.8);
+    result = calcMaxBlobArea(sharedInst.shuttleVideo, dlen, sharedInst.startFrame, sharedInst.endFrame, sharedInst.frameSteps, sharedInst.roiMaskImage, blobTh);
 
     % add result to axes & show in axes
     cname = 'max_blobarea_result';

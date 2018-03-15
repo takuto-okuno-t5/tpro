@@ -798,6 +798,7 @@ exportDcd = readTproConfig('exportDcd', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
+auto1stBlobTh = readTproConfig('auto1stFrameBlobTh', 0.8);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -980,7 +981,7 @@ for data_th = 1:size(records,1)
             elseif strcmp(type, 'maxBlobAreaLess') || strcmp(type, 'maxBlobAreaMore')
                 img = imcomplement(img);
                 img = double(img) .* roi_mask;
-                img = im2bw(uint8(img), 0.8);
+                img = im2bw(uint8(img), auto1stBlobTh);
                 img = bwareaopen(img, 25); % delete pixels less than 25
                 % blob analysis
                 [AREA, CENTROID, BBOX, MAJORAXIS, MINORAXIS, ORIENTATION, ECCENTRICITY, EXTENT] = step(hBlobAnls, img);
