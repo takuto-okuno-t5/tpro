@@ -737,7 +737,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
         cp = get(gca,'CurrentPoint');
         sharedInst.selectX = {};
         sharedInst.selectY = {};
-        sharedInst.selectFrame = round(sharedInst.startFrame + cp(1));
+        sharedInst.selectFrame = sharedInst.startFrame + floor(cp(1)) * sharedInst.frameSteps;
         sharedInst.longAxesDrag = sharedInst.selectFrame;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
@@ -842,7 +842,7 @@ function slider1_Callback(hObject, eventdata, handles)
 
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frameNum = int64(get(hObject,'Value'));
-    sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
+    sharedInst.frameNum = frameNum - rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
     if ~isempty(eventdata)
         sharedInst.selectFrame = sharedInst.frameNum;
     end

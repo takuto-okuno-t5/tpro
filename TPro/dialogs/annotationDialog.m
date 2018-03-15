@@ -402,7 +402,7 @@ function slider1_Callback(hObject, eventdata, handles)
 
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frameNum = int64(get(hObject,'Value'));
-    sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
+    sharedInst.frameNum = frameNum - rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     
     set(handles.edit1, 'String', sharedInst.frameNum);

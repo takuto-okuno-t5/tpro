@@ -554,7 +554,7 @@ function figure1_WindowButtonDownFcn(hObject, eventdata, handles)
         cp = get(gca,'CurrentPoint');
         sharedInst.selectX = {};
         sharedInst.selectY = {};
-        sharedInst.selectFrame = round(sharedInst.startFrame + cp(1));
+        sharedInst.selectFrame = sharedInst.startFrame + floor(cp(1)) * sharedInst.frameSteps;
         sharedInst.longAxesDrag = sharedInst.selectFrame;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
@@ -582,7 +582,7 @@ function figure1_WindowButtonMotionFcn(hObject, eventdata, handles)
     end
     if sharedInst.longAxesDrag > 0
         cp = get(handles.axes3,'CurrentPoint');
-        frameNum = round(sharedInst.startFrame + cp(1));
+        frameNum = sharedInst.startFrame + floor(cp(1)) * sharedInst.frameSteps;
         draglock = getappdata(handles.figure1, 'draglock');
         if sharedInst.selectFrame ~= frameNum && draglock == 0
             setappdata(handles.figure1,'draglock',1);
@@ -645,7 +645,7 @@ function figure1_WindowButtonUpFcn(hObject, eventdata, handles)
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
         cp = get(handles.axes3,'CurrentPoint');
-        frameNum = round(sharedInst.startFrame + cp(1));
+        frameNum = sharedInst.startFrame + floor(cp(1)) * sharedInst.frameSteps;
         if sharedInst.selectFrame ~= frameNum
             pause(0.1);
             pushbutton3_Callback(handles.pushbutton3, eventdata, handles);
@@ -663,7 +663,7 @@ function slider1_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     frameNum = int64(get(hObject,'Value'));
-    sharedInst.frameNum = frameNum + rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
+    sharedInst.frameNum = frameNum - rem(frameNum-sharedInst.startFrame, sharedInst.frameSteps);
     if ~isempty(eventdata)
         sharedInst.selectFrame = sharedInst.frameNum;
     end

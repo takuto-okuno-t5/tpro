@@ -1037,15 +1037,17 @@ for data_th = 1:size(records,1)
             mkdir(outputPath);
         end
     end
-    X = cell(1,end_frame-start_frame+1);
-    Y = cell(1,end_frame-start_frame+1);
+    insideNum = end_frame - start_frame + 1;
+    outFrameNum = ceil(insideNum / frame_steps);
+    X = cell(1,outFrameNum);
+    Y = cell(1,outFrameNum);
     X_update2 = X;
     Y_update2 = Y;
-    detection_num = nan(2,end_frame-start_frame+1);
+    detection_num = nan(2,outFrameNum);
     blobAvgSize = 0;
     checkNums = 25; % for finding middle area size
-    if checkNums > end_frame - start_frame
-        checkNums = end_frame - start_frame;
+    if checkNums > insideNum
+        checkNums = insideNum;
     end
 
     % finding middle area size
@@ -1056,7 +1058,7 @@ for data_th = 1:size(records,1)
     setappdata(hWaitBar,'canceling',0)
 
     % generate random
-    r = randperm(end_frame - start_frame + 1);
+    r = randperm(insideNum);
     r = r(1:checkNums);
     areas = [];
     for i = 1 : checkNums
