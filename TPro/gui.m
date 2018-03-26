@@ -1845,7 +1845,9 @@ for data_th = 1:size(records,1)
             [m3,mi3] = min(est_dist1,[],2);
             log3 = nan(1,length(asgn));
             asgnInv = asgn(invIdx>0);
-            if size(mi3,1) == size(asgnInv,1)
+            if isempty(mi3)
+                tmp = [];
+            elseif size(mi3,1) == size(asgnInv,1)
                 tmp = (mi3 == asgnInv);
             else
                 tmp = (mi3' == asgnInv);
