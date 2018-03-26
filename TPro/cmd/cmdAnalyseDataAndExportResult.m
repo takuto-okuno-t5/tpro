@@ -80,6 +80,11 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % load detection result
+        matFile = [confPath 'multi/detect_' filename,'.mat'];
+        if ~exist(matFile,'file')
+            continue;
+        end
+        load(matFile);
         matFile = [confPath 'multi/detect_' filename,'keep_count.mat'];
         if ~exist(matFile,'file')
             continue;
@@ -226,7 +231,12 @@ function cmdAnalyseDataAndExportResult(handles)
         if roiNum > 1
             roiData = {};
             for i=1:roiNum
-                rd = processDataByRoi(keep_data, img_h, img_w, roiMasks{i}, data);
+                switch(handles.analyseSrc)
+                case 'count'
+                    rd = processCountByRoi(X, Y, roiMasks{i});
+                otherwise
+                    rd = processDataByRoi(keep_data, img_h, img_w, roiMasks{i}, data);
+                end
                 roiData = [roiData, rd];
             end
         else
