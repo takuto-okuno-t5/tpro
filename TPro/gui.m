@@ -316,6 +316,10 @@ if length(handles.batch) > 0
         videoPaths = [videoPaths; [handles.path '/']];
         videoFiles = [videoFiles; batches{i,2}];
     end
+    % do not rewrite input_control csv at only tracking or export
+    if ~(handles.autobackground || handles.autodetect)
+        batches = [];
+    end
 
     % create config files if possible
     [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPaths, videoFiles, [], batches, false);
@@ -549,6 +553,7 @@ uniquePaths = unique(videoPaths);
 for i=1:length(uniquePaths)
     addpath(uniquePaths{i});
 end
+bgAlgorithm = readTproConfig('bgAlgorithm', 'mode');
 
 tic % start timer
 
@@ -605,6 +610,9 @@ for data_th = 1:size(records,1)
     if startFrame < 0
         continue;
     end
+    if (isempty(startFrame) || strcmp(startFrame,'auto') || startFrame <= 0)
+        startFrame = 1;
+    end
     if (endFrame - startFrame + 1) < checkNums
         checkNums = (endFrame - startFrame + 1);
     end
@@ -648,7 +656,15 @@ for data_th = 1:size(records,1)
         grayImages(:,:,i) = grayImage;
         clear frameImage;
     end
-    bgImage = mode(grayImages,3); % this takes much memory and CPU power
+    % get candidate image
+    switch bgAlgorithm
+    case 'mean'
+        bgImage = mean(grayImages,3); 
+    case 'max'
+        bgImage = max(grayImages,[],3); 
+    otherwise
+        bgImage = mode(grayImages,3); % this takes much memory and CPU power
+    end
     pause(3); % wait for freeing memory
 
     % sometimes fly stays same position. and mode does not work well.
@@ -799,6 +815,8 @@ dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
 auto1stBlobTh = readTproConfig('auto1stFrameBlobTh', 0.8);
+exportDetectionText = readTproConfig('exportDetectionText', 1);
+detectWings = readTproConfig('detectWings', 1);
 
 % show start text
 set(handles.text14, 'String','detection ...')
@@ -1002,7 +1020,7 @@ for data_th = 1:size(records,1)
                 end
             end
             if fffStep == 2
-                if ~strcmp(auto1st2, '')
+                if ~strcmp(auto1st2, '-')
                     type = auto1st2;
                     typeVal = auto1st2val;
                 else
@@ -1031,10 +1049,12 @@ for data_th = 1:size(records,1)
 
     % make output folder
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    for i=1:roiNum
-        outputPath = [confPath 'detect_output/' filename '_roi' num2str(i)];
-        if ~exist(outputPath, 'dir')
-            mkdir(outputPath);
+    if exportDetectionText > 0
+        for i=1:roiNum
+            outputPath = [confPath 'detect_output/' filename '_roi' num2str(i)];
+            if ~exist(outputPath, 'dir')
+                mkdir(outputPath);
+            end
         end
     end
     insideNum = end_frame - start_frame + 1;
@@ -1305,7 +1325,7 @@ for data_th = 1:size(records,1)
         %%
         if size(netForFrontBack, 1) > 0
             [ keep_direction, keep_angle, keep_wings ] = PD_direction_deepLearning(step2img, blobAreas, blobCenterPoints, blobBoxes, meanBlobmajor, mmPerPixel, blobOrient, netForFrontBack, classifierFrontBack);
-        elseif wingColorMax > 0
+        elseif wingColorMax > 0 && detectWings > 0
             params = {  wingColorMin, wingColorMax, wingRadiusRate, ...
                         wingColorRange, wingCircleStep, ignoreEccTh };
             [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2img, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params);
@@ -1413,7 +1433,6 @@ for data_th = 1:size(records,1)
     save(strcat(confPath,'multi/detect_',filename,'keep_count.mat'), 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
 
     % save data as text
-    exportDetectionText = readTproConfig('exportDetectionText', 1);
     if exportDetectionText > 0
         for i=1:roiNum
             outputPath = [confPath 'detect_output/' filename '_roi' num2str(i) '/'];
@@ -1523,6 +1542,7 @@ exportDcd = readTproConfig('exportDcd', 0);
 exportMd = readTproConfig('exportMinDistance', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
+exportTrackingText = readTproConfig('exportTrackingText', 1);
 
 % set recursion limit
 set(0,'RecursionLimit',RECURSION_LIMIT);
@@ -1564,14 +1584,16 @@ for data_th = 1:size(records,1)
 
     % make output folder
     confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
-    if ~exist([confPath 'output'], 'dir')
-        mkdir([confPath 'output']);
-    end
     filename = [sprintf('%05d',start_frame) '_' sprintf('%05d',end_frame)];
-    for i=1:roiNum
-        outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-        if ~exist(outputDataPath, 'dir')
-            mkdir(outputDataPath);
+    if exportTrackingText > 0
+        if ~exist([confPath 'output'], 'dir')
+            mkdir([confPath 'output']);
+        end
+        for i=1:roiNum
+            outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+            if ~exist(outputDataPath, 'dir')
+                mkdir(outputDataPath);
+            end
         end
     end
 
@@ -2113,7 +2135,6 @@ for data_th = 1:size(records,1)
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');
 
-    exportTrackingText = readTproConfig('exportTrackingText', 1);
     if exportTrackingText > 0
         % optional data export
         mdparam = [];

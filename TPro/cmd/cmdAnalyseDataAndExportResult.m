@@ -92,10 +92,9 @@ function cmdAnalyseDataAndExportResult(handles)
         load(matFile);
         % load tracking result
         matFile = [confPath 'multi/track_' filename,'.mat'];
-        if ~exist(matFile,'file')
-            continue;
+        if exist(matFile,'file')
+            load(matFile);
         end
-        load(matFile);
         % load group analysing result
         matFile = [confPath 'multi/nn_groups.mat'];
         if exist(matFile,'file')
@@ -119,7 +118,9 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % calc velocity etc
-        [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fpsNum, mmPerPixel);
+        if exist('keep_data', 'var')
+            [vxy, accVxy, updownVxy, dir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fpsNum, mmPerPixel);
+        end
         data = [];
 
         % get data

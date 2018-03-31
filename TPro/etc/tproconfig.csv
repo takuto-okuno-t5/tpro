@@ -46,3 +46,5 @@ pileupsSwapTh,7
 exportDetectionText,1
 exportTrackingText,1
 auto1stFrameBlobTh,0.8
+detectWings,1
+bgAlgorithm,mode

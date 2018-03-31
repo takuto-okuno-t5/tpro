@@ -194,8 +194,11 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.classifierFrontBack = classifierFrontBack;
     end
 
-    % fly image box size for deep learning
+    % tpro config values
+    sharedInst.detectWings = readTproConfig('detectWings', 1);
     sharedInst.meanBlobmajor = readTproConfig('meanBlobMajor', 3.56);
+
+    % fly image box size for deep learning
     sharedInst.boxSize = findFlyImageBoxSize(sharedInst.meanBlobmajor, sharedInst.mmPerPixel);
 
     if isnumeric(sharedInst.startFrame) && sharedInst.startFrame >= 1
@@ -1416,7 +1419,7 @@ function showDetectResultInAxes(hObject, handles, frameImage)
         if sharedInst.useDeepLearning
             [keep_direction, keep_angle, keep_wings] = PD_direction_deepLearning(sharedInst.step2Image, blobAreas, blobCenterPoints, blobBoxes, sharedInst.meanBlobmajor, sharedInst.mmPerPixel, blobOrient, ...
                 sharedInst.netForFrontBack, sharedInst.classifierFrontBack);
-        elseif sharedInst.wingColorMax > 0
+        elseif sharedInst.wingColorMax > 0 && sharedInst.detectWings > 0
             params = {  sharedInst.wingColorMin, sharedInst.wingColorMax, sharedInst.wingRadiusRate, ...
                         sharedInst.wingColorRange, sharedInst.wingCircleStep, sharedInst.ignoreEccTh };
             [keep_direction, keep_angle, keep_wings] = PD_direction3(sharedInst.step2Image, blobAreas, blobCenterPoints, blobMajorAxis, blobOrient, blobEcc, params);
