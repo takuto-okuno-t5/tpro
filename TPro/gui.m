@@ -1652,16 +1652,9 @@ for data_th = 1:size(records,1)
     if exist('keep_wings_sorted', 'var')
         direction_track(:,1:size(keep_wings_sorted{frame_start},2)) = keep_wings_sorted{frame_start};
     end
-    Q_loc_estimateY = nan(MAX_FLIES, 'single'); % position estimate
-    Q_loc_estimateX = nan(MAX_FLIES, 'single'); % position estimate
     nancount = zeros(1,MAX_FLIES); % counting NaN each fly
-    P_estimate = P;  % covariance estimator
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
-    outbound_trks = zeros(1, MAX_FLIES);  % counter of out boundary track
-    nD = size(X{frame_start},1); % initize number of detections
     flyNum =  find(isnan(Q_estimate(1,:))==1,1)-1 ; % initize number of track estimates
-    v_keep = nan(3, MAX_FLIES); % mean value of velocity
-    v_agent_max_keep = nan(1, MAX_FLIES); % max velocity of an agent at each time step
 
     keep_data = cell(1,KEEP_DATA_MAX);  % x y vx vy
     outFrameNum = int64((end_frame - start_frame + 1) / frame_steps) + 2;
@@ -1980,10 +1973,6 @@ for data_th = 1:size(records,1)
         % update covariance estimation.
         P =  (eye(4)-K*C)*P;
 
-        % Store data
-        Q_loc_estimateX(t,1:flyNum) = Q_estimate(1,1:flyNum);
-        Q_loc_estimateY(t,1:flyNum) = Q_estimate(2,1:flyNum);
-
         % keep data from Q_estimate
         keep_data{1}(t,1:flyNum) = Q_estimate(1,1:flyNum);    % x
         keep_data{2}(t,1:flyNum) = Q_estimate(2,1:flyNum);    % y
@@ -2022,9 +2011,9 @@ for data_th = 1:size(records,1)
                     asgn(k) = 0;
                 end
             end
-            
-            no_trk_list = find(asgn==0);
+
             prev_strk_trks = strk_trks;
+            no_trk_list = find(asgn==0);
             if ~isempty(no_trk_list)
                 
                 % check 1 frame error detection. sometimes it increase fly

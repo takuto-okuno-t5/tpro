@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 27-Feb-2018 17:52:25
+    % Last Modified by GUIDE v2.5 03-Apr-2018 18:54:32
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -117,6 +117,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.mmPerPixel = records{9};
     sharedInst.roiNum = records{10};
     sharedInst.isInvert = records{12};
+    sharedInst.rejectDist = records{11} / sharedInst.mmPerPixel / sharedInst.fpsNum;
     sharedInst.currentROI = 0;
     sharedInst.axesType1 = 'count';
     sharedInst.isModified = false;
@@ -1873,6 +1874,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
 
     height = sharedInst.nnHeight / sharedInst.mmPerPixel;
     algorithm = sharedInst.nnAlgorithm;
+    disp('start to calculate nn-clustering');
 
     % calculate top num of distances and variance
     result = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, algorithm, height);
@@ -2341,17 +2343,44 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_35 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
-    axes(handles.axes1); % set drawing area
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    % show center points
-    cla;
-    imshow(sharedInst.bgImage);
-    % group center
-    hold on;
-    for t=1:size(sharedInst.groupCenterX,1)
-        plot(sharedInst.groupCenterX(t,:),sharedInst.groupCenterY(t,:),'or','Color', [1 .3 1], 'Marker','x');
+    % calculate group tracking
+    rejectDist = 100 / sharedInst.mmPerPixel / sharedInst.fpsNum;
+    X = sharedInst.groupCenterX;
+    Y = sharedInst.groupCenterY;
+    group_keep_data = trackingPoints(X, Y, rejectDist, sharedInst.img_h, sharedInst.img_w);
+
+    % save data
+    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data');
+
+    % show figure
+    %t=1:size(group_keep_data{1},1);
+    %figure;
+    %plot3(group_keep_data{1}, group_keep_data{2}, t');
+end
+
+% --------------------------------------------------------------------
+function Untitled_36_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_36 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    listFly = sharedInst.listFly;
+    if listFly == 0
+        fn = 1:size(sharedInst.keep_data{1},2);
+    else
+        fn = listFly;
     end
-    hold off;
+    t=1:size(sharedInst.keep_data{1},1);
+    X = sharedInst.keep_data{1}(t,fn);
+    Y = sharedInst.keep_data{2}(t,fn);
+    figure;
+    plot3(X, Y, t');
+    % set view
+    az = -37.5;
+    el = 15;
+    view([0, 0, size(sharedInst.keep_data{1},1)/2]);
+    view(az, el);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2705,4 +2734,3 @@ function showFrameInAxes(hObject, handles, frameNum)
     % show detected count
     guidata(hObject, handles);    % Update handles structure
 end
-
