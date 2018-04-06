@@ -140,6 +140,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_angle_sorted = keep_angle_sorted;
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
+    sharedInst.group_keep_data = [];
     sharedInst.selectX = {};
     sharedInst.selectY = {};
     sharedInst.selectFrame = sharedInst.frameNum;
@@ -314,8 +315,13 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         addResult2Axes(handles, groupAreas, 'nn_groupAreas', handles.popupmenu8);
         addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
     end
-    set(handles.popupmenu8,'Value',1);
+    fname = [sharedInst.confPath 'multi/nn_groups_tracking.mat'];
+    if exist(fname, 'file')
+        load(fname);
+        sharedInst.group_keep_data = group_keep_data;
+    end
 
+    set(handles.popupmenu8,'Value',1);
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     setappdata(handles.figure1,'draglock',0);
     guidata(hObject, handles);  % Update handles structure
@@ -2688,6 +2694,9 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
             end
         end
+    end
+    % show group line & number
+    if ~isempty(sharedInst.group_keep_data)
     end
     % show edit mode
     if sharedInst.editMode > 0
