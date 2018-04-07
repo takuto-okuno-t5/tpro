@@ -2015,15 +2015,24 @@ for data_th = 1:size(records,1)
             prev_strk_trks = strk_trks;
             no_trk_list = find(asgn==0);
             if ~isempty(no_trk_list)
-                
                 % check 1 frame error detection. sometimes it increase fly
                 % number too much. so find such noise and clean fly number.
                 if ~isempty(find(flyNum==no_trk_list)) && strk_trks(flyNum) == 0
-                    % remove old 1 tracking frames
-                    for j = 1:KEEP_DATA_MAX
-                        keep_data{j}(t,flyNum) = NaN;
+                    if t <= 10
+                        chkst = 1;
+                    else
+                        chkst = t - 10;
                     end
-                    flyNum = flyNum - 1;
+                    keep_data_x_fly = keep_data{1}(chkst:t,flyNum);
+                    if length(find(~isnan(keep_data_x_fly))) == 1
+                        % remove old 1 tracking frames
+                        for j = 1:KEEP_DATA_MAX
+                            keep_data{j}(t,flyNum) = NaN;
+                        end
+                        flyNum = flyNum - 1;
+                    else
+                        strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
+                    end
                 else
                     strk_trks(no_trk_list) = strk_trks(no_trk_list) + 1;
                 end

@@ -2351,7 +2351,8 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % calculate group tracking
-    rejectDist = 100 / sharedInst.mmPerPixel / sharedInst.fpsNum;
+    groupRejectDist = readTproConfig('groupRejectDist', 700);
+    rejectDist = groupRejectDist / sharedInst.mmPerPixel / sharedInst.fpsNum;
     X = sharedInst.groupCenterX;
     Y = sharedInst.groupCenterY;
     group_keep_data = trackingPoints(X, Y, rejectDist, sharedInst.img_h, sharedInst.img_w);
@@ -2359,6 +2360,8 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     % save data
     save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data');
 
+    sharedInst.group_keep_data = group_keep_data;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     % show figure
     %t=1:size(group_keep_data{1},1);
     %figure;
@@ -2696,7 +2699,19 @@ function showFrameInAxes(hObject, handles, frameNum)
         end
     end
     % show group line & number
-    if ~isempty(sharedInst.group_keep_data)
+    if ~isempty(sharedInst.group_keep_data) && ...
+       (strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+       strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum'))
+        groupNum = size(sharedInst.group_keep_data{1},2);
+        for fn = 1:groupNum
+            tmY = sharedInst.group_keep_data{1}(t,fn);
+            tmX = sharedInst.group_keep_data{2}(t,fn);
+            % show number
+            if sharedInst.showNumber
+                num_txt = ['  ', num2str(fn)];
+                text(double(tmY),double(tmX),num_txt, 'Color','blue')
+            end
+        end
     end
     % show edit mode
     if sharedInst.editMode > 0
