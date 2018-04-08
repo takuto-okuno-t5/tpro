@@ -49,3 +49,4 @@ auto1stFrameBlobTh,0.8
 detectWings,1
 bgAlgorithm,mode
 groupRejectDist,700
+groupDuration,1

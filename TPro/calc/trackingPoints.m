@@ -1,5 +1,5 @@
 %%
-function keep_data = trackingPoints(X, Y, reject_dist, img_h, img_w)
+function keep_data = trackingPoints(X, Y, reject_dist, duration, img_h, img_w)
     MAX_FLIES = readTproConfig('trackingFlyMax', 800); % maxmum number of flies
     RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recursion limit
     IGNORE_NAN_COUNT = readTproConfig('ignoreNaNCount', 20); % maxmum NaN count of fly (removed from tracking pair-wise)
@@ -58,9 +58,9 @@ function keep_data = trackingPoints(X, Y, reject_dist, img_h, img_w)
         Q_loc_meas = [fx' fy'];
 
         Q_estimate(3:4,:) = 0; % do not use velocity. set zero
-        for F = 1:flyNum
-            Q_estimate(:,F) = A * Q_estimate(:,F) + B * u;
-        end
+        %for F = 1:flyNum
+        %    Q_estimate(:,F) = A * Q_estimate(:,F) + B * u;
+        %end
 
         %predict next covariance
         P = A * P* A' + Ex;
@@ -211,7 +211,7 @@ function keep_data = trackingPoints(X, Y, reject_dist, img_h, img_w)
                 end
             end
         end
-        
+
         % show processing
         if mod(t,200) == 0
             rate = t / frameNum;
@@ -223,6 +223,17 @@ function keep_data = trackingPoints(X, Y, reject_dist, img_h, img_w)
     moveIdx = 1:flyNum;
     for j = 1:KEEP_DATA_MAX
         keep_data{j} = keep_data{j}(:,moveIdx);
+    end
+    % check duration
+    for k = flyNum:-1:1
+        keep_data_x_fly = keep_data{1}(:,k);
+        len = length(find(~isnan(keep_data_x_fly)));
+        if len < duration
+            for j = 1:KEEP_DATA_MAX
+                keep_data{j}(:,k) = [];
+            end
+            disp(['removed by duration : fn : ' num2str(k) ' (len=' num2str(len) ')']);
+        end
     end
 
     % show end text

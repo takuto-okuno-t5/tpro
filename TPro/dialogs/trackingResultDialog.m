@@ -141,6 +141,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.keep_areas = keep_areas;
     sharedInst.keep_data = keep_data;
     sharedInst.group_keep_data = [];
+    sharedInst.groups = [];
     sharedInst.selectX = {};
     sharedInst.selectY = {};
     sharedInst.selectFrame = sharedInst.frameNum;
@@ -319,6 +320,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     if exist(fname, 'file')
         load(fname);
         sharedInst.group_keep_data = group_keep_data;
+        sharedInst.groups = groups;
     end
 
     set(handles.popupmenu8,'Value',1);
@@ -2352,14 +2354,47 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     % calculate group tracking
     groupRejectDist = readTproConfig('groupRejectDist', 700);
+    groupDuration = readTproConfig('groupDuration', 1);
     rejectDist = groupRejectDist / sharedInst.mmPerPixel / sharedInst.fpsNum;
+    duration = groupDuration * sharedInst.fpsNum;
     X = sharedInst.groupCenterX;
     Y = sharedInst.groupCenterY;
-    group_keep_data = trackingPoints(X, Y, rejectDist, sharedInst.img_h, sharedInst.img_w);
+    group_keep_data = trackingPoints(X, Y, rejectDist, duration, sharedInst.img_h, sharedInst.img_w);
+%group_keep_data = sharedInst.group_keep_data;
+    frameNum = size(group_keep_data{1},1);
+
+    data = getappdata(handles.figure1, 'nn_groups');
+    groups = nan(frameNum, size(data,2));
+    for t=1:frameNum
+        group = data(t,:);
+        maxGroup = max(group);
+        if isnan(maxGroup)
+            continue;
+        end
+        grcenter = [sharedInst.groupCenterX(t,1:maxGroup)' sharedInst.groupCenterY(t,1:maxGroup)'];
+        keepcenter = [group_keep_data{1}(t,:)' group_keep_data{2}(t,:)'];
+        idxlen = size(grcenter,1);
+        est_dist0 = pdist([grcenter; keepcenter]);
+        est_dist0 = squareform(est_dist0); %make square
+        est_dist1 = est_dist0(1:idxlen,idxlen+1:end) ; %limit to just the tracks to detection distances
+        for j=1:maxGroup
+            gidx = find(est_dist1(j,:) < 10);
+            if ~isempty(gidx)
+                idx = find(group==j);
+                groups(t,idx) = gidx;
+            end
+        end
+        % show processing
+        if mod(t,200) == 0
+            rate = t / frameNum;
+            disp(['group num to fly : t : ' num2str(t) ' : ' num2str(100*rate) '%']);
+        end
+    end
 
     % save data
-    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data');
+    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups');
 
+    sharedInst.groups = groups;
     sharedInst.group_keep_data = group_keep_data;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
     % show figure
