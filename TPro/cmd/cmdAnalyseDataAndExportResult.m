@@ -11,6 +11,8 @@ function cmdAnalyseDataAndExportResult(handles)
     dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
     nnHeight = readTproConfig('nnHeight', 5);
     nnAlgorithm = readTproConfig('nnAlgorithm', 'single');
+    groupRejectDist = readTproConfig('groupRejectDist', 700);
+    groupDuration = readTproConfig('groupDuration', 1);
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -206,6 +208,15 @@ function cmdAnalyseDataAndExportResult(handles)
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
                 'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
             disp(['calc group : ' name]);
+        case 'gtrack'
+            if ~isempty(grp)
+                rejectDist = groupRejectDist / mmPerPixel / fpsNum;
+                duration = groupDuration * fpsNum;
+                group_keep_data = trackingPoints(grp.groupCenterX, grp.groupCenterY, rejectDist, duration, img_h, img_w);
+                groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
+                save([confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups');
+                disp(['tracking group : ' name]);
+            end
         case 'garea'
             if ~isempty(grp)
                 data = grp.areas;
