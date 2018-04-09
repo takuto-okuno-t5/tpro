@@ -104,6 +104,13 @@ function cmdAnalyseDataAndExportResult(handles)
         else
             grp = [];
         end
+        % load group tracking result
+        matFile = [confPath 'multi/nn_groups_tracking.mat'];
+        if exist(matFile,'file')
+            grptrk = load(matFile);
+        else
+            grptrk = [];
+        end
         % load dcd result
         matFile = [confPath 'multi/aggr_dcd_result_tracking.mat'];
         if exist(matFile,'file')
@@ -230,6 +237,12 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = grp.groupFlyNum;
             end
+        case 'gx'
+            data = grptrk.group_keep_data{2};
+        case 'gy'
+            data = grptrk.group_keep_data{1};
+        case 'groups'
+            data = grptrk.groups;
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;

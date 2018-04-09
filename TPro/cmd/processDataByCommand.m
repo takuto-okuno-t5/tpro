@@ -154,6 +154,8 @@ function data = processDataByCommand(ops, data, fpsNum)
                 for i=1:frameNum
                     procData(i) = length(find(isnan(data(i,:))));
                 end
+            case 'transpose'
+                procData = data';
             otherwise
                 procData = [];
             end
