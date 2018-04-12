@@ -14,10 +14,28 @@ function videoStructs = TProVideoReader(videoPath, fileName, frames, fps)
             videoStructs.FrameRate = fps;
             listing = dir([videoPath fileName]);
             files = cell(size(listing,1)-2,1);
+            namelens = nan(size(listing,1)-2,1);
             for i = 1:(size(listing,1)-2) % not include '.' and '..'
                 files{i} = listing(i+2).name;
+                namelens(i) = length(files{i});
+            end
+            if isempty(files)
+                me = MException('TProVideoReader:noImageFiles',['folder (' fileName ') does not contain any image file.']);
+                throw(me);
             end
             files = sort(files);
+            % check flyCapture numbering bug.
+            if contains(files{1}, 'fc2_save_', 'IgnoreCase',true) && contains(files{1}, '-0000.', 'IgnoreCase',true)
+                % find longer name files.
+                strlen = length(files{1});
+                idx = find(namelens == strlen+1);
+                if ~isempty(idx)
+                    longerfiles = files(idx);
+                    files(idx) = [];
+                    longerfiles = sort(longerfiles);
+                    files = [files; longerfiles];
+                end
+            end
             videoStructs.files = files;
             videoStructs.videoPath = videoPath;
             videoStructs.NumberOfFrames = size(files,1);
