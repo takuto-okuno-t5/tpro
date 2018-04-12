@@ -12,7 +12,7 @@ function videoStructs = TProVideoReader(videoPath, fileName, frames, fps)
             videoStructs.Name = fileName;
             videoStructs.name = fileName;
             videoStructs.FrameRate = fps;
-            listing = dir([videoPath fileName]);
+            listing = dir([videoPath fileName '/']);
             files = cell(size(listing,1)-2,1);
             namelens = nan(size(listing,1)-2,1);
             for i = 1:(size(listing,1)-2) % not include '.' and '..'
@@ -22,10 +22,12 @@ function videoStructs = TProVideoReader(videoPath, fileName, frames, fps)
             if isempty(files)
                 me = MException('TProVideoReader:noImageFiles',['folder (' videoPath fileName ') does not contain any image file.']);
                 throw(me);
+%                disp(['folder (' videoPath fileName ') does not contain any image file.']);
+%                return;
             end
             files = sort(files);
             % check flyCapture numbering bug.
-            if ~isempty(strfind(files{1}, 'fc2_save_')) && ~isempty(strfind(files{1}, '-0000.'))
+            if ~isempty(strfind(files{1}, 'fc2_save_')) && strfind(files{1}, '-0000.')
                 % find longer name files.
                 strlen = length(files{1});
                 idx = find(namelens == strlen+1);
