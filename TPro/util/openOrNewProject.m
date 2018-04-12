@@ -83,7 +83,7 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
         try
             shuttleVideo = TProVideoReader(videoPath, fileName, 0, fps);
         catch e
-            msg = sprintf('failed to open : %s\nplease select movie files or image folders.', fileName);
+            msg = sprintf('failed to open : %s%s\nplease select movie files or image folders.', videoPath, fileName);
             disp(msg);
             errordlg(msg, 'Error');
             status = false;
