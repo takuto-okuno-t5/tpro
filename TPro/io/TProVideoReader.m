@@ -20,8 +20,10 @@ function videoStructs = TProVideoReader(videoPath, fileName, frames, fps)
                 namelens(i) = length(files{i});
             end
             if isempty(files)
-                me = MException('TProVideoReader:noImageFiles',['folder (' videoPath fileName ') does not contain any image file.']);
-                throw(me);
+                %me = MException('TProVideoReader:noImageFiles',['folder (' videoPath fileName ') does not contain any image file.']);
+                %throw(me);
+                disp(['folder (' videoPath fileName ') does not contain any image file.']);
+                return;
             end
             files = sort(files);
             % check flyCapture numbering bug.
