@@ -90,6 +90,7 @@ handles.analyseSrc = [];
 handles.range = {};
 handles.join = [];
 handles.procOps = {};
+handles.bgOp = {};
 
 % load command line input
 i = 1;
@@ -118,6 +119,9 @@ while true
             handles.autotracking = 1;
         case {'-f','--finish'}
             handles.autofinish = 1;
+        case {'--bgop'}
+            handles.bgOp = {varargin{i+1} varargin{i+2} varargin{i+3}};
+            i = i + 3;
         case {'--showcount'}
             handles.showcount = str2num(varargin{i+1});
             i = i + 1;
@@ -154,6 +158,7 @@ while true
             disp('  -d, --detect        force to start detection');
             disp('  -t, --tracking      force to start tracking');
             disp('  -f, --finish        force to finish tpro after processing');
+            disp('  --bgop start end num  background detection option [start] and [end] frame. pick up frame [num]');
             disp('  --showcount 0|1     show detection result [0:off, 1:on]');
             disp('  --pi roi1 roi2      export PI of [roi1] vs [roi2] using detection data');
             disp('  --dcd               export DCD using detection or tracking data');
@@ -579,6 +584,15 @@ for data_th = 1:size(records,1)
         endFrame = records{data_th, 6};
         isInvert = records{data_th, 12};
         checkNums = 50;
+        if ~isempty(handles.bgOp)
+            if ~strcmp(handles.bgOp{1},'start')
+                startFrame = str2num(handles.bgOp{1});
+            end
+            if ~strcmp(handles.bgOp{2},'end')
+                endFrame = str2num(handles.bgOp{2});
+            end
+            checkNums = str2num(handles.bgOp{3});
+        end
     else
         [dlg, startFrame, endFrame, checkNums, detectMode] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
         delete(dlg);
