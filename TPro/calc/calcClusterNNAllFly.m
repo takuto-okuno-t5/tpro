@@ -1,9 +1,10 @@
 % calculate nearest neighbor clustering
-function result = calcClusterNNAllFly(X, Y, roiMask, method, distance)
+function [result, wgcount] = calcClusterNNAllFly(X, Y, roiMask, method, distance)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
     
     result = zeros(flameMax,flyNum);
+    wgcount = zeros(flameMax,1);
     tic;
     for i = 1:flameMax
         % get detected points and roi points
@@ -12,7 +13,7 @@ function result = calcClusterNNAllFly(X, Y, roiMask, method, distance)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        result(i,:) = calcClusterNNFrame(fy',fx',method, distance);
+        [result(i,:), wgcount(i)] = calcClusterNNFrame(fy',fx',method, distance);
     end
     time = toc;
     disp(['calcClusterNNAllFly ... done : ' num2str(time) 's']);

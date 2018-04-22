@@ -1857,6 +1857,7 @@ function Untitled_16_Callback(hObject, eventdata, handles)
         ax.FontSize = 6;
     end
     tree = linkage(dist, algorithm);
+    wcount = calcWeightedGroupCountFrame(tree, size(pts,1), height);
 
     % plot colored points
     col = cluster(tree,'cutoff',height,'criterion','distance');
@@ -1885,7 +1886,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     disp('start to calculate nn-clustering');
 
     % calculate top num of distances and variance
-    result = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, algorithm, height);
+    [result, weightedGroupCount] = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, algorithm, height);
 
     % add result to axes & show in axes
     cname = 'nn_cluster_result_tracking';
@@ -1894,7 +1895,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
 
     [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
     [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.mmPerPixel);
-    save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
+    save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
         'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter');
 
     sharedInst.groupCenterX = groupCenterX;
@@ -1904,6 +1905,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     % update axes
     addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
     addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
+    addResult2Axes(handles, weightedGroupCount, 'nn_wgCount', handles.popupmenu8);
     addResult2Axes(handles, areas, 'nn_areas', handles.popupmenu8);
     addResult2Axes(handles, groupAreas, 'nn_groupAreas', handles.popupmenu8);
     addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
@@ -2480,7 +2482,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold on;
     if strcmp(sharedInst.axesType1,'aggr_ewd_result_tracking') || strcmp(sharedInst.axesType1,'aggr_dcd_result_tracking') || ...
        strcmp(sharedInst.axesType1,'aggr_dcd_result_mr') || strcmp(sharedInst.axesType1,'nn_cluster_result_tracking') || ...
-       strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+       strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_wgCount') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
        strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
         major = sharedInst.mean_blobmajor * 0.9;
         minor = major / 5 * 2;
@@ -2511,7 +2513,7 @@ function showFrameInAxes(hObject, handles, frameNum)
         end
         % nn clustered groups
         data = getappdata(handles.figure1, 'nn_groups');
-        if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+        if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || strcmp(sharedInst.axesType1,'nn_wgCount') || ...
              strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum')
             group = data(t,:);
             maxGroup = max(group);
@@ -2707,7 +2709,7 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     % show group line & number
     if ~isempty(sharedInst.group_keep_data) && ...
-       (strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || ...
+       (strcmp(sharedInst.axesType1,'nn_groups') || strcmp(sharedInst.axesType1,'nn_groupCount') || strcmp(sharedInst.axesType1,'nn_wgCount') || ...
        strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum'))
         groupNum = size(sharedInst.group_keep_data{1},2);
         for fn = 1:groupNum
