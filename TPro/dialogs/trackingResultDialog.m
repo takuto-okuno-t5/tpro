@@ -312,6 +312,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
         addResult2Axes(handles, result, 'nn_groups', handles.popupmenu8);
         addResult2Axes(handles, groupCount, 'nn_groupCount', handles.popupmenu8);
+        addResult2Axes(handles, weightedGroupCount, 'nn_wgCount', handles.popupmenu8);
         addResult2Axes(handles, areas, 'nn_areas', handles.popupmenu8);
         addResult2Axes(handles, groupAreas, 'nn_groupAreas', handles.popupmenu8);
         addResult2Axes(handles, biggestGroupFlyNum, 'nn_biggestGroupFlyNum', handles.popupmenu8);
