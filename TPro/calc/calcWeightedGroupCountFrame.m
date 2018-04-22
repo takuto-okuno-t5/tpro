@@ -34,44 +34,48 @@ function wcount = calcWeightedGroupCountFrame(tree, plen, height)
     h2 = height + hwidth;
     idx3 = find(dend(:,5)<=h2);
     dendIn = dend(idx3,:);
-    for i=size(dendIn,1):-1:1
+    for i=1:size(dendIn,1)
+        c1 = dendIn(i,2);
+        c2 = dendIn(i,3);
+        idx1 = dendIn(1,1);
         if dendIn(i,4) == 2
             if dendIn(i,5) >= h1
-                dendIn(i,6) = 1 - (dendIn(i,5) - h1) / (h2 - h1);
+                rate = (dendIn(i,5) - h1) / (h2 - h1);
+                dendIn(i,6) = 1 - rate;
             else
                 dendIn(i,6) = 1;
             end
         elseif dendIn(i,4) == 3
-            dendIn(i,6) = 1;
-        elseif dendIn(i,4) > 3
-            if dendIn(i,2) > plen && dendIn(i,3) > plen
-                if dendIn(i,5) >= h1
-                    dendIn(i,6) = 1 + (dendIn(i,5) - h1) / (h2 - h1);
-                else
-                    dendIn(i,6) = 1;
+            if dendIn(i,5) >= h1
+                if c1 > plen
+                    dendIn(i,6) = dendIn(c1-idx1+1, 6);
+                elseif c2 > plen
+                    dendIn(i,6) = dendIn(c2-idx1+1, 6);
                 end
             else
                 dendIn(i,6) = 1;
             end
+        elseif dendIn(i,4) > 3
+            if c1 > plen && c2 > plen
+                v1 = dendIn(c1-idx1+1, 6);
+                v2 = dendIn(c2-idx1+1, 6);
+                rate = (dendIn(i,5) - h1) / (h2 - h1);
+                dendIn(i,6) = 1*(1-rate) + (v1+v2)*rate;
+            elseif c1 > plen
+                dendIn(i,6) = dendIn(c1-idx1+1, 6);
+            elseif c2 > plen
+                dendIn(i,6) = dendIn(c2-idx1+1, 6);
+            end
         end
-        dendIn = removeChildCount(dendIn, i, plen);
+        if c1 > plen
+            dendIn(c1-idx1+1, 6) = 0;
+        end
+        if c2 > plen
+            dendIn(c2-idx1+1, 6) = 0;
+        end
     end
     if ~isempty(dendIn)
         wcount = nansum(dendIn(:,6));
     end
 end
 
-function dendIn = removeChildCount(dendIn, i, plen)
-    if i <= 0
-        return;
-    end
-    c1 = dendIn(i,2);
-    c2 = dendIn(i,3);
-    if c1 > plen
-        dendIn = removeChildCount(dendIn, c1-dendIn(1,1)+1, plen);
-    end
-    if c2 > plen
-        dendIn = removeChildCount(dendIn, c2-dendIn(1,1)+1, plen);
-    end
-    dendIn(i,4) = 0;
-end
