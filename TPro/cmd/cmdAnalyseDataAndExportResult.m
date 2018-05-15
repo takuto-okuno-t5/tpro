@@ -215,6 +215,10 @@ function cmdAnalyseDataAndExportResult(handles)
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
                 'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
             disp(['calc group : ' name]);
+        case 'wgcount'
+            if ~isempty(grp)
+                data = grp.weightedGroupCount;
+            end
         case 'gtrack'
             if ~isempty(grp)
                 rejectDist = groupRejectDist / mmPerPixel / fpsNum;
