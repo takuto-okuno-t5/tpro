@@ -245,6 +245,36 @@ function cmdAnalyseDataAndExportResult(handles)
             data = grptrk.group_keep_data{2};
         case 'gy'
             data = grptrk.group_keep_data{1};
+        case 'gindv'
+            gmax = max(max(grptrk.groups));
+            data = nan(size(grptrk.groups,1),size(grptrk.groups,2));
+            for i=1:gmax
+                idx = find(grptrk.groups==i);
+                data(idx) = vxy(idx);
+            end
+        case 'gmeanv'
+            gmax = max(max(grptrk.groups));
+            data = nan(1,gmax);
+            for i=1:gmax
+                idx = find(grptrk.groups==i);
+                data(i) = mean(vxy(idx));
+            end
+        case 'gszfreq'
+            cntgrp = grptrk.group_keep_data{2};
+            cntgrp(:,:) = NaN;
+            for i=1:size(cntgrp,1)
+                ids = unique(grptrk.groups(i,:));
+                ids(isnan(ids)) = [];
+                for j=1:length(ids)
+                    count = length(find(grptrk.groups(i,:)==ids(j)));
+                    cntgrp(i,ids(j)) = count;
+                end
+            end
+            fmax = max(max(cntgrp));
+            data = nan(1,fmax);
+            for i=2:fmax
+                data(i) = length(find(cntgrp==i));
+            end
         case 'groups'
             data = grptrk.groups;
         otherwise
@@ -298,7 +328,7 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % save data as text
-        if isempty(handles.join)
+        if isempty(handles.join) && isempty(handles.joinr)
             for i=1:roiNum
                 % export file
                 if isempty(handles.export)
@@ -314,22 +344,43 @@ function cmdAnalyseDataAndExportResult(handles)
         else
             disp(['joining a data : ' name]);
             for i=1:roiNum
-                if ~isempty(joinData)
-                    if size(joinData,1) > size(roiData{i},1)
-                        roiData{i}(size(joinData,1),1) = NaN;
-                    elseif size(joinData,1) < size(roiData{i},1)
-                        joinData(size(roiData{i},1),1) = NaN;
+                if ~isempty(handles.join)
+                    if ~isempty(joinData)
+                        sj = size(joinData,1);
+                        sr = size(roiData{i},1);
+                        if sj > sr
+                            roiData{i}((sr+1):sj,1) = NaN;
+                        elseif sj < sr
+                            joinData((sj+1):sr,1:end) = NaN;
+                        end
                     end
+                    joinData = [joinData, roiData{i}];
+                    joinHeader = [joinHeader, name];
+                elseif ~isempty(handles.joinr)
+                    if ~isempty(joinData)
+                        sj = size(joinData,2);
+                        sr = size(roiData{i},2);
+                        if sj > sr
+                            roiData{i}(1,(sr+1):sj) = NaN;
+                        elseif sj < sr
+                            joinData(1:end,(sj+1):sr) = NaN;
+                        end
+                    end
+                    joinData = [joinData; roiData{i}];
+                    joinHeader = [joinHeader; name];
                 end
-                joinData = [joinData, roiData{i}];
-                joinHeader = [joinHeader, name];
             end
         end
     end
 
     % save joined data as text
-    if ~isempty(handles.join) && ~isempty(handles.export)
+    if (~isempty(handles.join) || ~isempty(handles.joinr)) && ~isempty(handles.export)
         if handles.join == 0
+            joinHeader = {};
+        elseif ~isempty(handles.joinr)
+            if handles.joinr == 1
+                joinData = [joinHeader, joinData];
+            end
             joinHeader = {};
         end
         outputPath = [handles.export '/'];

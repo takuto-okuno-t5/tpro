@@ -89,6 +89,7 @@ handles.export = [];
 handles.analyseSrc = [];
 handles.range = {};
 handles.join = [];
+handles.joinr = [];
 handles.procOps = {};
 handles.bgOp = {};
 
@@ -145,6 +146,9 @@ while true
         case {'--join'}
             handles.join = str2num(varargin{i+1});
             i = i + 1;
+        case {'--joinr'}
+            handles.joinr = str2num(varargin{i+1});
+            i = i + 1;
         case {'--proc'}
             handles.procOps = [handles.procOps, varargin{i+1}];
             i = i + 1;
@@ -170,6 +174,7 @@ while true
             disp('                      [op] : sum,mean,max,min,count==N,nancount, ...');
             disp('  --export path       export analysed data files on [path]');
             disp('  --join 0|1          join columns of export data [0:without, 1:with] header');
+            disp('  --joinr 0|1         join rows of export data [0:without, 1:with] header');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
             handles.commandError = 1;
