@@ -252,12 +252,22 @@ function cmdAnalyseDataAndExportResult(handles)
                 idx = find(grptrk.groups==i);
                 data(idx) = vxy(idx);
             end
-        case 'gmeanv'
+        case {'gmeanv', 'gmeandcd', 'gmeanangle', 'gmeanav'}
             gmax = max(max(grptrk.groups));
             data = nan(1,gmax);
+            switch(handles.analyseSrc)
+            case 'gmeanv'
+                src = vxy;
+            case 'gmeanangle'
+                src = dir;
+            case 'gmeanav'
+                src = av;
+            case 'gmeandcd'
+                src = dcd.result;
+            end
             for i=1:gmax
                 idx = find(grptrk.groups==i);
-                data(i) = mean(vxy(idx));
+                data(i) = nanmean(src(idx));
             end
         case 'gszfreq'
             cntgrp = grptrk.group_keep_data{2};
