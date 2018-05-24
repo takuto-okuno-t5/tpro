@@ -2362,12 +2362,12 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     duration = groupDuration * sharedInst.fpsNum;
     X = sharedInst.groupCenterX;
     Y = sharedInst.groupCenterY;
-    group_keep_data = trackingPoints(X, Y, rejectDist, duration, sharedInst.img_h, sharedInst.img_w);
+    [group_keep_data, detect2groupIds] = trackingPoints(X, Y, rejectDist, duration, sharedInst.img_h, sharedInst.img_w);
     nn_groups = getappdata(handles.figure1, 'nn_groups');
     groups = matchingGroupAndFly(nn_groups, group_keep_data, X, Y);
 
     % save data
-    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups');
+    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds');
 
     sharedInst.groups = groups;
     sharedInst.group_keep_data = group_keep_data;

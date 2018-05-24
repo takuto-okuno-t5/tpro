@@ -1,5 +1,5 @@
 %%
-function keep_data = trackingPoints(X, Y, reject_dist, duration, img_h, img_w)
+function [keep_data, groupIds] = trackingPoints(X, Y, reject_dist, duration, img_h, img_w)
     MAX_FLIES = readTproConfig('trackingFlyMax', 800); % maxmum number of flies
     RECURSION_LIMIT = readTproConfig('recursionLimit', 500); % maxmum number of recursion limit
     IGNORE_NAN_COUNT = readTproConfig('ignoreNaNCount', 20); % maxmum NaN count of fly (removed from tracking pair-wise)
@@ -48,6 +48,7 @@ function keep_data = trackingPoints(X, Y, reject_dist, duration, img_h, img_w)
     nancount = zeros(1, MAX_FLIES); % counting NaN each fly
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
     flyNum = find(isnan(Q_estimate(1,:))==1,1) - 1; % initize number of track estimates
+    groupIds = nan(size(X,1),size(X,2));
 
     for t = 1:frameNum
         % make the given detections matrix
@@ -166,6 +167,12 @@ function keep_data = trackingPoints(X, Y, reject_dist, duration, img_h, img_w)
                 end
             end
 
+            % group Ids
+            idx = find(asgn>0);
+            for j = 1:length(idx)
+                k = asgn(idx(j));
+                groupIds(t,k) = idx(j);
+            end
             % consecutive strike
             % if the strike is not consecutive then reset
             prev_strk_trks = strk_trks;
