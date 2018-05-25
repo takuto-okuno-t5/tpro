@@ -2150,7 +2150,7 @@ for data_th = 1:size(records,1)
     [headAngle, keep_data] = fixHeadAndWingAngle(vxy, keep_data{7}, headAngle, keep_data, beJumpLv, ignoreEccTh, fpsNum, start_frame);
 
     % save keep_data
-    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory');
+    save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory', '-v7.3');
 
     if exportTrackingText > 0
         % optional data export

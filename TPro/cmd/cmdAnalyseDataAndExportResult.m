@@ -269,6 +269,31 @@ function cmdAnalyseDataAndExportResult(handles)
                 idx = find(grptrk.groups==i);
                 data(i) = nanmean(src(idx));
             end
+        case {'gmeanarea', 'gmeanori', 'gmeanperi', 'gmeanflynum'}
+            gmax = max(max(grptrk.groups));
+            gdata = nan(size(grptrk.group_keep_data{1},1), size(grptrk.group_keep_data{1},2));
+            data = nan(1,gmax);
+            switch(handles.analyseSrc)
+            case 'gmeanarea'
+                src = grp.groupAreas;
+            case 'gmeanori'
+                src = grp.groupOrient;
+            case 'gmeanperi'
+                src = grp.groupPerimeter;
+            case 'gmeanflynum'
+                src = grp.groupFlyNum;
+            end
+            for t=1:size(grptrk.detect2groupIds,1)
+                idx = find(grptrk.detect2groupIds(t,:)>0);
+                for j=1:length(idx)
+                    id = grptrk.detect2groupIds(t,idx(j));
+                    gdata(t,id) = src(t,idx(j));
+                end
+            end
+            for i=1:gmax
+                idx = find(~isnan(gdata(:,i)));
+                data(i) = nanmean(gdata(idx,i));
+            end
         case 'gszfreq'
             cntgrp = grptrk.group_keep_data{2};
             cntgrp(:,:) = NaN;
