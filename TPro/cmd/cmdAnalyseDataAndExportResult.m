@@ -225,7 +225,7 @@ function cmdAnalyseDataAndExportResult(handles)
                 duration = groupDuration * fpsNum;
                 [group_keep_data, detect2groupIds] = trackingPoints(grp.groupCenterX, grp.groupCenterY, rejectDist, duration, img_h, img_w);
                 groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
-                save([confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds');
+                save([confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
                 disp(['tracking group : ' name]);
             end
         case 'garea'

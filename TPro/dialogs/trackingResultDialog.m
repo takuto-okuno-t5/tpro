@@ -2369,7 +2369,7 @@ function Untitled_35_Callback(hObject, eventdata, handles)
     groups = matchingGroupAndFly(nn_groups, group_keep_data, X, Y);
 
     % save data
-    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds');
+    save([sharedInst.confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
 
     sharedInst.groups = groups;
     sharedInst.group_keep_data = group_keep_data;
