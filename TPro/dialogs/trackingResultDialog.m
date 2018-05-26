@@ -1897,9 +1897,9 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
 
     [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.mmPerPixel);
+    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.mmPerPixel);
     save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-        'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter');
+        'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
 
     sharedInst.groupCenterX = groupCenterX;
     sharedInst.groupCenterY = groupCenterY;

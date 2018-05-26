@@ -208,25 +208,9 @@ function cmdAnalyseDataAndExportResult(handles)
             else
                 data = grp.groupCount;
             end
-        case 'gcalc'
-            [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
-            [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, mmPerPixel); % dummy roiMask
-            save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
-            disp(['calc group : ' name]);
         case 'wgcount'
             if ~isempty(grp)
                 data = grp.weightedGroupCount;
-            end
-        case 'gtrack'
-            if ~isempty(grp)
-                rejectDist = groupRejectDist / mmPerPixel / fpsNum;
-                duration = groupDuration * fpsNum;
-                [group_keep_data, detect2groupIds] = trackingPoints(grp.groupCenterX, grp.groupCenterY, rejectDist, duration, img_h, img_w);
-                groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
-                save([confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
-                disp(['tracking group : ' name]);
             end
         case 'garea'
             if ~isempty(grp)
@@ -241,58 +225,98 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = grp.groupFlyNum;
             end
-        case 'gx'
-            data = grptrk.group_keep_data{2};
-        case 'gy'
-            data = grptrk.group_keep_data{1};
-        case 'gindv'
+        case 'gcalc'
+            [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+            [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, mmPerPixel); % dummy roiMask
+            save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
+            disp(['calc group : ' name]);
+        case 'gtrack'
+            if ~isempty(grp)
+                rejectDist = groupRejectDist / mmPerPixel / fpsNum;
+                duration = groupDuration * fpsNum;
+                [group_keep_data, detect2groupIds] = trackingPoints(grp.groupCenterX, grp.groupCenterY, rejectDist, duration, img_h, img_w);
+                groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
+                save([confPath 'multi/nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
+                disp(['tracking group : ' name]);
+            end
+        case 'flygid' % frame x fly matrix (group id)
+            data = grptrk.groups;
+        case {'flygv', 'flygdir', 'flygav', 'flygdcd'}  % frame x fly matrix (velocity, dcd, angle, av)
             gmax = max(max(grptrk.groups));
             data = nan(size(grptrk.groups,1),size(grptrk.groups,2));
+            switch(handles.analyseSrc)
+            case 'flygv'
+                src = vxy;
+            case 'flygdir'
+                src = dir;
+            case 'flygav'
+                src = av;
+            case 'flygdcd'
+                src = dcd.result;
+            end
             for i=1:gmax
                 idx = find(grptrk.groups==i);
-                data(idx) = vxy(idx);
+                data(idx) = src(idx);
             end
-        case {'gmeanv', 'gmeandcd', 'gmeanangle', 'gmeanav'}
+        case 'tgcx' % frame x tracked-group matrix (centroid x)
+            data = grptrk.group_keep_data{2};
+        case 'tgcy' % frame x tracked-group matrix (centroid y)
+            data = grptrk.group_keep_data{1};
+        case 'tgcv' % frame x tracked-group matrix (centroid v)
+            data = calcVxy(grptrk.group_keep_data{3}, grptrk.group_keep_data{4}) * fpsNum * mmPerPixel;
+        case 'tgmeancv' % 1 x tracked-group matrix (mean centroid v)
+            data = calcVxy(grptrk.group_keep_data{3}, grptrk.group_keep_data{4}) * fpsNum * mmPerPixel;
+            data = nanmean(data);
+        case {'tgmeanv', 'tgmeandir', 'tgmeanav', 'tgmeandcd'} % 1 x tracked-group matrix (mean frames)
             gmax = max(max(grptrk.groups));
             data = nan(1,gmax);
             switch(handles.analyseSrc)
-            case 'gmeanv'
+            case 'tgmeanv'
                 src = vxy;
-            case 'gmeanangle'
+            case 'tgmeandir'
                 src = dir;
-            case 'gmeanav'
+            case 'tgmeanav'
                 src = av;
-            case 'gmeandcd'
+            case 'tgmeandcd'
                 src = dcd.result;
             end
             for i=1:gmax
                 idx = find(grptrk.groups==i);
                 data(i) = nanmean(src(idx));
             end
-        case {'gmeanarea', 'gmeanori', 'gmeanperi', 'gmeanflynum'}
-            gmax = max(max(grptrk.groups));
-            gdata = nan(size(grptrk.group_keep_data{1},1), size(grptrk.group_keep_data{1},2));
-            data = nan(1,gmax);
+        case {'tgarea', 'tgori', 'tgperi', 'tgflynum'} % frame x tracked-group matrix 
+            frameNum = size(grptrk.group_keep_data{1},1);
+            groupNum = size(grptrk.group_keep_data{1},2);
             switch(handles.analyseSrc)
-            case 'gmeanarea'
-                src = grp.groupAreas;
-            case 'gmeanori'
-                src = grp.groupOrient;
-            case 'gmeanperi'
-                src = grp.groupPerimeter;
-            case 'gmeanflynum'
-                src = grp.groupFlyNum;
+            case 'tgarea'
+                data = getTgData(frameNum, groupNum, grp.groupAreas, grptrk.detect2groupIds);
+            case 'tgori'
+                data = getTgData(frameNum, groupNum, grp.groupOrient, grptrk.detect2groupIds);
+            case 'tgperi'
+                data = getTgData(frameNum, groupNum, grp.groupPerimeter, grptrk.detect2groupIds);
+            case 'tgflynum'
+                data = getTgData(frameNum, groupNum, grp.groupFlyNum, grptrk.detect2groupIds);
             end
-            for t=1:size(grptrk.detect2groupIds,1)
-                idx = find(grptrk.detect2groupIds(t,:)>0);
-                for j=1:length(idx)
-                    id = grptrk.detect2groupIds(t,idx(j));
-                    gdata(t,id) = src(t,idx(j));
-                end
+        case {'tgmeanarea', 'tgmeanori', 'tgmeanperi', 'tgmeanflynum'} % 1 x tracked-group matrix (mean frames)
+            frameNum = size(grptrk.group_keep_data{1},1);
+            groupNum = size(grptrk.group_keep_data{1},2);
+            switch(handles.analyseSrc)
+            case 'tgmeanarea'
+                tgdata = getTgData(frameNum, groupNum, grp.groupAreas, grptrk.detect2groupIds);
+            case 'tgmeanori'
+                tgdata = getTgData(frameNum, groupNum, grp.groupOrient, grptrk.detect2groupIds);
+            case 'tgmeanperi'
+                tgdata = getTgData(frameNum, groupNum, grp.groupPerimeter, grptrk.detect2groupIds);
+            case 'tgmeanflynum'
+                tgdata = getTgData(frameNum, groupNum, grp.groupFlyNum, grptrk.detect2groupIds);
             end
+            gmax = max(max(grptrk.groups));
+            data = nan(1,gmax);
             for i=1:gmax
-                idx = find(~isnan(gdata(:,i)));
-                data(i) = nanmean(gdata(idx,i));
+                idx = find(~isnan(tgdata(:,i)));
+                data(i) = nanmean(tgdata(idx,i));
             end
         case 'gszfreq'
             cntgrp = grptrk.group_keep_data{2};
@@ -310,8 +334,6 @@ function cmdAnalyseDataAndExportResult(handles)
             for i=2:fmax
                 data(i) = length(find(cntgrp==i));
             end
-        case 'groups'
-            data = grptrk.groups;
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;
@@ -425,4 +447,15 @@ function cmdAnalyseDataAndExportResult(handles)
 
     time = toc;
     disp(['analysing data ... done : ' num2str(time) 's']);
+end
+
+function gtdata = getTgData(frameNum, groupNum, src, detect2groupIds)
+    gtdata = nan(frameNum, groupNum);
+    for t=1:size(detect2groupIds,1)
+        idx = find(detect2groupIds(t,:)>0);
+        for j=1:length(idx)
+            id = detect2groupIds(t,idx(j));
+            gtdata(t,id) = src(t,idx(j));
+        end
+    end
 end
