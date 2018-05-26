@@ -318,6 +318,22 @@ function cmdAnalyseDataAndExportResult(handles)
                 idx = find(~isnan(tgdata(:,i)));
                 data(i) = nanmean(tgdata(idx,i));
             end
+        case {'tgflydiff', 'tgfuse', 'tgsepa'}
+            frameNum = size(grptrk.group_keep_data{1},1);
+            groupNum = size(grptrk.group_keep_data{1},2);
+            tgdata = getTgData(frameNum, groupNum, grp.groupFlyNum, grptrk.detect2groupIds);
+            tgdiff = diff(tgdata);
+            data = [nan(1,groupNum); tgdiff];
+            switch(handles.analyseSrc)
+            case 'tgfuse'
+                data(data<=1) = NaN;
+                data(data>1) = 1;
+                data = nansum(data);
+            case 'tgsepa'
+                data(data>=-1) = NaN;
+                data(data<-1) = 1;
+                data = nansum(data);
+            end
         case 'gszfreq'
             cntgrp = grptrk.group_keep_data{2};
             cntgrp(:,:) = NaN;
