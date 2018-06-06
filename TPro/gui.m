@@ -2335,7 +2335,14 @@ while data_th <= size(records,1)
     if records{data_th, 1}
         videoPath = videoPaths{data_th};
         shuttleVideo = TProVideoReader(videoPath, records{data_th,2}, records{data_th,6}, records{data_th,7});
-        frameImage = TProRead(shuttleVideo,1);
+
+        % load background image
+        bgImageFile = [videoPath shuttleVideo.name '_tpro/background.png'];
+        if exist(bgImageFile, 'file')
+            frameImage = imread(bgImageFile);
+        else
+            frameImage = TProRead(shuttleVideo,1);
+        end
         if size(frameImage,3) == 1
             grayImage = frameImage;
         else

@@ -125,7 +125,7 @@ function [keep_data, groupIds] = trackingPoints(X, Y, reject_dist, duration, img
                         if estF > 0
                             [m,i] = min(est_dist1(estF,:));
                             % find non assigned detection point and nearest measurement within min_dist_threshold, then estimate next point
-                            if isempty(find(asgn==i)) && m < min_dist_threshold  
+                            if isempty(find(asgn==i)) && m < min_dist_threshold
                                 Q_estimate(:,k) = Q_estimate(:,k) + K * (Q_loc_meas(i,:)' - C * Q_estimate(:,k));
                             end
                         end
