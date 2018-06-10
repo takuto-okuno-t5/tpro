@@ -1,5 +1,5 @@
 %%
-function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir, r, angleTh)
+function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir, br, ir, angleTh)
     fn = length(X);
     hhInt = nan(1,fn);
     haInt = nan(1,fn);
@@ -10,18 +10,18 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
     ay = nan(1,fn);
     for i=1:fn
         th = (-dir(i))/ 180 * pi;
-        hx(i) = X(i) + r * cos(th);
-        hy(i) = Y(i) + r * sin(th);
+        hx(i) = X(i) + br * cos(th);
+        hy(i) = Y(i) + br * sin(th);
         th = (-dir(i)+180)/ 180 * pi;
-        ax(i) = X(i) + r * cos(th);
-        ay(i) = Y(i) + r * sin(th);
+        ax(i) = X(i) + br * cos(th);
+        ay(i) = Y(i) + br * sin(th);
     end
     % find head to head
     pts = [hx', hy'; ax', ay'; X', Y'];
     dist = pdist(pts);
     dist1 = squareform(dist); %make square
     hhdist = dist1(1:fn,1:fn); 
-    idx = find(hhdist<r & hhdist>0);
+    idx = find(hhdist<ir & hhdist>0);
     for i=1:length(idx)
         [row, col] = ind2sub(size(hhdist), idx(i));
         dir2 = mod(atan2(hy(row)-hy(col), hx(col)-hx(row)) / pi * 180 + 360, 360);
@@ -36,7 +36,7 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
     end
     % find head to ass
     hadist = dist1(1:fn,(fn+1):fn*2); 
-    idx = find(hadist<r & hadist>0);
+    idx = find(hadist<ir & hadist>0);
     for i=1:length(idx)
         [row, col] = ind2sub(size(hadist), idx(i));
         dir2 = mod(atan2(hy(row)-ay(col), ax(col)-hx(row)) / pi * 180 + 360, 360);
@@ -51,7 +51,7 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
     end
     % find head to body
     hbdist = dist1(1:fn,(fn*2+1):end); 
-    idx = find(hbdist<r & hbdist>0);
+    idx = find(hbdist<ir & hbdist>0);
     for i=1:length(idx)
         [row, col] = ind2sub(size(hbdist), idx(i));
         if row ~= col

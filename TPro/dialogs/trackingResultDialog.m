@@ -2422,9 +2422,10 @@ function Untitled_37_Callback(hObject, eventdata, handles)
     X = sharedInst.keep_data{2};
     Y = sharedInst.keep_data{1};
     dir = calcDir(sharedInst.keep_data{5}, sharedInst.keep_data{6});
-    r = sharedInst.mean_blobmajor * 0.5;
+    br = sharedInst.mean_blobmajor*0.4; % head-body, body-ass radius
+    ir = sharedInst.mean_blobmajor*0.5; % interaction radius
 
-    interaction_data = calcInteractionAllFly(X, Y, dir, r, interactAngle);
+    interaction_data = calcInteractionAllFly(X, Y, dir, br, ir, interactAngle);
     sharedInst.interaction_data = interaction_data;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
