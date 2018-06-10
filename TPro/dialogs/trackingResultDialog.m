@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 03-Apr-2018 18:54:32
+    % Last Modified by GUIDE v2.5 10-Jun-2018 01:42:06
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1428,8 +1428,8 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
 
     % load latest config
     sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
@@ -1444,7 +1444,7 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
         cnr = dcdCnRadius / sharedInst.mmPerPixel;
-        [means, results] = calcLocalDensityDcdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r, cnr);
+        [means, results] = calcLocalDensityDcdAllFly(X, Y, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
         if lastMax < max(max(results))
@@ -1487,8 +1487,8 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
     multiR = 2.5:0.5:10;
     dcdCnRadius = sharedInst.dcdCnRadius;
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
@@ -1498,7 +1498,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     lastMax = 0;
     multiR = multiR / sharedInst.mmPerPixel;
     cnR = dcdCnRadius / sharedInst.mmPerPixel;
-    results = calcLocalDensityDcdAllFlyMultiR(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, multiR, cnR);
+    results = calcLocalDensityDcdAllFlyMultiR(X, Y, sharedInst.roiMaskImage, multiR, cnR);
 
     % show in plot
     lastMax = 0;
@@ -1525,8 +1525,8 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
     radius = sharedInst.ewdRadius;
 
     % calc local density of ewd
@@ -1534,7 +1534,7 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
         r = mm / sharedInst.mmPerPixel;
-        [means, results] = calcLocalDensityEwdAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, r);
+        [means, results] = calcLocalDensityEwdAllFly(X, Y, sharedInst.roiMaskImage, r);
 
         % show in plot
         if lastMax < max(max(results))
@@ -1802,12 +1802,12 @@ function Untitled_15_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
     num = 10;
 
     % calculate top num of distances and variance
-    [means, vars] = calcNumDistanceVarAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, num);
+    [means, vars] = calcNumDistanceVarAllFly(X, Y, sharedInst.roiMaskImage, num);
 
     % add result to axes & show in axes
     cname = 'aggr_topmeans_result_tracking';
@@ -1828,8 +1828,8 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
 
     % load latest config
     sharedInst.nnHeight = readTproConfig('nnHeight', 5);
@@ -1840,8 +1840,8 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     algorithm = sharedInst.nnAlgorithm; %'single', 'average', 'ward';
 
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-    fx = Q_loc_estimateX(t,:);
-    fy = Q_loc_estimateY(t,:);
+    fx = X(t,:);
+    fy = Y(t,:);
     fx(fx==0) = NaN;
     fy(fy==0) = NaN;
 
@@ -1866,7 +1866,7 @@ function Untitled_16_Callback(hObject, eventdata, handles)
     col = cluster(tree,'cutoff',height,'criterion','distance');
     axes(handles.axes1); % set drawing area
     hold on;
-    scatter(fy,fx,height*height,col,'LineWidth',0.5); % the actual detecting
+    scatter(fx,fy,height*height,col,'LineWidth',0.5); % the actual detecting
     hold off;
 end
 
@@ -1876,8 +1876,8 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
 
     % load latest config
     sharedInst.nnHeight = readTproConfig('nnHeight', 5);
@@ -1889,7 +1889,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     disp('start to calculate nn-clustering');
 
     % calculate top num of distances and variance
-    [result, weightedGroupCount] = calcClusterNNAllFly(Q_loc_estimateX, Q_loc_estimateY, sharedInst.roiMaskImage, algorithm, height);
+    [result, weightedGroupCount] = calcClusterNNAllFly(X, Y, sharedInst.roiMaskImage, algorithm, height);
 
     % add result to axes & show in axes
     cname = 'nn_cluster_result_tracking';
@@ -1897,7 +1897,7 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
 
     [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(Q_loc_estimateX, Q_loc_estimateY, result, sharedInst.mmPerPixel);
+    [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(X, Y, result, sharedInst.mmPerPixel);
     save([sharedInst.confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
         'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
 
@@ -1922,8 +1922,8 @@ function Untitled_18_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    X = sharedInst.keep_data{1};
-    Y = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
     dirX = sharedInst.keep_data{5};
     dirY = sharedInst.keep_data{6};
 
@@ -1958,7 +1958,7 @@ function Untitled_18_Callback(hObject, eventdata, handles)
             cy = Y(frameNum,i);
             vec = [dirX(frameNum,i); dirY(frameNum,i)];
 
-            trimmedImage = getOneFlyBoxImage_(step2Image, cy, cx, vec, sharedInst.boxSize);
+            trimmedImage = getOneFlyBoxImage_(step2Image, cx, cy, vec, sharedInst.boxSize);
             img = resizeImage64ForDL(trimmedImage);
             % Extract image features using the CNN
             imageFeatures = activations(netForFrontBack, img, 11);
@@ -2274,8 +2274,8 @@ function Untitled_28_Callback(hObject, eventdata, handles) % find crossed trajec
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    X = sharedInst.keep_data{1};
-    Y = sharedInst.keep_data{2};
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
 
     % find clossed trajectory
     result = findClossedTrajectory(X, Y, sharedInst.roiMaskImage);
@@ -2393,8 +2393,9 @@ function Untitled_36_Callback(hObject, eventdata, handles)
         fn = listFly;
     end
     t=1:size(sharedInst.keep_data{1},1);
-    X = sharedInst.keep_data{1}(t,fn);
-    Y = sharedInst.keep_data{2}(t,fn);
+    X = sharedInst.keep_data{2}(t,fn);
+    Y = sharedInst.keep_data{1}(t,fn);
+
     figure;
     plot3(X, Y, t');
     % set view
@@ -2402,6 +2403,83 @@ function Untitled_36_Callback(hObject, eventdata, handles)
     el = 15;
     view([0, 0, size(sharedInst.keep_data{1},1)/2]);
     view(az, el);
+end
+
+% --------------------------------------------------------------------
+function Untitled_37_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_37 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
+    X = sharedInst.keep_data{2}(t,:);
+    Y = sharedInst.keep_data{1}(t,:);
+    dir = calcDir(sharedInst.keep_data{5}, sharedInst.keep_data{6});
+    dir = dir(t,:);
+    fn = length(X);
+    r = sharedInst.mean_blobmajor * 0.5;
+    hx = nan(1,fn);
+    hy = nan(1,fn);
+    ax = nan(1,fn);
+    ay = nan(1,fn);
+    for i=1:fn
+        th = (-dir(i))/ 180 * pi;
+        hx(i) = X(i) + r * cos(th);
+        hy(i) = Y(i) + r * sin(th);
+        th = (-dir(i)+180)/ 180 * pi;
+        ax(i) = X(i) + r * cos(th);
+        ay(i) = Y(i) + r * sin(th);
+    end
+    % find head to head
+    pts = [hx', hy'; ax', ay'; X', Y'];
+    dist = pdist(pts);
+    dist1 = squareform(dist); %make square
+    hhdist = dist1(1:fn,1:fn); 
+    idx = find(hhdist<r & hhdist>0);
+    hx2 = [];
+    hy2 = [];
+    for i=1:length(idx)
+        [row, col] = ind2sub(size(hhdist), idx(i));
+        dir2 = mod(atan2(hy(row)-hy(col), hx(col) - hx(row)) / pi * 180 + 360, 360);
+        dir3 = dir(row);
+        if abs(dir2-dir3) <= 60
+            hx2 = [hx2, hx(row)];
+            hy2 = [hy2, hy(row)];
+            hx2 = [hx2, hx(col)];
+            hy2 = [hy2, hy(col)];
+        end
+    end
+    % find head to ass
+    hadist = dist1(1:fn,(fn+1):fn*2); 
+    idx = find(hadist<r & hadist>0);
+    ax2 = [];
+    ay2 = [];
+    for i=1:length(idx)
+        [row, col] = ind2sub(size(hadist), idx(i));
+        ax2 = [ax2, hx(row)];
+        ay2 = [ay2, hy(row)];
+        ax2 = [ax2, ax(col)];
+        ay2 = [ay2, ay(col)];
+    end
+    % find head to body
+    hbdist = dist1(1:fn,(fn*2+1):end); 
+    idx = find(hbdist<r & hbdist>0);
+    bx2 = [];
+    by2 = [];
+    for i=1:length(idx)
+        [row, col] = ind2sub(size(hbdist), idx(i));
+        if row ~= col
+            bx2 = [bx2, hx(row)];
+            by2 = [by2, hy(row)];
+            bx2 = [bx2, X(col)];
+            by2 = [by2, Y(col)];
+        end
+    end
+    hold on;
+    plot(hx2,hy2,'or','Color', [.3 1 .3], 'Marker','d');
+    plot(ax2,ay2,'or','Color', [.3 .3 1], 'Marker','d');
+    plot(bx2,by2,'or','Color', [1 .3 .3], 'Marker','d');
+    hold off;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2461,8 +2539,8 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
 
     angle = sharedInst.keep_data{8};
-    Q_loc_estimateX = sharedInst.keep_data{1};
-    Q_loc_estimateY = sharedInst.keep_data{2};
+    Q_loc_estimateX = sharedInst.keep_data{2};
+    Q_loc_estimateY = sharedInst.keep_data{1};
     flameMax = size(Q_loc_estimateX, 1);
     flyNum = size(Q_loc_estimateX, 2);
     listFly = sharedInst.listFly;
@@ -2490,8 +2568,8 @@ function showFrameInAxes(hObject, handles, frameNum)
         major = sharedInst.mean_blobmajor * 0.9;
         minor = major / 5 * 2;
         pos = [-major/2 -minor/2 major minor];
-        fy = Q_loc_estimateY(t,:);
         fx = Q_loc_estimateX(t,:);
+        fy = Q_loc_estimateY(t,:);
         % get clustering result of all fly
         data = getappdata(handles.figure1, 'nn_cluster_result_tracking');
         if ~isempty(data) && strcmp(sharedInst.axesType1,'nn_cluster_result_tracking')
@@ -2512,7 +2590,7 @@ function showFrameInAxes(hObject, handles, frameNum)
             fy2(idxs) = [];
             fx2(idxs) = [];
             culster(idxs) = [];
-            scatter(fy2,fx2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
+            scatter(fx2,fy2,height*height,culster,'filled','LineWidth',0.5); % the actual detecting
         end
         % nn clustered groups
         data = getappdata(handles.figure1, 'nn_groups');
@@ -2522,8 +2600,8 @@ function showFrameInAxes(hObject, handles, frameNum)
             maxGroup = max(group);
             for j=1:maxGroup
                 idx = find(group==j);
-                gx = double(fy(idx))';
-                gy = double(fx(idx))';
+                gx = double(fx(idx))';
+                gy = double(fy(idx))';
                 if length(idx)==2
                     plot(gx,gy,'Color','blue','LineWidth',0.5);
                 else
@@ -2581,42 +2659,42 @@ function showFrameInAxes(hObject, handles, frameNum)
                         if isnan(ang)
                             ang = 0;
                         end
-                        g.Matrix = makehgtform('translate',[fy(i) fx(i) 0],'zrotate',-ang/180*pi);
+                        g.Matrix = makehgtform('translate',[fx(i) fy(i) 0],'zrotate',-ang/180*pi);
                     end
                 end
             end
         end
     elseif sharedInst.showDetectResult
-        keepY = Q_loc_estimateY(t,:);
         keepX = Q_loc_estimateX(t,:);
-        keepDirY = sharedInst.keep_data{5}(t,:);
-        keepDirX = sharedInst.keep_data{6}(t,:);
+        keepY = Q_loc_estimateY(t,:);
+        keepDirX = sharedInst.keep_data{5}(t,:);
+        keepDirY = sharedInst.keep_data{6}(t,:);
         if sharedInst.listMode == 1
             plot(Y,X,'or'); % the actual detecting
-            quiver(keepY, keepX, keepDirY, keepDirX, 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+            quiver(keepX, keepY, keepDirX, keepDirY, 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
 
             % show wings
             if length(sharedInst.keep_data) > 8
                 wingLength = sharedInst.mean_blobmajor * 0.6;
                 leftWingDir = angleToDirection(sharedInst.keep_data{10}(t,:), wingLength);
                 rightWingDir = angleToDirection(sharedInst.keep_data{9}(t,:), wingLength);
-                quiver(keepY, keepX, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
-                quiver(keepY, keepX, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                quiver(keepX, keepY, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                quiver(keepX, keepY, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
             end
         else
             fy = keepY(listFly);
             fx = keepX(listFly);
-            if ~isnan(fy) && ~isnan(fx) && currentMask(round(fx),round(fy)) > 0
-                plot(fy,fx,'or'); % the actual detecting
-                quiver(fy, fx, keepDirY(listFly), keepDirX(listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
+            if ~isnan(fy) && ~isnan(fx) && currentMask(round(fy),round(fx)) > 0
+                plot(fx,fy,'or'); % the actual detecting
+                quiver(fx, fy, keepDirX(listFly), keepDirY(listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
 
                 % show wings
                 if length(sharedInst.keep_data) > 8
                     wingLength = sharedInst.mean_blobmajor * 0.6;
                     leftWingDir = angleToDirection(sharedInst.keep_data{10}(t,listFly), wingLength);
                     rightWingDir = angleToDirection(sharedInst.keep_data{9}(t,listFly), wingLength);
-                    quiver(fy, fx, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
-                    quiver(fy, fx, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                    quiver(fx, fy, leftWingDir(:,1)', leftWingDir(:,2)', 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+                    quiver(fx, fy, rightWingDir(:,1)', rightWingDir(:,2)', 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
                 end
             end
         end
@@ -2660,20 +2738,20 @@ function showFrameInAxes(hObject, handles, frameNum)
             % check ROI
             if sharedInst.currentROI > 0
                 for j = length(tmX):-1:1
-                    if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                    if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmY(j)),round(tmX(j))) <= 0
                         tmX(j) = NaN;
                         tmY(j) = NaN;
                     end
                 end
             end
             if sharedInst.lineLength > 0
-                plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                plot(tmX, tmY, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
             end
 
             % show number
             if sharedInst.showNumber && listFly > 0
                 num_txt = ['  ', num2str(fn)];
-                text(double(Q_loc_estimateY(t,listFly)),double(Q_loc_estimateX(t,listFly)),num_txt, 'Color','red')
+                text(double(Q_loc_estimateX(t,listFly)),double(Q_loc_estimateY(t,listFly)),num_txt, 'Color','red')
             end            
         else
             % show tail lines
@@ -2691,20 +2769,20 @@ function showFrameInAxes(hObject, handles, frameNum)
                 % check ROI
                 if sharedInst.currentROI > 0
                     for j = length(tmX):-1:1
-                        if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmX(j)),round(tmY(j))) <= 0
+                        if isnan(tmX(j)) || isnan(tmY(j)) || currentMask(round(tmY(j)),round(tmX(j))) <= 0
                             tmX(j) = NaN;
                             tmY(j) = NaN;
                         end
                     end
                 end
                 if sharedInst.lineLength > 0
-                    plot(tmY, tmX, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                    plot(tmX, tmY, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
                 end
 
                 % show number
                 if sharedInst.showNumber
                     num_txt = ['  ', num2str(fn)];
-                    text(double(tmY(end)),double(tmX(end)),num_txt, 'Color','red')
+                    text(double(tmX(end)),double(tmY(end)),num_txt, 'Color','red')
                     % quiver(Y{t}(11:12),X{t}(11:12),keep_direction_sorted{t}(1,11:12)',keep_direction_sorted{t}(2,11:12)', 'r', 'MaxHeadSize',1, 'LineWidth',1)  %arrow
                 end
             end
@@ -2716,12 +2794,12 @@ function showFrameInAxes(hObject, handles, frameNum)
        strcmp(sharedInst.axesType1,'nn_areas') || strcmp(sharedInst.axesType1,'nn_biggestGroupFlyNum'))
         groupNum = size(sharedInst.group_keep_data{1},2);
         for fn = 1:groupNum
-            tmY = sharedInst.group_keep_data{1}(t,fn);
-            tmX = sharedInst.group_keep_data{2}(t,fn);
+            tmX = sharedInst.group_keep_data{1}(t,fn);
+            tmY = sharedInst.group_keep_data{2}(t,fn);
             % show number
             if sharedInst.showNumber
                 num_txt = ['  ', num2str(fn)];
-                text(double(tmY),double(tmX),num_txt, 'Color','blue')
+                text(double(tmX),double(tmY),num_txt, 'Color','blue')
             end
         end
     end

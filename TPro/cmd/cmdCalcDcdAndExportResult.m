@@ -84,7 +84,7 @@ function cmdCalcDcdAndExportResult(handles)
         matFile = [confPath 'multi/track_' filename,'.mat'];
         if exist(matFile,'file')
             load(matFile);
-            [means, results] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
+            [means, results] = calcLocalDensityDcdAllFly(keep_data{2}, keep_data{1}, [], r, cnr); % empty roiMask
         end
 
         % save data as text

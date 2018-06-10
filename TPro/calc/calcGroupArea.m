@@ -19,7 +19,7 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerim
         fy(fy==0) = NaN;
         group = groups(i,:);
 
-        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupFlyNum(i,:)] = calcGroupAreaFrame(fy,fx,group,mmPerPixel);
+        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupFlyNum(i,:)] = calcGroupAreaFrame(fx,fy,group,mmPerPixel);
 
         if mod(i,200)==0
             rate = i/frame * 100;

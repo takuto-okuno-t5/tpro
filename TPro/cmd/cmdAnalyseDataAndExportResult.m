@@ -187,7 +187,7 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'dcdcalc'
             r = dcdRadius / mmPerPixel;
             cnr = dcdCnRadius / mmPerPixel;
-            [means, result] = calcLocalDensityDcdAllFly(keep_data{1}, keep_data{2}, [], r, cnr); % empty roiMask
+            [means, result] = calcLocalDensityDcdAllFly(keep_data{2}, keep_data{1}, [], r, cnr); % empty roiMask
             save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
             disp(['calc DCD : ' name]);
         case 'dcd'
@@ -196,14 +196,14 @@ function cmdAnalyseDataAndExportResult(handles)
             end
         case 'group'
             if isempty(grp)
-                [result, wgCount] = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+                [result, wgCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
                 [data, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
             else
                 data = grp.result;
             end
         case 'gcount'
             if isempty(grp)
-                [result, wgCount] = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+                [result, wgCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
                 [result, data, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
             else
                 data = grp.groupCount;
@@ -226,9 +226,9 @@ function cmdAnalyseDataAndExportResult(handles)
                 data = grp.groupFlyNum;
             end
         case 'gcalc'
-            [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{1}, keep_data{2}, [], algorithm, height); % ignore roiMask
+            [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{1}, keep_data{2}, result, mmPerPixel); % dummy roiMask
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{2}, keep_data{1}, result, mmPerPixel); % dummy roiMask
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
                 'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
             disp(['calc group : ' name]);

@@ -13,7 +13,7 @@ function [result, wgcount] = calcClusterNNAllFly(X, Y, roiMask, method, distance
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        [result(i,:), wgcount(i)] = calcClusterNNFrame(fy',fx',method, distance);
+        [result(i,:), wgcount(i)] = calcClusterNNFrame(fx',fy',method, distance);
     end
     time = toc;
     disp(['calcClusterNNAllFly ... done : ' num2str(time) 's']);
