@@ -325,6 +325,13 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.group_keep_data = group_keep_data;
         sharedInst.groups = groups;
     end
+    % load head interaction data
+    fname = [sharedInst.confPath 'multi/head_interaction.mat'];
+    if exist(fname, 'file')
+        load(fname);
+        sharedInst.interaction_data = interaction_data;
+        addResult2Axes(handles, interaction_data{1}, 'head_interaction', handles.popupmenu8);
+    end
 
     set(handles.popupmenu8,'Value',1);
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
@@ -2410,76 +2417,22 @@ function Untitled_37_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_37 (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+    interactAngle = readTproConfig('interactAngle', 75);
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
-    X = sharedInst.keep_data{2}(t,:);
-    Y = sharedInst.keep_data{1}(t,:);
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
     dir = calcDir(sharedInst.keep_data{5}, sharedInst.keep_data{6});
-    dir = dir(t,:);
-    fn = length(X);
     r = sharedInst.mean_blobmajor * 0.5;
-    hx = nan(1,fn);
-    hy = nan(1,fn);
-    ax = nan(1,fn);
-    ay = nan(1,fn);
-    for i=1:fn
-        th = (-dir(i))/ 180 * pi;
-        hx(i) = X(i) + r * cos(th);
-        hy(i) = Y(i) + r * sin(th);
-        th = (-dir(i)+180)/ 180 * pi;
-        ax(i) = X(i) + r * cos(th);
-        ay(i) = Y(i) + r * sin(th);
-    end
-    % find head to head
-    pts = [hx', hy'; ax', ay'; X', Y'];
-    dist = pdist(pts);
-    dist1 = squareform(dist); %make square
-    hhdist = dist1(1:fn,1:fn); 
-    idx = find(hhdist<r & hhdist>0);
-    hx2 = [];
-    hy2 = [];
-    for i=1:length(idx)
-        [row, col] = ind2sub(size(hhdist), idx(i));
-        dir2 = mod(atan2(hy(row)-hy(col), hx(col) - hx(row)) / pi * 180 + 360, 360);
-        dir3 = dir(row);
-        if abs(dir2-dir3) <= 60
-            hx2 = [hx2, hx(row)];
-            hy2 = [hy2, hy(row)];
-            hx2 = [hx2, hx(col)];
-            hy2 = [hy2, hy(col)];
-        end
-    end
-    % find head to ass
-    hadist = dist1(1:fn,(fn+1):fn*2); 
-    idx = find(hadist<r & hadist>0);
-    ax2 = [];
-    ay2 = [];
-    for i=1:length(idx)
-        [row, col] = ind2sub(size(hadist), idx(i));
-        ax2 = [ax2, hx(row)];
-        ay2 = [ay2, hy(row)];
-        ax2 = [ax2, ax(col)];
-        ay2 = [ay2, ay(col)];
-    end
-    % find head to body
-    hbdist = dist1(1:fn,(fn*2+1):end); 
-    idx = find(hbdist<r & hbdist>0);
-    bx2 = [];
-    by2 = [];
-    for i=1:length(idx)
-        [row, col] = ind2sub(size(hbdist), idx(i));
-        if row ~= col
-            bx2 = [bx2, hx(row)];
-            by2 = [by2, hy(row)];
-            bx2 = [bx2, X(col)];
-            by2 = [by2, Y(col)];
-        end
-    end
-    hold on;
-    plot(hx2,hy2,'or','Color', [.3 1 .3], 'Marker','d');
-    plot(ax2,ay2,'or','Color', [.3 .3 1], 'Marker','d');
-    plot(bx2,by2,'or','Color', [1 .3 .3], 'Marker','d');
-    hold off;
+
+    interaction_data = calcInteractionAllFly(X, Y, dir, r, interactAngle);
+    sharedInst.interaction_data = interaction_data;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    % add result to axes & show in axes
+    cname = 'head_interaction';
+    addResult2Axes(handles, interaction_data{1}, cname, handles.popupmenu8);
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'interaction_data');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2705,6 +2658,27 @@ function showFrameInAxes(hObject, handles, frameNum)
                 plot(sharedInst.selectY{i},sharedInst.selectX{i},'or','Color', [.3 1 .3]);
             end
         end
+    end
+    % show head interaction
+    if strcmp(sharedInst.axesType1,'head_interaction')
+        hx = sharedInst.interaction_data{5}(t,:);
+        hy = sharedInst.interaction_data{6}(t,:);
+        ax = sharedInst.interaction_data{7}(t,:);
+        ay = sharedInst.interaction_data{8}(t,:);
+        bx = Q_loc_estimateX(t,:);
+        by = Q_loc_estimateY(t,:);
+        hhInt = sharedInst.interaction_data{2}(t,:);
+        haInt = sharedInst.interaction_data{3}(t,:);
+        hbInt = sharedInst.interaction_data{4}(t,:);
+        idx = find(hbInt>0);
+        plot(hx(idx),hy(idx),'or','Color', [1 .3 .3], 'Marker','d');
+        plot(bx(hbInt(idx)),by(hbInt(idx)),'or','Color', [1 .3 .3], 'Marker','d');
+        idx = find(haInt>0);
+        plot(hx(idx),hy(idx),'or','Color', [.3 .3 1], 'Marker','d');
+        plot(ax(haInt(idx)),ay(haInt(idx)),'or','Color', [.3 .3 1], 'Marker','d');
+        idx = find(hhInt>0);
+        idx2 = [idx, hhInt(idx)];
+        plot(hx(idx2),hy(idx2),'or','Color', [.3 1 .3], 'Marker','d');
     end
 
     for fn = 1:flyNum

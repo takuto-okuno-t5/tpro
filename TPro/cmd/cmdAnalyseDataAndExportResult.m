@@ -13,6 +13,8 @@ function cmdAnalyseDataAndExportResult(handles)
     nnAlgorithm = readTproConfig('nnAlgorithm', 'single');
     groupRejectDist = readTproConfig('groupRejectDist', 700);
     groupDuration = readTproConfig('groupDuration', 1);
+    interactAngle = readTproConfig('interactAngle', 75);
+    meanBlobMajor = readTproConfig('meanBlobMajor', 3.56);
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -45,6 +47,7 @@ function cmdAnalyseDataAndExportResult(handles)
         mmPerPixel = records{data_th, 9};
         height = nnHeight / mmPerPixel;
         algorithm = nnAlgorithm; 
+        mean_blobmajor = meanBlobMajor / mmPerPixel;
 
         % get path of output folder
         confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
@@ -124,6 +127,13 @@ function cmdAnalyseDataAndExportResult(handles)
             be = load(annoFileName);
         else
             be = [];
+        end
+        % load head interaction
+        matFile = [confPath 'multi/head_interaction.mat'];
+        if exist(matFile, 'file')
+            hInt = load(matFile);
+        else
+            hInt = [];
         end
 
         % calc velocity etc
@@ -350,6 +360,12 @@ function cmdAnalyseDataAndExportResult(handles)
             for i=2:fmax
                 data(i) = length(find(cntgrp==i));
             end
+        case 'hintcalc'
+            interaction_data = calcInteractionAllFly(keep_data{2}, keep_data{1}, dir, mean_blobmajor*0.5, interactAngle);
+            save([confPath 'multi/head_interaction.mat'], 'interaction_data');
+            disp(['calc head interaction : ' name]);
+        case 'hintcount'
+            data = hInt.interaction_data{1};
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;

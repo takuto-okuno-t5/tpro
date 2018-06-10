@@ -13,7 +13,7 @@ function [means, result] = calcLocalDensityDcdAllFly(X, Y, roiMask, r, cnR)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
 
-        [means(i), result(i,:)] = calcLocalDensityDcdFrame(fy,fx,r,cnR);
+        [means(i), result(i,:)] = calcLocalDensityDcdFrame(fx,fy,r,cnR);
     end
     time = toc;
     disp(['calcLocalDensityDcdAllFly ... done : ' num2str(time) 's']);
