@@ -1,5 +1,5 @@
 %%
-function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir, br, ir, angleTh)
+function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir, ecc, br, ir, angleTh, eccTh)
     fn = length(X);
     hhInt = nan(1,fn);
     haInt = nan(1,fn);
@@ -26,7 +26,8 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
         [row, col] = ind2sub(size(hhdist), idx(i));
         dir2 = mod(atan2(hy(row)-hy(col), hx(col)-hx(row)) / pi * 180 + 360, 360);
         dir3 = dir(row);
-        if abs(dir2-dir3) <= angleTh
+        ecc2 = ecc(row);
+        if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
             hhInt(1,row) = col;
 %            hx2 = [hx2, hx(row)];
 %            hy2 = [hy2, hy(row)];
@@ -41,7 +42,8 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
         [row, col] = ind2sub(size(hadist), idx(i));
         dir2 = mod(atan2(hy(row)-ay(col), ax(col)-hx(row)) / pi * 180 + 360, 360);
         dir3 = dir(row);
-        if abs(dir2-dir3) <= angleTh
+        ecc2 = ecc(row);
+        if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
             haInt(1,row) = col;
 %            ax2 = [ax2, hx(row)];
 %            ay2 = [ay2, hy(row)];
@@ -57,7 +59,8 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
         if row ~= col
             dir2 = mod(atan2(hy(row)-Y(col), ax(col)-X(row)) / pi * 180 + 360, 360);
             dir3 = dir(row);
-            if abs(dir2-dir3) <= angleTh
+            ecc2 = ecc(row);
+            if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
                 hbInt(1,row) = col;
 %                bx2 = [bx2, hx(row)];
 %                by2 = [by2, hy(row)];

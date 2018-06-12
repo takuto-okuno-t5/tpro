@@ -1,5 +1,5 @@
 %%
-function interaction_data = calcInteractionAllFly(X, Y, dir, br, ir, angleTh)
+function interaction_data = calcInteractionAllFly(X, Y, dir, ecc, br, ir, angleTh, eccTh)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
 
@@ -18,8 +18,9 @@ function interaction_data = calcInteractionAllFly(X, Y, dir, br, ir, angleTh)
         fx(fx==0) = NaN;
         fy(fy==0) = NaN;
         fdir = dir(i,:);
+        fecc = ecc(i,:);
 
-        [hhInt(i,:), haInt(i,:), hbInt(i,:), hx(i,:), hy(i,:), ax(i,:), ay(i,:)] = calcInteractionFrame(fx,fy,fdir,br,ir,angleTh);
+        [hhInt(i,:), haInt(i,:), hbInt(i,:), hx(i,:), hy(i,:), ax(i,:), ay(i,:)] = calcInteractionFrame(fx,fy,fdir,fecc,br,ir,angleTh,eccTh);
     end
     % head > ass > body
     hbInt(hhInt>0) = NaN;

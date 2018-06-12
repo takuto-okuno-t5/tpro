@@ -15,6 +15,7 @@ function cmdAnalyseDataAndExportResult(handles)
     groupDuration = readTproConfig('groupDuration', 1);
     interactAngle = readTproConfig('interactAngle', 75);
     meanBlobMajor = readTproConfig('meanBlobMajor', 3.56);
+    eccTh = readTproConfig('beClimb', 0.88);
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -363,7 +364,7 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'hintcalc' % head interaction calc
             br = mean_blobmajor*0.4; % head-body, body-ass radius
             ir = mean_blobmajor*0.5; % interaction radius
-            interaction_data = calcInteractionAllFly(keep_data{2}, keep_data{1}, dir, br, ir, interactAngle);
+            interaction_data = calcInteractionAllFly(keep_data{2}, keep_data{1}, dir, ecc, br, ir, interactAngle, eccTh);
             save([confPath 'multi/head_interaction.mat'], 'interaction_data');
             disp(['calc head interaction : ' name]);
         case 'hintcount' % head interaction count frame x 1
