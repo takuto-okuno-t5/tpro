@@ -29,10 +29,6 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
         ecc2 = ecc(row);
         if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
             hhInt(1,row) = col;
-%            hx2 = [hx2, hx(row)];
-%            hy2 = [hy2, hy(row)];
-%            hx2 = [hx2, hx(col)];
-%            hy2 = [hy2, hy(col)];
         end
     end
     % find head to ass
@@ -45,10 +41,6 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
         ecc2 = ecc(row);
         if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
             haInt(1,row) = col;
-%            ax2 = [ax2, hx(row)];
-%            ay2 = [ay2, hy(row)];
-%            ax2 = [ax2, ax(col)];
-%            ay2 = [ay2, ay(col)];
         end
     end
     % find head to body
@@ -62,10 +54,6 @@ function [hhInt, haInt, hbInt, hx, hy, ax, ay] = calcInteractionFrame(X, Y, dir,
             ecc2 = ecc(row);
             if abs(dir2-dir3) <= angleTh && ecc2 >= eccTh
                 hbInt(1,row) = col;
-%                bx2 = [bx2, hx(row)];
-%                by2 = [by2, hy(row)];
-%                bx2 = [bx2, X(col)];
-%                by2 = [by2, Y(col)];
             end
         end
     end

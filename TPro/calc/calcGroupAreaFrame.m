@@ -21,7 +21,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
             cx = mean(gx);
             cy = mean(gy);
             perimeter = sqrt(diff(gx).^2 + diff(gy).^2) * mmPerPixel * 2;
-            area = perimeter * 1.5; % 1.5mm
+            area = 0; % perimeter * 1.5; % 1.5mm
             angle = atan2(diff(gy),diff(gx)) / pi * 180;
         else
             dt = delaunayTriangulation(gx,gy);
@@ -31,7 +31,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
             cx = geom(2);
             cy = geom(3);
             perimeter = geom(4) * mmPerPixel;
-            area = geom(1) * (mmPerPixel^2) + perimeter * 1.5; % 1.5mm
+            area = geom(1) * (mmPerPixel^2);% + perimeter * 1.5; % 1.5mm
             angle = cpmo(2) / pi * 180;
         end
         groupAreas(j) = area;

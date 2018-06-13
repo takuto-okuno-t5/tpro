@@ -92,6 +92,7 @@ handles.join = [];
 handles.joinr = [];
 handles.procOps = {};
 handles.bgOp = {};
+handles.percentile = [];
 
 % load command line input
 i = 1;
@@ -148,6 +149,9 @@ while true
             i = i + 1;
         case {'--joinr'}
             handles.joinr = str2num(varargin{i+1});
+            i = i + 1;
+        case {'--percentile'}
+            handles.percentile = [100,75,50,25,0];
             i = i + 1;
         case {'--proc'}
             handles.procOps = [handles.procOps, varargin{i+1}];

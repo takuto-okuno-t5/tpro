@@ -223,10 +223,6 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = grp.weightedGroupCount;
             end
-        case 'garea'
-            if ~isempty(grp)
-                data = grp.areas;
-            end
         case 'gsolo'
             if ~isempty(grp)
                 gfly = nansum(grp.groupFlyNum, 2);
@@ -235,6 +231,35 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'gfly'
             if ~isempty(grp)
                 data = grp.groupFlyNum;
+            end
+        case 'gsize'
+            if ~isempty(grp)
+                data = nansum(grp.groupFlyNum,2) ./ grp.groupCount;
+            end
+        case 'garea'
+            if ~isempty(grp)
+                data = grp.areas;
+            end
+        case 'gdensity'
+            if ~isempty(grp)
+                data = nansum(grp.groupFlyNum,2) ./ grp.areas;
+            end
+        case 'gperimeter'
+            if ~isempty(grp)
+                data = nansum(grp.groupPerimeter,2);
+            end
+        case 'gperimeterbygs' % group perimeter by group size
+            for i=2:20
+                idx = find(grp.groupFlyNum==i);
+                peris = grp.groupPerimeter(idx);
+                sj = size(data,1);
+                sr = size(peris,1);
+                if sj > sr
+                    peris((sr+1):sj,1) = NaN;
+                elseif sj < sr
+                    data((sj+1):sr,1:end) = NaN;
+                end
+                data = [data, peris];
             end
         case 'gcalc'
             [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
@@ -470,7 +495,20 @@ function cmdAnalyseDataAndExportResult(handles)
             end
         end
     end
-
+    % percentile for box whisker plot
+    if ~isempty(handles.percentile)
+        jsize = size(joinData,2);
+        psize = length(handles.percentile);
+        pdata = nan(psize, jsize);
+        for i=1:size(joinData,2)
+            pdata2 = nan(psize, 1);
+            for j=1:psize
+                pdata2(j) = prctile(joinData(:,i), handles.percentile(j));
+            end
+            pdata(:,i) = pdata2;
+        end
+        joinData = pdata;
+    end
     % save joined data as text
     if (~isempty(handles.join) || ~isempty(handles.joinr)) && ~isempty(handles.export)
         if handles.join == 0
