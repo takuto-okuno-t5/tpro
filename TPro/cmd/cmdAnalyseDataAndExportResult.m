@@ -248,18 +248,43 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = nansum(grp.groupPerimeter,2);
             end
+        case 'gareabygs' % group area by group size
+            for i=2:20
+                idx = find(grp.groupFlyNum==i);
+                vals = grp.groupAreas(idx);
+                data = mergeColumns(data,vals);
+            end
         case 'gperimeterbygs' % group perimeter by group size
             for i=2:20
                 idx = find(grp.groupFlyNum==i);
-                peris = grp.groupPerimeter(idx);
-                sj = size(data,1);
-                sr = size(peris,1);
-                if sj > sr
-                    peris((sr+1):sj,1) = NaN;
-                elseif sj < sr
-                    data((sj+1):sr,1:end) = NaN;
+                vals = grp.groupPerimeter(idx);
+                data = mergeColumns(data,vals);
+            end
+        case 'gdensitybygs' % group density by group size
+            for i=2:20
+                idx = find(grp.groupFlyNum==i);
+                vals = i ./ grp.groupAreas(idx);
+                data = mergeColumns(data,vals);
+            end
+        case 'gareatmbygs' % group area time course by group size
+            frame = size(grp.groupFlyNum,1);
+            data = nan(frame,19);
+            for j=1:frame
+                for i=2:20
+                    idx = find(grp.groupFlyNum(j,:)==i);
+                    vals = grp.groupAreas(j,idx);
+                    data(j,i-1) = nanmean(vals);
                 end
-                data = [data, peris];
+            end
+        case 'gperimetertmbygs' % group perimeter time course by group size
+            frame = size(grp.groupFlyNum,1);
+            data = nan(frame,19);
+            for j=1:frame
+                for i=2:20
+                    idx = find(grp.groupFlyNum(j,:)==i);
+                    vals = grp.groupPerimeter(j,idx);
+                    data(j,i-1) = nanmean(vals);
+                end
             end
         case 'gcalc'
             [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
@@ -451,7 +476,7 @@ function cmdAnalyseDataAndExportResult(handles)
         end
 
         % save data as text
-        if isempty(handles.join) && isempty(handles.joinr)
+        if isempty(handles.join) && isempty(handles.joinr) && isempty(handles.merge)
             for i=1:roiNum
                 % export file
                 if isempty(handles.export)
@@ -464,7 +489,7 @@ function cmdAnalyseDataAndExportResult(handles)
                 disp(['exporting a file : ' dataFileName]);
                 saveNxNmatText(dataFileName, [], roiData{i});
             end
-        else
+        elseif isempty(handles.merge)
             disp(['joining a data : ' name]);
             for i=1:roiNum
                 if ~isempty(handles.join)
@@ -493,6 +518,32 @@ function cmdAnalyseDataAndExportResult(handles)
                     joinHeader = [joinHeader; name];
                 end
             end
+        else
+            disp(['merging a data : ' name]);
+            for i=1:roiNum
+                if i==1 && data_th == 1
+                    joinData = roiData{i};
+                    continue;
+                end
+                sj = size(joinData,1);
+                sr = size(roiData{i},1);
+                if sj > sr
+                    roiData{i}((sr+1):sj,1:end) = NaN;
+                elseif sj < sr
+                    joinData((sj+1):sr,1:end) = NaN;
+                end
+                joinData3 = [];
+                switch handles.merge
+                case 'mean'
+                    joinData3(:,:,1) = joinData .* (data_th - 1);
+                    joinData3(:,:,2) = roiData{i};
+                    joinData = nansum(joinData3,3) ./ data_th;
+                case 'sum'
+                    joinData3(:,:,1) = joinData;
+                    joinData3(:,:,2) = roiData{i};
+                    joinData = nansum(joinData3,3);
+                end
+            end
         end
     end
     % percentile for box whisker plot
@@ -510,8 +561,12 @@ function cmdAnalyseDataAndExportResult(handles)
         joinData = pdata;
     end
     % save joined data as text
-    if (~isempty(handles.join) || ~isempty(handles.joinr)) && ~isempty(handles.export)
-        if handles.join == 0
+    if (~isempty(handles.join) || ~isempty(handles.joinr) || ~isempty(handles.merge)) && ~isempty(handles.export)
+        postText = '_joined';
+        if ~isempty(handles.merge)
+            joinHeader = {};
+            postText = '_merged';
+        elseif handles.join == 0
             joinHeader = {};
         elseif ~isempty(handles.joinr)
             if handles.joinr == 1
@@ -520,7 +575,7 @@ function cmdAnalyseDataAndExportResult(handles)
             joinHeader = {};
         end
         outputPath = [handles.export '/'];
-        dataFileName = [outputPath name '_' rangeName handles.analyseSrc '_joined'];
+        dataFileName = [outputPath name '_' rangeName handles.analyseSrc postText];
         saveNxNmatText(dataFileName, joinHeader, joinData);
     end
 

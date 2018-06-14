@@ -93,6 +93,7 @@ handles.joinr = [];
 handles.procOps = {};
 handles.bgOp = {};
 handles.percentile = [];
+handles.merge = {};
 
 % load command line input
 i = 1;
@@ -150,8 +151,16 @@ while true
         case {'--joinr'}
             handles.joinr = str2num(varargin{i+1});
             i = i + 1;
+        case {'--merge'}
+            handles.merge = varargin{i+1};
+            i = i + 1;
         case {'--percentile'}
-            handles.percentile = [100,75,50,25,0];
+            C = strsplit(varargin{i+1},'/');
+            nums = [];
+            for j=1:length(C)
+                nums = [nums, str2num(C{j})];
+            end
+            handles.percentile = nums;
             i = i + 1;
         case {'--proc'}
             handles.procOps = [handles.procOps, varargin{i+1}];
@@ -176,9 +185,11 @@ while true
             disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --proc op           process analysed data by [op] operation');
             disp('                      [op] : sum,mean,max,min,count==N,nancount, ...');
+            disp('  --join 0|1          join columns of export data after proc [0:without, 1:with] header');
+            disp('  --joinr 0|1         join rows of export data after proc [0:without, 1:with] header');
+            disp('  --merge op          merge matrix of export data after proc by [op] operation');
+            disp('  --percentile nums   percentile columns of export data after join. [nums] are percent');
             disp('  --export path       export analysed data files on [path]');
-            disp('  --join 0|1          join columns of export data [0:without, 1:with] header');
-            disp('  --joinr 0|1         join rows of export data [0:without, 1:with] header');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
             handles.commandError = 1;
