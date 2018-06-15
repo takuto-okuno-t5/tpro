@@ -1,5 +1,5 @@
 % calculate group area
-function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupAreaFrame(X, Y, group, mmPerPixel)
+function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum, groupFlyDir] = calcGroupAreaFrame(X, Y, dir, group, mmPerPixel)
     fn = length(X);
     maxGroup = max(group);
     groupAreas = nan(1,fn);
@@ -8,6 +8,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
     groupOrient = nan(1,fn);
     groupPerimeter = nan(1,fn);
     groupFlyNum = nan(1,fn);
+    groupFlyDir = nan(1,fn);
 
     for j=1:maxGroup
         idx = find(group==j);
@@ -40,6 +41,12 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
         groupOrient(j) = angle;
         groupPerimeter(j) = perimeter;
         groupFlyNum(j) = flyNum;
+        % calc each fly "head" direction from group centroid
+        for k=1:length(gx)
+            dir2 = mod(atan2(cy-gy(k), gx(k)-cx) / pi * 180 + 180 + 360, 360); %  flip +180
+            fidx = idx(k);
+            groupFlyDir(fidx) = mod(dir(fidx) - dir2 + 360, 360);
+        end
     end
 
     area = nansum(groupAreas);

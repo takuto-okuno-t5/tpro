@@ -286,12 +286,20 @@ function cmdAnalyseDataAndExportResult(handles)
                     data(j,i-1) = nanmean(vals);
                 end
             end
+        case 'ganglehist'
+            data = nan(1,36);
+            for j=1:36
+                bg = (j-1)*10;
+                ed = j*10;
+                idx = find(grp.groupFlyDir>=bg & grp.groupFlyDir<ed);
+                data(j) = length(idx);
+            end
         case 'gcalc'
             [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum] = calcGroupArea(keep_data{2}, keep_data{1}, result, mmPerPixel); % dummy roiMask
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum, groupFlyDir] = calcGroupArea(keep_data{2}, keep_data{1}, dir, result, mmPerPixel); % dummy roiMask
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum');
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum', 'groupFlyDir');
             disp(['calc group : ' name]);
         case 'gtrack'
             if ~isempty(grp)
@@ -394,6 +402,30 @@ function cmdAnalyseDataAndExportResult(handles)
                 data(data>=-1) = NaN;
                 data(data<-1) = 1;
                 data = nansum(data);
+            end
+        case 'tgduration'
+            gmax = max(max(grptrk.groups));
+            data = nan(gmax,2);
+            for i=1:gmax
+                idx = find(~isnan(grptrk.group_keep_data{1}(:,i)));
+                maxfr = max(idx);
+                if 90000 < maxfr
+                    maxfr = 90000;
+                end
+                data(i,1) = min(idx);
+                data(i,2) = maxfr - data(i,1);
+            end
+        case 'tgmtduration'
+            gmax = max(max(grptrk.groups));
+            data = nan(gmax,2);
+            for i=1:gmax
+                idx = find(~isnan(grptrk.group_keep_data{1}(:,i)));
+                maxfr = max(idx);
+                if 90000 < maxfr
+                    maxfr = 90000;
+                end
+                data(i,2) = maxfr - min(idx);
+                data(i,1) = min(idx) + data(i,2) / 2;
             end
         case 'gszfreq'
             cntgrp = grptrk.group_keep_data{2};
