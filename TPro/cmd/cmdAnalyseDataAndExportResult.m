@@ -248,6 +248,14 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = nansum(grp.groupPerimeter,2);
             end
+        case 'gmarea'
+            if ~isempty(grp)
+                data = grp.areas ./ grp.groupCount;
+            end
+        case 'gmperimeter'
+            if ~isempty(grp)
+                data = nansum(grp.groupPerimeter,2) ./ grp.groupCount;
+            end
         case 'gareabygs' % group area by group size
             for i=2:20
                 idx = find(grp.groupFlyNum==i);
@@ -283,6 +291,20 @@ function cmdAnalyseDataAndExportResult(handles)
                 for i=2:20
                     idx = find(grp.groupFlyNum(j,:)==i);
                     vals = grp.groupPerimeter(j,idx);
+                    data(j,i-1) = nanmean(vals);
+                end
+            end
+        case 'gdcdtmbygs' % group DCD time course by group size
+            frame = size(grp.groupFlyNum,1);
+            data = nan(frame,19);
+            for j=1:frame
+                for i=2:20
+                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx2 = [];
+                    for k=1:length(idx)
+                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                    end
+                    vals = dcd.result(j,idx2);
                     data(j,i-1) = nanmean(vals);
                 end
             end
