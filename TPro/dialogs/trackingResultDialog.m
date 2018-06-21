@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 10-Jun-2018 01:42:06
+    % Last Modified by GUIDE v2.5 20-Jun-2018 19:54:35
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -2419,14 +2419,16 @@ function Untitled_37_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     interactAngle = readTproConfig('interactAngle', 75);
+    eccTh = readTproConfig('beClimb', 0.88);
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     X = sharedInst.keep_data{2};
     Y = sharedInst.keep_data{1};
+    ecc = sharedInst.keep_data{7};
     dir = calcDir(sharedInst.keep_data{5}, sharedInst.keep_data{6});
     br = sharedInst.mean_blobmajor*0.4; % head-body, body-ass radius
     ir = sharedInst.mean_blobmajor*0.5; % interaction radius
 
-    interaction_data = calcInteractionAllFly(X, Y, dir, br, ir, interactAngle);
+    interaction_data = calcInteractionAllFly(X, Y, dir, ecc, br, ir, interactAngle, eccTh);
     sharedInst.interaction_data = interaction_data;
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
@@ -2435,6 +2437,28 @@ function Untitled_37_Callback(hObject, eventdata, handles)
     addResult2Axes(handles, interaction_data{1}, cname, handles.popupmenu8);
     save([sharedInst.confPath 'multi/' cname '.mat'], 'interaction_data');
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+% --------------------------------------------------------------------
+function Untitled_38_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_38 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
+    ecc = sharedInst.keep_data{7};
+    dir = calcDir(sharedInst.keep_data{5}, sharedInst.keep_data{6});
+    br = sharedInst.mean_blobmajor*0.4; % head-body, body-ass radius
+    pcR = readTproConfig('polarChartRadius', 7.5) / sharedInst.mmPerPixel; % polar chart radius
+    eccTh = readTproConfig('beClimb', 0.88);
+
+    pc_data = calcPolarChartAllFly(X, Y, dir, ecc, br, pcR, eccTh);
+    sharedInst.pc_data = pc_data;
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+
+    % add result to axes & show in axes
+    save([sharedInst.confPath 'multi/head_pc.mat'], 'pc_data');
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

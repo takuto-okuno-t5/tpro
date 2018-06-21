@@ -16,6 +16,7 @@ function cmdAnalyseDataAndExportResult(handles)
     interactAngle = readTproConfig('interactAngle', 75);
     meanBlobMajor = readTproConfig('meanBlobMajor', 3.56);
     eccTh = readTproConfig('beClimb', 0.88);
+    pcR = readTproConfig('polarChartRadius', 7.5); % polar chart radius
 
     % load configuration files
     videoFileNum = size(videoFiles,1);
@@ -135,6 +136,13 @@ function cmdAnalyseDataAndExportResult(handles)
             hInt = load(matFile);
         else
             hInt = [];
+        end
+        % load head polar chart
+        matFile = [confPath 'multi/head_pc.mat'];
+        if exist(matFile, 'file')
+            hPc = load(matFile);
+        else
+            hPc = [];
         end
 
         % calc velocity etc
@@ -308,6 +316,20 @@ function cmdAnalyseDataAndExportResult(handles)
                     data(j,i-1) = nanmean(vals);
                 end
             end
+        case 'gdcdvartmbygs' % group DCD var time course by group size
+            frame = size(grp.groupFlyNum,1);
+            data = nan(frame,19);
+            for j=1:frame
+                for i=2:20
+                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx2 = [];
+                    for k=1:length(idx)
+                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                    end
+                    vals = dcd.result(j,idx2);
+                    data(j,i-1) = nanvar(vals);
+                end
+            end
         case 'ganglehist'
             data = nan(1,36);
             for j=1:36
@@ -479,11 +501,24 @@ function cmdAnalyseDataAndExportResult(handles)
             data = hInt.interaction_data{3};
         case 'hbint'
             data = hInt.interaction_data{4};
+        case 'hpccalc' % head polar chart calc
+            br = mean_blobmajor*0.4; % head-body, body-ass radius
+            pc_data = calcPolarChartAllFly(keep_data{2}, keep_data{1}, dir, ecc, br, pcR / mmPerPixel, eccTh);
+            save([confPath 'multi/head_pc.mat'], 'pc_data');
+            disp(['calc head polar chart : ' name]);
+        case 'hhpc' % head to head polar chart
+            data = hPc.pc_data{1};
+        case 'hapc' % head to ass polar chart
+            data = hPc.pc_data{2};
+        case 'hhpchist' % head to head polar chart histgram
+            data = hPc.pc_data{3};
+        case 'hapchist' % head to ass polar chart histgram
+            data = hPc.pc_data{4};
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;
         end
-        
+
         if isempty(data)
             continue;
         end
