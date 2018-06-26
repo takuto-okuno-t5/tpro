@@ -94,6 +94,7 @@ handles.procOps = {};
 handles.bgOp = {};
 handles.percentile = [];
 handles.merge = {};
+handles.maxFrame = 0; % for raster duration
 
 % load command line input
 i = 1;
@@ -164,6 +165,9 @@ while true
             i = i + 1;
         case {'--proc'}
             handles.procOps = [handles.procOps, varargin{i+1}];
+            i = i + 1;
+        case {'--maxframe'}
+            handles.maxFrame = str2num(varargin{i+1});
             i = i + 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);

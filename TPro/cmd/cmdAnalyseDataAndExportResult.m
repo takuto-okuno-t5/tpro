@@ -450,23 +450,58 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'tgduration'
             gmax = max(max(grptrk.groups));
             data = nan(gmax,2);
+            rasterData = cell(gmax,1);
             for i=1:gmax
                 idx = find(~isnan(grptrk.group_keep_data{1}(:,i)));
                 maxfr = max(idx);
-                if 90000 < maxfr
-                    maxfr = 90000;
+                if handles.maxFrame > 0 && handles.maxFrame < maxfr
+                    maxfr = handles.maxFrame;
                 end
                 data(i,1) = min(idx);
                 data(i,2) = maxfr - data(i,1);
+                rasterData{i} = min(idx);
             end
+
+            %
+            %if isempty(f)
+                f = figure;
+            %end
+
+            hold on;
+            LineFormat.LineWidth = 2.5;
+            LineFormat.Color = 'b';
+            plotSpikeRaster(rasterData, 'SpikeDuration', data(:,2), 'LineFormat',LineFormat,'XLimForCell',[1 90000]); % 
+
+            % fuse & separate
+            frameNum = size(grptrk.group_keep_data{1},1);
+            groupNum = size(grptrk.group_keep_data{1},2);
+            tgdata = getTgData(frameNum, groupNum, grp.groupFlyNum, grptrk.detect2groupIds);
+            tgdiff = diff(tgdata);
+            datadiff = [nan(1,groupNum); tgdiff];
+            fuseData = cell(gmax,1);
+            sepaData = cell(gmax,1);
+            for i=1:gmax
+                idx = find(datadiff(:,i)<-1);
+                fuseData{i} = idx';
+                idx = find(datadiff(:,i)>1);
+                sepaData{i} = idx';
+            end
+
+            % show fuse & separate
+            LineFormat.Color = 'r';
+            plotSpikeRaster(fuseData, 'SpikeDuration', 200, 'LineFormat',LineFormat,'XLimForCell',[1 90000]); % 
+            LineFormat.Color = 'g';
+            plotSpikeRaster(sepaData, 'SpikeDuration', 200, 'LineFormat',LineFormat,'XLimForCell',[1 90000]); % 
+            xlabel('Time (s)'); % 
+            hold off;
         case 'tgmtduration'
             gmax = max(max(grptrk.groups));
             data = nan(gmax,2);
             for i=1:gmax
                 idx = find(~isnan(grptrk.group_keep_data{1}(:,i)));
                 maxfr = max(idx);
-                if 90000 < maxfr
-                    maxfr = 90000;
+                if handles.maxFrame > 0 && handles.maxFrame < maxfr
+                    maxfr = handles.maxFrame;
                 end
                 data(i,2) = maxfr - min(idx);
                 data(i,1) = min(idx) + data(i,2) / 2;
