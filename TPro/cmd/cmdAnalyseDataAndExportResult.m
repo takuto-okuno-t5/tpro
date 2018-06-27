@@ -338,12 +338,34 @@ function cmdAnalyseDataAndExportResult(handles)
                 idx = find(grp.groupFlyDir>=bg & grp.groupFlyDir<ed);
                 data(j) = length(idx);
             end
+        case 'ganglehistbygs'
+            frame = size(grp.groupFlyNum,1);
+            data = zeros(19,36);
+            for j=1:frame
+                for i=2:20
+                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx2 = [];
+                    for k=1:length(idx)
+                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                    end
+                    for k=1:36
+                        bg = (k-1)*10;
+                        ed = k*10;
+                        idx3 = find(grp.groupFlyDir(j,idx2)>=bg & grp.groupFlyDir(j,idx2)<ed);
+                        data(i-1,k) = data(i-1,k) + length(idx3);
+                    end
+                end
+                if mod(j,200)==0
+                    rate = j/frame * 100;
+                    disp(['ganglehistbygs : ' num2str(j) '(' num2str(rate) '%)']);
+                end
+            end
         case 'gcalc'
             [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
             [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
-            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum, groupFlyDir] = calcGroupArea(keep_data{2}, keep_data{1}, dir, result, mmPerPixel); % dummy roiMask
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupEcc, groupFlyNum, groupFlyDir] = calcGroupArea(keep_data{2}, keep_data{1}, dir, result, mmPerPixel); % dummy roiMask
             save([confPath 'multi/nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
-                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupFlyNum', 'groupFlyDir');
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupEcc', 'groupFlyNum', 'groupFlyDir');
             disp(['calc group : ' name]);
         case 'gtrack'
             if ~isempty(grp)

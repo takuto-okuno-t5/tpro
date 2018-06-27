@@ -1,5 +1,5 @@
 % calculate group area
-function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupFlyNum, groupFlyDir] = calcGroupArea(X, Y, dir, groups, mmPerPixel)
+function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupEcc, groupFlyNum, groupFlyDir] = calcGroupArea(X, Y, dir, groups, mmPerPixel)
     fn = size(X,2);
     frame = size(X,1);
     areas = zeros(frame,1);
@@ -8,6 +8,7 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerim
     groupCenterY = nan(frame,fn);
     groupOrient = nan(frame,fn);
     groupPerimeter = nan(frame,fn);
+    groupEcc = nan(frame,fn);
     groupFlyNum = nan(frame,fn);
     groupFlyDir = nan(frame,fn);
 
@@ -21,7 +22,7 @@ function [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerim
         fdir = dir(i,:);
         group = groups(i,:);
 
-        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupFlyNum(i,:), groupFlyDir(i,:)] = calcGroupAreaFrame(fx,fy,fdir,group,mmPerPixel);
+        [areas(i), groupAreas(i,:), groupCenterX(i,:), groupCenterY(i,:), groupOrient(i,:), groupPerimeter(i,:), groupEcc(i,:), groupFlyNum(i,:), groupFlyDir(i,:)] = calcGroupAreaFrame(fx,fy,fdir,group,mmPerPixel);
 
         if mod(i,200)==0
             rate = i/frame * 100;
