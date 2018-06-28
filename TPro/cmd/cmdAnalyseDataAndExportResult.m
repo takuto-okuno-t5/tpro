@@ -264,6 +264,10 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(grp)
                 data = nansum(grp.groupPerimeter,2) ./ grp.groupCount;
             end
+        case 'gmecc'
+            if ~isempty(grp)
+                data = nansum(grp.groupEcc,2) ./ grp.groupCount;
+            end
         case 'gareabygs' % group area by group size
             for i=2:20
                 idx = find(grp.groupFlyNum==i);
@@ -276,6 +280,12 @@ function cmdAnalyseDataAndExportResult(handles)
                 vals = grp.groupPerimeter(idx);
                 data = mergeColumns(data,vals);
             end
+        case 'geccbygs' % group ecc by group size
+            for i=2:20
+                idx = find(grp.groupFlyNum==i);
+                vals = grp.groupEcc(idx);
+                data = mergeColumns(data,vals);
+            end
         case 'gdensitybygs' % group density by group size
             for i=2:20
                 idx = find(grp.groupFlyNum==i);
@@ -286,8 +296,9 @@ function cmdAnalyseDataAndExportResult(handles)
             frame = size(grp.groupFlyNum,1);
             data = nan(frame,19);
             for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
                 for i=2:20
-                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx = find(groupFlyNum2==i);
                     vals = grp.groupAreas(j,idx);
                     data(j,i-1) = nanmean(vals);
                 end
@@ -296,9 +307,21 @@ function cmdAnalyseDataAndExportResult(handles)
             frame = size(grp.groupFlyNum,1);
             data = nan(frame,19);
             for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
                 for i=2:20
-                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx = find(groupFlyNum2==i);
                     vals = grp.groupPerimeter(j,idx);
+                    data(j,i-1) = nanmean(vals);
+                end
+            end
+        case 'gecctmbygs' % group perimeter time course by group size
+            frame = size(grp.groupFlyNum,1);
+            data = nan(frame,19);
+            for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
+                for i=2:20
+                    idx = find(groupFlyNum2==i);
+                    vals = grp.groupEcc(j,idx);
                     data(j,i-1) = nanmean(vals);
                 end
             end
@@ -306,11 +329,13 @@ function cmdAnalyseDataAndExportResult(handles)
             frame = size(grp.groupFlyNum,1);
             data = nan(frame,19);
             for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
+                groupFly = grp.result(j,:);
                 for i=2:20
-                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx = find(groupFlyNum2==i);
                     idx2 = [];
                     for k=1:length(idx)
-                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                        idx2 = [idx2, find(groupFly==idx(k))];
                     end
                     vals = dcd.result(j,idx2);
                     data(j,i-1) = nanmean(vals);
@@ -320,11 +345,13 @@ function cmdAnalyseDataAndExportResult(handles)
             frame = size(grp.groupFlyNum,1);
             data = nan(frame,19);
             for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
+                groupFly = grp.result(j,:);
                 for i=2:20
-                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx = find(groupFlyNum2==i);
                     idx2 = [];
                     for k=1:length(idx)
-                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                        idx2 = [idx2, find(groupFly==idx(k))];
                     end
                     vals = dcd.result(j,idx2);
                     data(j,i-1) = nanvar(vals);
@@ -342,22 +369,78 @@ function cmdAnalyseDataAndExportResult(handles)
             frame = size(grp.groupFlyNum,1);
             data = zeros(19,36);
             for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
+                groupFly = grp.result(j,:);
                 for i=2:20
-                    idx = find(grp.groupFlyNum(j,:)==i);
+                    idx = find(groupFlyNum2==i);
                     idx2 = [];
                     for k=1:length(idx)
-                        idx2 = [idx2, find(grp.result(j,:)==idx(k))];
+                        idx2 = [idx2, find(groupFly==idx(k))];
                     end
+                    groupFlyDir2 = grp.groupFlyDir(j,idx2);
                     for k=1:36
                         bg = (k-1)*10;
                         ed = k*10;
-                        idx3 = find(grp.groupFlyDir(j,idx2)>=bg & grp.groupFlyDir(j,idx2)<ed);
+                        idx3 = find(groupFlyDir2>=bg & groupFlyDir2<ed);
                         data(i-1,k) = data(i-1,k) + length(idx3);
                     end
                 end
                 if mod(j,200)==0
                     rate = j/frame * 100;
                     disp(['ganglehistbygs : ' num2str(j) '(' num2str(rate) '%)']);
+                end
+            end
+        case 'ganglehistbyecc' % group angle histgram by group ecc
+            frame = size(grp.groupFlyNum,1);
+            data = zeros(10,36);
+            for j=1:frame
+                groupEcc2 = grp.groupEcc(j,:);
+                groupFly = grp.result(j,:);
+                for i=1:10
+                    idx = find(groupEcc2>=(i-1)*0.1 & groupEcc2<i*0.1);
+                    idx2 = [];
+                    for k=1:length(idx)
+                        idx2 = [idx2, find(groupFly==idx(k))];
+                    end
+                    groupFlyDir2 = grp.groupFlyDir(j,idx2);
+                    for k=1:36
+                        bg = (k-1)*10;
+                        ed = k*10;
+                        idx3 = find(groupFlyDir2>=bg & groupFlyDir2<ed);
+                        data(i,k) = data(i,k) + length(idx3);
+                    end
+                end
+                if mod(j,200)==0
+                    rate = j/frame * 100;
+                    disp(['ganglehistbyecc : ' num2str(j) '(' num2str(rate) '%)']);
+                end
+            end
+        case 'ganglehistbyeccgs' % group angle histgram by group ecc
+            frame = size(grp.groupFlyNum,1);
+            data = zeros(10*10,36);
+            for j=1:frame
+                groupFlyNum2 = grp.groupFlyNum(j,:);
+                groupEcc2 = grp.groupEcc(j,:);
+                groupFly = grp.result(j,:);
+                for i=2:11
+                    for n=1:10
+                        idx = find(groupFlyNum2==i & groupEcc2>=(n-1)*0.1 & groupEcc2<n*0.1);
+                        idx2 = [];
+                        for k=1:length(idx)
+                            idx2 = [idx2, find(groupFly==idx(k))];
+                        end
+                        groupFlyDir2 = grp.groupFlyDir(j,idx2);
+                        for k=1:36
+                            bg = (k-1)*10;
+                            ed = k*10;
+                            idx3 = find(groupFlyDir2>=bg & groupFlyDir2<ed);
+                            data((n-1)*10+i-1,k) = data((n-1)*10+i-1,k) + length(idx3);
+                        end
+                    end
+                end
+                if mod(j,200)==0
+                    rate = j/frame * 100;
+                    disp(['ganglehistbyecc : ' num2str(j) '(' num2str(rate) '%)']);
                 end
             end
         case 'gcalc'
