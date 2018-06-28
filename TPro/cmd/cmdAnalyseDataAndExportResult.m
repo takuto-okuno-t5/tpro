@@ -415,7 +415,7 @@ function cmdAnalyseDataAndExportResult(handles)
                     disp(['ganglehistbyecc : ' num2str(j) '(' num2str(rate) '%)']);
                 end
             end
-        case 'ganglehistbyeccgs' % group angle histgram by group ecc
+        case 'ganglehistbyeccgs' % group angle histgram by group ecc / group size
             frame = size(grp.groupFlyNum,1);
             data = zeros(10*10,36);
             for j=1:frame
@@ -440,7 +440,7 @@ function cmdAnalyseDataAndExportResult(handles)
                 end
                 if mod(j,200)==0
                     rate = j/frame * 100;
-                    disp(['ganglehistbyecc : ' num2str(j) '(' num2str(rate) '%)']);
+                    disp(['ganglehistbyeccgs : ' num2str(j) '(' num2str(rate) '%)']);
                 end
             end
         case 'gcalc'
