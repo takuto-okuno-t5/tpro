@@ -3,8 +3,9 @@ function pc_data = calcPolarChartAllFly(X, Y, dir, ecc, br, ir, eccTh)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
 
-    hhPx = zeros(200,200);
-    haPx = zeros(200,200);
+    sqsize = ceil(ir/100) * 100 * 2;
+    hhPx = zeros(sqsize, sqsize);
+    haPx = zeros(sqsize, sqsize);
     hhHist = zeros(1,36);
     haHist = zeros(1,36);
     hx = single(nan(flameMax, flyNum));

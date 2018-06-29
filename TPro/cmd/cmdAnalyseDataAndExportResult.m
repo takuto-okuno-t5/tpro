@@ -434,7 +434,7 @@ function cmdAnalyseDataAndExportResult(handles)
                             bg = (k-1)*10;
                             ed = k*10;
                             idx3 = find(groupFlyDir2>=bg & groupFlyDir2<ed);
-                            data((n-1)*10+i-1,k) = data((n-1)*10+i-1,k) + length(idx3);
+                            data((i-2)*10+n,k) = data((i-2)*10+n,k) + length(idx3);
                         end
                     end
                 end

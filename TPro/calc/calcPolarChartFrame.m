@@ -1,8 +1,10 @@
 %%
 function [hhPx, haPx, hhHist, haHist, hx, hy, ax, ay] = calcPolarChartFrame(X, Y, dir, ecc, br, r, eccTh)
     fn = length(X);
-    hhPx = zeros(200,200);
-    haPx = zeros(200,200);
+    sqsize = ceil(r/100) * 100 * 2;
+    ct = sqsize / 2;
+    hhPx = zeros(sqsize, sqsize);
+    haPx = zeros(sqsize, sqsize);
     hhHist = zeros(1,36);
     haHist = zeros(1,36);
     hx = nan(1,fn);
@@ -37,7 +39,7 @@ function [hhPx, haPx, hhHist, haHist, hx, hy, ax, ay] = calcPolarChartFrame(X, Y
             px = round(dist4 * cosd(dir4+90));
             py = round(dist4 * sind(dir4+90));
             hhHist(dir4r) = hhHist(dir4r) + 1;
-            hhPx(100-py, 100+px) = hhPx(100-py, 100+px) + 1;
+            hhPx(ct-py, ct+px) = hhPx(ct-py, ct+px) + 1;
         end
     end
     % find head to ass
@@ -55,7 +57,7 @@ function [hhPx, haPx, hhHist, haHist, hx, hy, ax, ay] = calcPolarChartFrame(X, Y
             px = round(dist4 * cosd(dir4+90));
             py = round(dist4 * sind(dir4+90));
             haHist(dir4r) = haHist(dir4r) + 1;
-            haPx(100-py, 100+px) = haPx(100-py, 100+px) + 1;
+            haPx(ct-py, ct+px) = haPx(ct-py, ct+px) + 1;
         end
     end
 end
