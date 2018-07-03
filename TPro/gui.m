@@ -95,6 +95,7 @@ handles.bgOp = {};
 handles.percentile = [];
 handles.merge = {};
 handles.maxFrame = 0; % for raster duration
+handles.janeriaTrxPath = {};
 
 % load command line input
 i = 1;
@@ -169,6 +170,9 @@ while true
         case {'--maxframe'}
             handles.maxFrame = str2num(varargin{i+1});
             i = i + 1;
+        case {'--jtrx'}
+            handles.janeriaTrxPath = varargin{i+1};
+            i = i + 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
@@ -194,6 +198,7 @@ while true
             disp('  --merge op          merge matrix of export data after proc by [op] operation');
             disp('  --percentile nums   percentile columns of export data after join. [nums] are percent');
             disp('  --export path       export analysed data files on [path]');
+            disp('  --jtrx path         janeria trx data [path]');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
             handles.commandError = 1;
@@ -211,7 +216,7 @@ end
 guidata(hObject, handles);
 
 % set window title
-versionNumber = '1.5.0';
+versionNumber = '1.5.2';
 set(gcf, 'name', ['TPro version ', versionNumber]);
 set(handles.text14, 'String', ['TPro ', versionNumber])
 set(handles.text2, 'String', ['TPro', versionNumber])
@@ -325,6 +330,23 @@ handles.uitable2.Data = tebleItems;
 function runCommandLineMode(hObject, eventdata, handles)
 if handles.commandError > 0
     delete(hObject);
+    return;
+end
+% start janeria trx file process
+if length(handles.janeriaTrxPath) > 0
+    d = dir(handles.janeriaTrxPath);
+    dsize = length(d);
+    data = cell(dsize, 2);
+    j = 1;
+    for i=1:dsize
+        if d(i).isdir && ~strcmp(d(i).name,'.') && ~strcmp(d(i).name,'..')
+            fname = [d(i).folder '/' d(i).name '/registered_trx.mat'];
+            if exist(fname, 'file')
+                data{j,1} = d(i).name;
+                j = j + 1;
+            end
+        end
+    end
     return;
 end
 % start batch process
