@@ -52,9 +52,10 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
             switch(type)
             case 'ctrax'
                 [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data] = loadCtraxMat(videoPath, fileName, iniHeight);
+                keep_wings_sorted = {}; keep_mean_blobmajor = []; keep_mean_blobminor = [];
                 fps = 30; mmperpx = 0.1; startframe = 1; endframe = length(X); maxframe = length(X);
             case 'jntrx'
-                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data, ...
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
                     fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(videoPath, fileName, iniHeight);
             otherwise
                 X = [];
@@ -136,9 +137,9 @@ function [status, tebleItems, videoPaths, videoFiles] = openOrNewProject(videoPa
             end
             % save detection X, Y, keep_*
             startend = [sprintf('%05d',B{4}) '_' sprintf('%05d',B{5})];
-            save([outPathName '/multi/detect_' startend '.mat'], 'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas');
+            save([outPathName '/multi/detect_' startend '.mat'], 'X','Y', 'keep_direction_sorted', 'keep_ecc_sorted', 'keep_angle_sorted', 'keep_areas', 'keep_wings_sorted');
             % save keep_count
-            save([outPathName '/multi/detect_' startend 'keep_count.mat'], 'keep_count');
+            save([outPathName '/multi/detect_' startend 'keep_count.mat'], 'keep_count', 'keep_mean_blobmajor', 'keep_mean_blobminor');
             % save tracking keep_data
             if ~isempty(keep_data)
                 save([outPathName '/multi/track_' startend '.mat'], 'keep_data');

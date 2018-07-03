@@ -1,12 +1,15 @@
 %% load ctrax mat file
-function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_data, fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(path, fileName, img_h)
+function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_data, keep_mean_blobmajor, keep_mean_blobminor, fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(path, fileName, img_h)
     X = {};
     Y = {};
     keep_angle_sorted = {};
     keep_direction_sorted = {};
     keep_areas = {};
     keep_ecc_sorted = {};
+    keep_wings_sorted = {};
     keep_data = {};
+    keep_mean_blobmajor = [];
+    keep_mean_blobminor = [];
 	startframe = 1;
     endframe = 1;
     maxframe = 1;
@@ -43,6 +46,9 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     keep_direction_sorted = cell(1,frames);
     keep_areas = cell(1,frames);
     keep_ecc_sorted = cell(1,frames);
+    keep_wings_sorted = cell(1,frames);
+    keep_mean_blobmajor = nan(1,frames);
+    keep_mean_blobminor = nan(1,frames);
 
     % init tracking cells
     keep_data = cell(1,10);
@@ -56,12 +62,16 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     jtth = zeros(fn,frames);
     jta = zeros(fn,frames);
     jtb = zeros(fn,frames);
+    jwl = zeros(fn,frames);
+    jwr = zeros(fn,frames);
     for i=1:fn
         jtx(i,:) = ctrax.trx(i).x;
         jty(i,:) = ctrax.trx(i).y;
         jtth(i,:) = ctrax.trx(i).theta;
         jta(i,:) = ctrax.trx(i).a;
         jtb(i,:) = ctrax.trx(i).b;
+        jwl(i,:) = ctrax.trx(i).wing_anglel;
+        jwr(i,:) = ctrax.trx(i).wing_angler;
     end
     % convert
     for i=1:frames
@@ -72,16 +82,27 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         keep_direction_sorted{i} = zeros(2,fn);
         keep_areas{i} = zeros(1,fn);
         keep_ecc_sorted{i} = zeros(1,fn);
+        keep_wings_sorted{i} = zeros(2,fn);
         % convert detection
-        angle = jtth(:,i);
-        keep_direction_sorted{i}(2,:) = 10 .* cos(angle);
-        keep_direction_sorted{i}(1,:) = 10 .* sin(angle);
+        angle = jtth(:,i) + pi / 2;
+        bsize = jta(:,i) ./ 3 ./ mmperpx;
+        keep_direction_sorted{i}(2,:) = bsize .* cos(angle);
+        keep_direction_sorted{i}(1,:) = bsize .* sin(angle);
         angle = angle .* (180 / pi);
         idx1 = find(angle > 90);
         idx2 = find(angle < -90);
         angle(idx1) = angle(idx1) - 180;
         angle(idx2) = angle(idx2) + 180;
         keep_angle_sorted{i} = angle';
+        % convert ecc
+        keep_mean_blobmajor(i) = nanmean(jta(:,i)') / mmperpx;
+        keep_mean_blobminor(i) = nanmean(jtb(:,i)') / mmperpx;
+        keep_ecc_sorted{i} = jtb(:,i)' ./ jta(:,i)';
+        % convert wings
+        wrAngle = (pi - jwr(:,i) - jtth(:,i)) .* (180 / pi); % fly's right wing angle;
+        wlAngle = (pi - jwl(:,i) - jtth(:,i)) .* (180 / pi); % fly's left wing angle
+        keep_wings_sorted{i}(1,:) = wrAngle';
+        keep_wings_sorted{i}(2,:) = wlAngle';
         % convert tracking
         keep_data{1}(i,:) = X{i}(:,1)';
         keep_data{2}(i,:) = Y{i}(:,1)';
@@ -96,5 +117,7 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         keep_data{6}(i,:) = keep_direction_sorted{i}(2,:);
         keep_data{7}(i,:) = keep_ecc_sorted{i}(1,:);
         keep_data{8}(i,:) = keep_angle_sorted{i}(1,:);
+        keep_data{9}(i,:) = keep_wings_sorted{i}(1,:);
+        keep_data{10}(i,:) = keep_wings_sorted{i}(2,:);
     end
 end

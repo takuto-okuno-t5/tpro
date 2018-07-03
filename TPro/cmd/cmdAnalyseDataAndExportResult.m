@@ -266,7 +266,13 @@ function cmdAnalyseDataAndExportResult(handles)
             end
         case 'gmecc'
             if ~isempty(grp)
-                data = nansum(grp.groupEcc,2) ./ grp.groupCount;
+                data = nanmean(grp.groupEcc,2);
+            end
+        case 'gmeccwo2'
+            if ~isempty(grp)
+                idx = find(grp.groupFlyNum==2);
+                grp.groupEcc(idx) = NaN;
+                data = nanmean(grp.groupEcc,2);
             end
         case 'gareabygs' % group area by group size
             for i=2:20
@@ -650,10 +656,22 @@ function cmdAnalyseDataAndExportResult(handles)
             data = hPc.pc_data{1};
         case 'hapc' % head to ass polar chart
             data = hPc.pc_data{2};
+        case 'hcpc' % head to centroid polar chart
+            data = hPc.pc_data{9};
+        case 'hh-hapc' % head2head minus head2ass polar chart
+            d1 = hPc.pc_data{1};
+            d2 = hPc.pc_data{2};
+            data = d1 - d2;
+        case 'ha-hhpc' % head2ass minus head2head polar chart
+            d1 = hPc.pc_data{1};
+            d2 = hPc.pc_data{2};
+            data = d2 - d1;
         case 'hhpchist' % head to head polar chart histgram
             data = hPc.pc_data{3};
         case 'hapchist' % head to ass polar chart histgram
             data = hPc.pc_data{4};
+        case 'hcpchist' % head to centroid polar chart histgram
+            data = hPc.pc_data{10};
         otherwise
             disp(['unsupported data type : ' handles.analyseSrc]);
             continue;

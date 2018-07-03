@@ -51,4 +51,4 @@ bgAlgorithm,mode
 groupRejectDist,700
 groupDuration,0
 interactAngle,75
-polarChartRadius,7.5
+polarChartRadius,15
