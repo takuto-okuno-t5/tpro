@@ -334,19 +334,8 @@ if handles.commandError > 0
 end
 % start janeria trx file process
 if length(handles.janeriaTrxPath) > 0
-    d = dir(handles.janeriaTrxPath);
-    dsize = length(d);
-    data = cell(dsize, 2);
-    j = 1;
-    for i=1:dsize
-        if d(i).isdir && ~strcmp(d(i).name,'.') && ~strcmp(d(i).name,'..')
-            fname = [d(i).folder '/' d(i).name '/registered_trx.mat'];
-            if exist(fname, 'file')
-                data{j,1} = d(i).name;
-                j = j + 1;
-            end
-        end
-    end
+    cmdJaneriaTraxDataResult(handles);
+    delete(hObject); % close window
     return;
 end
 % start batch process
