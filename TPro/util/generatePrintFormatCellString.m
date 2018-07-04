@@ -2,7 +2,7 @@
 function save_string = generatePrintFormatCellString(data)
     save_string = '';
     for i = 1:length(data)
-        if i==2
+        if i>1
             save_string = [save_string '\t'];
         end
         if ischar(data{i})
