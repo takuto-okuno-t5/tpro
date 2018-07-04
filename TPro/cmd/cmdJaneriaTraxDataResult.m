@@ -4,19 +4,19 @@ function cmdJaneriaTraxDataResult(handles)
     dcdRadius = readTproConfig('dcdRadius', 7.5);
     dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 
+    procName = 'dcd';
+
     disp('start to process janeria trax data');
     tic;
 
-    procName = 'dcd';
     % find gal4 line names
     d = dir(handles.janeriaTrxPath);
     dsize = length(d);
     fnames = cell(dsize, 2);
-    folder = d(1).folder;
-    j = 1;    
+    j = 1;
     for i=1:dsize
         if d(i).isdir && ~strcmp(d(i).name,'.') && ~strcmp(d(i).name,'..')
-            fname = [folder '/' d(i).name '/registered_trx.mat'];
+            fname = [handles.janeriaTrxPath '/' d(i).name '/registered_trx.mat'];
             if exist(fname, 'file')
                 fnames{j,1} = d(i).name;
                 C = strsplit(d(i).name, '_');
@@ -27,7 +27,23 @@ function cmdJaneriaTraxDataResult(handles)
     end
     fn2 = fnames(:,2);
     fn2(j:dsize) = [];
-    gids = findgroups(fn2);
+    gids = nan(j-1,1);
+    names = {};
+    count = 1;
+    % find groups
+    for i=1:(j-1)
+        name = fn2{i};
+        idxC = strfind(names, name);
+        idx = find(not(cellfun('isempty', idxC)));
+        if isempty(idx) || isempty(idx(:))
+            names = [names, name];
+            gids(i) = count;
+            count = count + 1;
+        else
+            gids(i) = idx(1);
+        end
+    end
+%    gids = findgroups(fn2); % just for R2017
     gmax = max(gids);
 
     % process registered_trx.mat files
@@ -44,7 +60,7 @@ function cmdJaneriaTraxDataResult(handles)
             rate = count/dsize * 100;
             disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{k,1} ' (' num2str(rate) '%)']);
             [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat([folder '/' fnames{k,1} '/'], 'registered_trx.mat', 1024);
+                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat([handles.janeriaTrxPath '/' fnames{k,1} '/'], 'registered_trx.mat', 1024);
 
             r = dcdRadius / mmperpx;
             cnr = dcdCnRadius / mmperpx;
@@ -61,7 +77,7 @@ function cmdJaneriaTraxDataResult(handles)
         data{i,5} = prctile(means,75);
         data{i,6} = prctile(means,50);
         data{i,7} = prctile(means,25);
-        data{i,8} = prctile(means,0);        
+        data{i,8} = prctile(means,0);
     end
     % save data as text
     if ~isempty(handles.export)
