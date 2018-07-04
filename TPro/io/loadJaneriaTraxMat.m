@@ -57,21 +57,24 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     end
 
     % janeria trax intermediate table
-    jtx = zeros(fn,frames);
-    jty = zeros(fn,frames);
-    jtth = zeros(fn,frames);
-    jta = zeros(fn,frames);
-    jtb = zeros(fn,frames);
-    jwl = zeros(fn,frames);
-    jwr = zeros(fn,frames);
+    jtx = nan(fn,frames);
+    jty = nan(fn,frames);
+    jtth = nan(fn,frames);
+    jta = nan(fn,frames);
+    jtb = nan(fn,frames);
+    jwl = nan(fn,frames);
+    jwr = nan(fn,frames);
+    firstframe = ctrax.trx(1).firstframe;
     for i=1:fn
-        jtx(i,:) = ctrax.trx(i).x;
-        jty(i,:) = ctrax.trx(i).y;
-        jtth(i,:) = ctrax.trx(i).theta;
-        jta(i,:) = ctrax.trx(i).a;
-        jtb(i,:) = ctrax.trx(i).b;
-        jwl(i,:) = ctrax.trx(i).wing_anglel;
-        jwr(i,:) = ctrax.trx(i).wing_angler;
+        st = ctrax.trx(i).firstframe - firstframe + 1;
+        ed = st + size(ctrax.trx(i).x, 2) - 1;
+        jtx(i,st:ed)  = ctrax.trx(i).x;
+        jty(i,st:ed)  = ctrax.trx(i).y;
+        jtth(i,st:ed) = ctrax.trx(i).theta;
+        jta(i,st:ed)  = ctrax.trx(i).a;
+        jtb(i,st:ed)  = ctrax.trx(i).b;
+        jwl(i,st:ed)  = ctrax.trx(i).wing_anglel;
+        jwr(i,st:ed)  = ctrax.trx(i).wing_angler;
     end
     % convert
     for i=1:frames
