@@ -141,6 +141,11 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     else
         sharedInst.keep_wings_sorted = [];
     end
+    if exist('keep_gender', 'var')
+        sharedInst.keep_gender = keep_gender;
+    else
+        sharedInst.keep_gender = [];
+    end
 
     sharedInst.selectX = {};
     sharedInst.selectY = {};
@@ -1952,7 +1957,14 @@ function showFrameInAxes(hObject, handles, frameNum)
     hold on;
     if sharedInst.showDetectResult
         if frameNum == sharedInst.selectFrame
-            plot(Y,X,'or'); % the actual detecting
+            if isempty(sharedInst.keep_gender)
+                plot(Y,X,'or'); % the actual detecting
+            else
+                midx = find(sharedInst.keep_gender{1}==1);
+                fidx = find(sharedInst.keep_gender{1}==2);
+                plot(Y(fidx),X(fidx),'or'); % the actual detecting
+                plot(Y(midx),X(midx),'or','Color', [.1 .1 .1]); % the actual detecting
+            end
         else
             for i=1:slen
                 frame = sframe + (i-1)*sharedInst.frameSteps;

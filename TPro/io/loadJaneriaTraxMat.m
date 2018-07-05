@@ -1,5 +1,5 @@
 %% load ctrax mat file
-function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_data, keep_mean_blobmajor, keep_mean_blobminor, fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(path, fileName, img_h)
+function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(path, fileName, img_h)
     X = {};
     Y = {};
     keep_angle_sorted = {};
@@ -7,6 +7,7 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     keep_areas = {};
     keep_ecc_sorted = {};
     keep_wings_sorted = {};
+    keep_gender = {};
     keep_data = {};
     keep_mean_blobmajor = [];
     keep_mean_blobminor = [];
@@ -47,14 +48,16 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     keep_areas = cell(1,frames);
     keep_ecc_sorted = cell(1,frames);
     keep_wings_sorted = cell(1,frames);
+    keep_gender = cell(1,1);
     keep_mean_blobmajor = nan(1,frames);
     keep_mean_blobminor = nan(1,frames);
 
     % init tracking cells
-    keep_data = cell(1,10);
+    keep_data = cell(1,11);
     for i = 1:10
         keep_data{i} = nan(frames, fn);
     end
+    keep_data{11} = nan(1, fn);
 
     % janeria trax intermediate table
     jtx = nan(fn,frames);
@@ -64,6 +67,7 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
     jtb = nan(fn,frames);
     jwl = nan(fn,frames);
     jwr = nan(fn,frames);
+    jgen = nan(fn,1);
     firstframe = ctrax.trx(1).firstframe;
     for i=1:fn
         st = ctrax.trx(i).firstframe - firstframe + 1;
@@ -75,6 +79,12 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         jtb(i,st:ed)  = ctrax.trx(i).b;
         jwl(i,st:ed)  = ctrax.trx(i).wing_anglel;
         jwr(i,st:ed)  = ctrax.trx(i).wing_angler;
+        genstr = ctrax.trx(i).sex{1};
+        if strcmp(genstr,'M')
+            jgen(i,1) = 1; % male
+        elseif strcmp(genstr,'F')
+            jgen(i,1) = 2; % female
+        end
     end
     % convert
     for i=1:frames
@@ -123,4 +133,6 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         keep_data{9}(i,:) = keep_wings_sorted{i}(1,:);
         keep_data{10}(i,:) = keep_wings_sorted{i}(2,:);
     end
+    keep_gender{1} = jgen;
+    keep_data{11} = jgen;
 end

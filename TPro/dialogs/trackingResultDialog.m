@@ -2649,7 +2649,14 @@ function showFrameInAxes(hObject, handles, frameNum)
         keepDirX = sharedInst.keep_data{5}(t,:);
         keepDirY = sharedInst.keep_data{6}(t,:);
         if sharedInst.listMode == 1
-            plot(Y,X,'or'); % the actual detecting
+            if length(sharedInst.keep_data) > 10
+                midx = find(sharedInst.keep_data{11}==1);
+                fidx = find(sharedInst.keep_data{11}==2);
+                plot(Y(fidx),X(fidx),'or'); % the actual detecting
+                plot(Y(midx),X(midx),'or','Color', [.1 .1 .1]); % the actual detecting
+            else
+                plot(Y,X,'or'); % the actual detecting
+            end
             quiver(keepX, keepY, keepDirX, keepDirY, 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
 
             % show wings
@@ -2664,7 +2671,15 @@ function showFrameInAxes(hObject, handles, frameNum)
             fy = keepY(listFly);
             fx = keepX(listFly);
             if ~isnan(fy) && ~isnan(fx) && currentMask(round(fy),round(fx)) > 0
-                plot(fx,fy,'or'); % the actual detecting
+                if length(sharedInst.keep_data) > 10
+                    if sharedInst.keep_data{11}(listFly)==1
+                        plot(fx,fy,'or','Color', [.1 .1 .1]); % the actual detecting
+                    else
+                        plot(fx,fy,'or'); % the actual detecting
+                    end
+                else
+                    plot(fx,fy,'or'); % the actual detecting
+                end
                 quiver(fx, fy, keepDirX(listFly), keepDirY(listFly), 0, 'r', 'MaxHeadSize',2, 'LineWidth',0.2)  %arrow
 
                 % show wings
