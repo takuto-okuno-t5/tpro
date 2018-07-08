@@ -1,7 +1,7 @@
 %%
 function [hhPx, haPx, hcPx, hhHist, haHist, hcHist, hx, hy, ax, ay] = calcPolarChartFrame(X, Y, dir, ecc, br, r, eccTh)
     fn = length(X);
-    sqsize = ceil(r/100) * 100 * 2;
+    sqsize = ceil(r/20) * 20 * 2;
     ct = sqsize / 2;
     hhPx = zeros(sqsize, sqsize);
     haPx = zeros(sqsize, sqsize);

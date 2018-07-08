@@ -110,7 +110,7 @@ function [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_s
         % convert ecc
         keep_mean_blobmajor(i) = nanmean(jta(:,i)') / mmperpx;
         keep_mean_blobminor(i) = nanmean(jtb(:,i)') / mmperpx;
-        keep_ecc_sorted{i} = jtb(:,i)' ./ jta(:,i)';
+        keep_ecc_sorted{i} = sqrt(1 - (jtb(:,i)'.* jtb(:,i)') ./ (jta(:,i)' .* jta(:,i)'));
         % convert wings
         wrAngle = (pi - jwr(:,i) - jtth(:,i)) .* (180 / pi); % fly's right wing angle;
         wlAngle = (pi - jwl(:,i) - jtth(:,i)) .* (180 / pi); % fly's left wing angle

@@ -25,7 +25,7 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
             perimeter = sqrt(diff(gx).^2 + diff(gy).^2) * mmPerPixel * 2;
             area = 0; % perimeter * 1.5; % 1.5mm
             angle = atan2(diff(gy),diff(gx)) / pi * 180;
-            ecc = 0;
+            ecc = 1;
         else
             dt = delaunayTriangulation(gx,gy);
             fe = freeBoundary(dt)';
@@ -43,7 +43,9 @@ function [area, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerime
             gy3 = gx2 .* sind(-angle) + gy2 .* cosd(-angle);
             gx3long = max(gx3) - min(gx3);
             gy3long = max(gy3) - min(gy3);
-            ecc = min(gx3long, gy3long) / max(gx3long, gy3long);
+            a = max(gx3long, gy3long);
+            b = min(gx3long, gy3long);
+            ecc = sqrt(1-(b*b)/(a*a));
         end
         groupAreas(j) = area;
         groupCenterX(j) = cx;

@@ -3,7 +3,7 @@ function pc_data = calcPolarChartAllFly(X, Y, dir, ecc, br, ir, eccTh)
     flameMax = size(X, 1);
     flyNum = size(X, 2);
 
-    sqsize = ceil(ir/100) * 100 * 2;
+    sqsize = ceil(ir/20) * 20 * 2;
     hhPx = zeros(sqsize, sqsize);
     haPx = zeros(sqsize, sqsize);
     hcPx = zeros(sqsize, sqsize);
