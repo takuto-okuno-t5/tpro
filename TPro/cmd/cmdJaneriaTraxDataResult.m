@@ -52,6 +52,16 @@ function cmdJaneriaTraxDataResult(handles)
 %    gids = findgroups(fn2); % just for R2017
     gmax = max(gids);
 
+    % read control data
+    if strcmp(handles.analyseSrc, 'gal4dcdpval')
+        fname = 'TrpA_dcd_mean.csv';
+        dcdControlData = csvread(fname);
+        if isempty(dcdControlData)
+            disp(['control value file not found : ' fname]);
+            return;
+        end
+    end
+
     % process registered_trx.mat files
     switch(handles.analyseSrc)
     case 'dcd'
@@ -114,6 +124,43 @@ function cmdJaneriaTraxDataResult(handles)
             data{i,6} = prctile(means,50);
             data{i,7} = prctile(means,25);
             data{i,8} = prctile(means,0);
+        end
+    case 'gal4dcdpval'
+        data = cell(gmax, 3);
+        dsize = length(gids);
+        count = 1;
+        for i=1:gmax
+            idx = find(gids==i);
+            means = [];
+            for j=1:length(idx)
+                k = idx(j);
+
+                % load registered_trx.mat file
+                jtrxPath = [handles.janeriaTrxPath '/' fnames{k,1} '/'];
+                rate = count/dsize * 100;
+                disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{k,1} ' (' num2str(rate) '%)']);
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', 1024);
+
+                r = dcdRadius / mmperpx;
+                cnr = dcdCnRadius / mmperpx;
+
+                % calc DCD
+                means1 = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
+                means1m = mean(means1);
+                means = [means; means1m];
+                count = count + 1;
+            end
+            s1 = randsample(dcdControlData,762);
+            [bootstat,bootsam] = bootstrp(10000,@mean,s1);
+            pv = nan(length(means),1);
+            for j=1:length(means)
+                pvIdx = find(bootstat>=means(j));
+                pv(j) = (1+length(pvIdx))/(length(bootstat)+1);
+            end
+            data{i,1} = fnames{idx(1),2};
+            data{i,2} = length(idx);
+            data{i,3} = max(pv);
         end
     case 'hpccalc' % head polar chart calc
         dsize = length(fn2);
