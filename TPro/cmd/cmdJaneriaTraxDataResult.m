@@ -60,6 +60,7 @@ function cmdJaneriaTraxDataResult(handles)
             disp(['control value file not found : ' fname]);
             return;
         end
+        meanDcdControlData = mean(dcdControlData);
     end
 
     % process registered_trx.mat files
@@ -126,7 +127,7 @@ function cmdJaneriaTraxDataResult(handles)
             data{i,8} = prctile(means,0);
         end
     case 'gal4dcdpval'
-        data = cell(gmax, 3);
+        data = cell(gmax, 5);
         dsize = length(gids);
         count = 1;
         for i=1:gmax
@@ -160,7 +161,14 @@ function cmdJaneriaTraxDataResult(handles)
             end
             data{i,1} = fnames{idx(1),2};
             data{i,2} = length(idx);
-            data{i,3} = max(pv);
+            [maxpv, midx] = max(pv);
+            data{i,3} = maxpv;
+            data{i,4} = means(midx);
+            if means(midx) > meanDcdControlData
+                data{i,5} = 1;
+            else
+                data{i,5} = 2;
+            end
         end
     case 'hpccalc' % head polar chart calc
         dsize = length(fn2);
