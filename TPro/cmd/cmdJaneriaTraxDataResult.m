@@ -153,6 +153,10 @@ function cmdJaneriaTraxDataResult(handles)
                 means = [means; means1m];
                 count = count + 1;
             end
+            sampleNum = groupNum;
+            if sampleNum < 6
+                sampleNum = 6;
+            end
             s1 = randsample(dcdControlData, groupNum);
             [bootstat,bootsam] = bootstrp(10000,@mean,s1);
             pv = nan(groupNum,1);
