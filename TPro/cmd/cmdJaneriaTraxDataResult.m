@@ -132,8 +132,9 @@ function cmdJaneriaTraxDataResult(handles)
         count = 1;
         for i=1:gmax
             idx = find(gids==i);
+            groupNum = length(idx);
             means = [];
-            for j=1:length(idx)
+            for j=1:groupNum
                 k = idx(j);
 
                 % load registered_trx.mat file
@@ -152,15 +153,15 @@ function cmdJaneriaTraxDataResult(handles)
                 means = [means; means1m];
                 count = count + 1;
             end
-            s1 = randsample(dcdControlData,762);
+            s1 = randsample(dcdControlData, groupNum);
             [bootstat,bootsam] = bootstrp(10000,@mean,s1);
-            pv = nan(length(means),1);
-            for j=1:length(means)
+            pv = nan(groupNum,1);
+            for j=1:groupNum
                 pvIdx = find(bootstat>=means(j));
                 pv(j) = (1+length(pvIdx))/(length(bootstat)+1);
             end
             data{i,1} = fnames{idx(1),2};
-            data{i,2} = length(idx);
+            data{i,2} = groupNum;
             [maxpv, midx] = max(pv);
             data{i,3} = maxpv;
             data{i,4} = means(midx);
