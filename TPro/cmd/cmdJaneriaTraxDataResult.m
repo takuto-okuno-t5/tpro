@@ -157,7 +157,7 @@ function cmdJaneriaTraxDataResult(handles)
             if sampleNum < 6
                 sampleNum = 6;
             end
-            s1 = randsample(dcdControlData, groupNum);
+            s1 = randsample(dcdControlData, sampleNum);
             [bootstat,bootsam] = bootstrp(10000,@mean,s1);
             pv = nan(groupNum,1);
             for j=1:groupNum
