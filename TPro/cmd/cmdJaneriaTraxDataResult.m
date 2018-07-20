@@ -12,6 +12,9 @@ function cmdJaneriaTraxDataResult(handles)
     eccTh = readTproConfig('beClimb', 0.88);
     pcR = readTproConfig('polarChartRadius', 7.5); % polar chart radius
 
+    img_h = 1024;
+    img_w = 1024;
+
     disp('start to process janeria trax data');
     tic;
 
@@ -74,7 +77,7 @@ function cmdJaneriaTraxDataResult(handles)
             rate = count/dsize * 100;
             disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
             [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat([handles.janeriaTrxPath '/' fnames{i,1} '/'], 'registered_trx.mat', 1024);
+                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat([handles.janeriaTrxPath '/' fnames{i,1} '/'], 'registered_trx.mat', img_h);
 
             r = dcdRadius / mmperpx;
             cnr = dcdCnRadius / mmperpx;
@@ -107,7 +110,7 @@ function cmdJaneriaTraxDataResult(handles)
                 rate = count/dsize * 100;
                 disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{k,1} ' (' num2str(rate) '%)']);
                 [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', 1024);
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 
                 r = dcdRadius / mmperpx;
                 cnr = dcdCnRadius / mmperpx;
@@ -142,7 +145,7 @@ function cmdJaneriaTraxDataResult(handles)
                 rate = count/dsize * 100;
                 disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{k,1} ' (' num2str(rate) '%)']);
                 [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', 1024);
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 
                 r = dcdRadius / mmperpx;
                 cnr = dcdCnRadius / mmperpx;
@@ -175,17 +178,76 @@ function cmdJaneriaTraxDataResult(handles)
                 data{i,5} = 2;
             end
         end
-    case 'hpccalc' % head polar chart calc
+    case 'gcalc'
+        data = cell(1,1); % dummy
         dsize = length(fn2);
-        data = cell(dsize, 8);
         count = 1;
         for i=1:dsize
             % load registered_trx.mat file
             jtrxPath = [handles.janeriaTrxPath '/' fnames{i,1} '/'];
             rate = count/dsize * 100;
+            count = count + 1;
+            disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
+%            fname = [jtrxPath 'registered_trx_tpro.mat'];
+%            if exist(fname, 'file')
+%                load(fname);
+%            else
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
+%                save(fname, 'X', 'Y', 'keep_angle_sorted', 'keep_direction_sorted', 'keep_areas', 'keep_ecc_sorted', 'keep_wings_sorted', 'keep_gender', ...
+%                    'keep_data', 'keep_mean_blobmajor', 'keep_mean_blobminor', 'fps', 'mmperpx', 'startframe', 'endframe', 'maxframe');
+%            end
+            [vxy, accVxy, updownVxy, fdir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fps, mmperpx);
+
+            height = nnHeight / mmperpx;
+            algorithm = nnAlgorithm; 
+            [result, weightedGroupCount] = calcClusterNNAllFly(keep_data{2}, keep_data{1}, [], algorithm, height); % ignore roiMask
+            [result, groupCount, biggestGroup, biggestGroupFlyNum, singleFlyNum] = calcClusterNNGroups(result);
+            [areas, groupAreas, groupCenterX, groupCenterY, groupOrient, groupPerimeter, groupEcc, groupFlyNum, groupFlyDir] = calcGroupArea(keep_data{2}, keep_data{1}, fdir, result, mmperpx); % dummy roiMask
+            save([jtrxPath 'nn_groups.mat'], 'result', 'groupCount', 'weightedGroupCount', 'biggestGroup', 'biggestGroupFlyNum', ...
+                'areas', 'groupAreas', 'groupCenterX', 'groupCenterY', 'groupOrient', 'groupPerimeter', 'groupEcc', 'groupFlyNum', 'groupFlyDir');
+        end
+    case 'gtrack'
+        data = cell(1,1); % dummy
+        dsize = length(fn2);
+        count = 1;
+        for i=1:dsize
+            % load registered_trx.mat file
+            jtrxPath = [handles.janeriaTrxPath '/' fnames{i,1} '/'];
+            rate = count/dsize * 100;
+            count = count + 1;
+            disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
+%            fname = [jtrxPath 'registered_trx_tpro.mat'];
+%            if exist(fname, 'file')
+%                load(fname);
+%            else
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
+%                save(fname, 'X', 'Y', 'keep_angle_sorted', 'keep_direction_sorted', 'keep_areas', 'keep_ecc_sorted', 'keep_wings_sorted', 'keep_gender', ...
+%                    'keep_data', 'keep_mean_blobmajor', 'keep_mean_blobminor', 'fps', 'mmperpx', 'startframe', 'endframe', 'maxframe');
+%            end
+
+            % load group analysing result
+            grp = load([jtrxPath 'nn_groups.mat']);
+
+            rejectDist = groupRejectDist / mmperpx / fps;
+            duration = groupDuration * fps;
+            [group_keep_data, detect2groupIds] = trackingPoints(grp.groupCenterX, grp.groupCenterY, rejectDist, duration, img_h, img_w);
+            groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
+            save([jtrxPath 'nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
+        end
+    case 'hpccalc' % head polar chart calc
+        data = cell(1,1); % dummy
+        dsize = length(fn2);
+        count = 1;
+        for i=1:dsize
+            % load registered_trx.mat file
+            jtrxPath = [handles.janeriaTrxPath '/' fnames{i,1} '/'];
+            rate = count/dsize * 100;
+            count = count + 1;
             disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
             [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', 1024);
+                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 
             [vxy, accVxy, updownVxy, fdir, sideways, sidewaysVelocity, av, ecc, rWingAngle, lWingAngle, rWingAngleV, lWingAngleV] = calcVelocityDirEtc(keep_data, fps, mmperpx);
 
