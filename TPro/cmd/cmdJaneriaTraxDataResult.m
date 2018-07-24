@@ -236,6 +236,40 @@ function cmdJaneriaTraxDataResult(handles)
             groups = matchingGroupAndFly(grp.result, group_keep_data, grp.groupCenterX, grp.groupCenterY);
             save([jtrxPath 'nn_groups_tracking.mat'], 'group_keep_data', 'groups', 'detect2groupIds', '-v7.3');
         end
+    case 'gcount'
+        data = cell(gmax, 8);
+        dsize = length(gids);
+        count = 1;
+        for i=1:gmax
+            idx = find(gids==i);
+            means = [];
+            for j=1:length(idx)
+                k = idx(j);
+
+                % load registered_trx.mat file
+                jtrxPath = [handles.janeriaTrxPath '/' fnames{k,1} '/'];
+                rate = count/dsize * 100;
+                disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{k,1} ' (' num2str(rate) '%)']);
+                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
+                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
+
+                % load group analysing result
+                grp = load([jtrxPath 'nn_groups.mat']);
+
+                % calc DCD
+                means1 = grp.groupCount;
+                means = [means; means1];
+                count = count + 1;
+            end
+            data{i,1} = fnames{idx(1),2};
+            data{i,2} = length(idx);
+            data{i,3} = nanmean(means);
+            data{i,4} = prctile(means,100);
+            data{i,5} = prctile(means,75);
+            data{i,6} = prctile(means,50);
+            data{i,7} = prctile(means,25);
+            data{i,8} = prctile(means,0);
+        end
     case 'hpccalc' % head polar chart calc
         data = cell(1,1); % dummy
         dsize = length(fn2);
