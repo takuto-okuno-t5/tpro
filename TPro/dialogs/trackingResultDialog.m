@@ -279,7 +279,9 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.popupmenu7,'String',listItem);
 
     % count each ROI fly number
-    countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
+    if ~isempty(roiMasks)
+        countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
+    end
 
     % calc velocity and etc.
     if exist('assignCost','var')
@@ -2203,7 +2205,12 @@ function Untitled_25_Callback(hObject, eventdata, handles)
         dataFileName = [outputDataPath sharedInst.shuttleVideo.name '_' filename];
 
         % output text data
-        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
+        if isempty(roiMasks)
+            roiMask = [];
+        else
+            roiMask = roiMasks{i};
+        end
+        saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam);
     end
     time = toc;
     disp(['done!     t =' num2str(time) 's']);

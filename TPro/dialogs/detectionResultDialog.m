@@ -255,7 +255,9 @@ function detectionResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.popupmenu3,'String',listItem);
 
     % count each ROI fly number
-    countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
+    if ~isempty(roiMasks)
+        countFliesEachROI(handles, X, Y, sharedInst.roiNum, roiMasks, roiMaskImage);
+    end
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_dcd_result', 'aggr_dcd_p_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_ssi_result', 'aggr_grid_result', ...
@@ -1271,7 +1273,9 @@ function Untitled_20_Callback(hObject, eventdata, handles)
     sharedInst.keep_ecc_sorted = keep_ecc_sorted;
 
     % count each ROI fly number
-    countFliesEachROI(handles, X, Y, sharedInst.roiNum, sharedInst.roiMasks, sharedInst.roiMaskImage);
+    if ~isempty(sharedInst.roiMasks)
+        countFliesEachROI(handles, X, Y, sharedInst.roiNum, sharedInst.roiMasks, sharedInst.roiMaskImage);
+    end
     set(handles.popupmenu4,'Value',1);
 
     h = msgbox({'import ctrax output file successfully!'});

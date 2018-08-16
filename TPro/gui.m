@@ -84,6 +84,7 @@ handles.autodetect = 0;
 handles.autotracking = 0;
 handles.autofinish = 0;
 handles.autodcd = 0;
+handles.tmpindex = 0;
 handles.pi = [];
 handles.export = [];
 handles.analyseSrc = [];
@@ -173,6 +174,9 @@ while true
         case {'--jtrx'}
             handles.janeriaTrxPath = varargin{i+1};
             i = i + 1;
+        case {'--tempindex'}
+            handles.tmpindex = str2num(varargin{i+1});
+            i = i + 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
@@ -199,6 +203,7 @@ while true
             disp('  --percentile nums   percentile columns of export data after join. [nums] are percent');
             disp('  --export path       export analysed data files on [path]');
             disp('  --jtrx path         janeria trx data [path]');
+            disp('  --tempindex num     template index [num] (along with background detection)');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
             handles.commandError = 1;
@@ -376,7 +381,11 @@ if length(handles.movies) > 0
     videoPaths = {};
     for i=1:length(handles.movies)
         [path, name, ext] = fileparts(handles.movies{i});
-        videoPaths = [videoPaths; [path '/']];
+        if isempty(path)
+            videoPaths = [videoPaths; './'];
+        else
+            videoPaths = [videoPaths; [path '/']];
+        end
         videoFiles = [videoFiles; [name ext]];
     end
     % sort input files
@@ -627,6 +636,28 @@ for data_th = 1:size(records,1)
                 endFrame = str2num(handles.bgOp{2});
             end
             checkNums = str2num(handles.bgOp{3});
+        end
+
+        % apply template
+        if handles.tmpindex > 0
+            modeFileName = getTproEtcFile('mode_template.csv');
+            if ~exist(modeFileName, 'file')
+                errordlg(['mode template file not found : ' modeFileName], 'Error');
+                return;
+            end
+            confTable = readtable(modeFileName);
+            templates = table2cell(confTable);
+            template = {templates{handles.tmpindex,:}};
+            template(1:7) = {records{data_th, 1:7}};
+            template{10} = records{data_th, 10};
+
+            confFileName = [pathName 'input_video_control.csv'];
+            status = saveInputControlFile(confFileName, template);
+            if ~status
+                errordlg(['failed to save a configuration file : ' confFileName], 'Error');
+                return;
+            end
+            isInvert = template{12};
         end
     else
         [dlg, startFrame, endFrame, checkNums, detectMode] = startEndDialog({'1', num2str(shuttleVideo.NumberOfFrames), shuttleVideo.name});
@@ -2195,11 +2226,21 @@ for data_th = 1:size(records,1)
 
         % save data as text
         for i=1:roiNum
-            outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
-            dataFileName = [outputDataPath shuttleVideo.name '_' filename];
+            if isfield(handles, 'export')
+                outputDataPath = [handles.export '/'];
+                dataFileName = [outputDataPath shuttleVideo.name];
+            else
+                outputDataPath = [confPath 'output/' filename '_roi' num2str(i) '_data/'];
+                dataFileName = [outputDataPath shuttleVideo.name '_' filename];
+            end
 
             % output text data
-            saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMasks{i}, dcdparam, mdparam);
+            if isempty(roiMasks)
+                roiMask = [];
+            else
+                roiMask = roiMasks{i};
+            end
+            saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h, img_w, roiMask, dcdparam, mdparam);
 
             % save input data used for generating this result
             record = {records{data_th,:}};
@@ -2210,7 +2251,9 @@ for data_th = 1:size(records,1)
     end
 
     % show tracking result
-    dlg = trackingResultDialog({num2str(data_th)});
+    if ~isfield(handles, 'showcount') || handles.showcount
+        dlg = trackingResultDialog({num2str(data_th)});
+    end
     pause(3); % pause 3 sec
 end
 

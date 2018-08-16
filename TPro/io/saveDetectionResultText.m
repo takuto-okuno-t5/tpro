@@ -20,7 +20,7 @@ function saveDetectionResultText(dataFileName, X, Y, i, img_h, roiMasks, dcdpara
         for j = flyNum:-1:1
             y = round(fy(j));
             x = round(fx(j));
-            if (y < 1) || (x < 1) || isnan(y) || isnan(x) || roiMasks{i}(y,x) <= 0
+            if (y < 1) || (x < 1) || isnan(y) || isnan(x) || (~isempty(roiMasks) && roiMasks{i}(y,x) <= 0)
                 fx(j) = [];
                 fy(j) = [];
             end
