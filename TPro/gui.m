@@ -2226,7 +2226,7 @@ for data_th = 1:size(records,1)
 
         % save data as text
         for i=1:roiNum
-            if isfield(handles, 'export')
+            if isfield(handles, 'export') && ~isempty(handles.export)
                 outputDataPath = [handles.export '/'];
                 dataFileName = [outputDataPath shuttleVideo.name];
             else
