@@ -731,7 +731,7 @@ for data_th = 1:size(records,1)
             grayImage = rgb2gray(frameImage);
         end
         if isInvert
-            grayImages = imcomplement(grayImages);
+            grayImage = imcomplement(grayImage);
         end
         grayImages(:,:,i) = grayImage;
         clear frameImage;
@@ -1180,9 +1180,8 @@ for data_th = 1:size(records,1)
             grayImg = rgb2gray(frameImage);
         end
         if isInvert
-            grayImages = imcomplement(grayImages);
+            grayImg = imcomplement(grayImg);
         end
-        grayImages(:,:,i) = grayImg;
         clear frameImage;
         if ~isempty(bg_img_mean)
             grayImg = grayImg + (bg_img_mean - mean(mean(grayImg)));
