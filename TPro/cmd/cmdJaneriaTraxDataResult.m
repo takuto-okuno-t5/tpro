@@ -216,13 +216,19 @@ function cmdJaneriaTraxDataResult(handles)
             jtrxPath = [handles.janeriaTrxPath '/' fnames{i,1} '/'];
             rate = count/dsize * 100;
             count = count + 1;
-            disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
+            fname = [jtrxPath 'nn_groups_tracking.mat'];
+            if exist(fname, 'file')
+                disp(['skip(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
+                continue
+            else
+                disp(['processing(' num2str(count) ') : G(' num2str(i) ') ' fnames{i,1} ' (' num2str(rate) '%)']);
+            end
 %            fname = [jtrxPath 'registered_trx_tpro.mat'];
 %            if exist(fname, 'file')
 %                load(fname);
 %            else
-                [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
-                    fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
+            [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
+                fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 %                save(fname, 'X', 'Y', 'keep_angle_sorted', 'keep_direction_sorted', 'keep_areas', 'keep_ecc_sorted', 'keep_wings_sorted', 'keep_gender', ...
 %                    'keep_data', 'keep_mean_blobmajor', 'keep_mean_blobminor', 'fps', 'mmperpx', 'startframe', 'endframe', 'maxframe');
 %            end
