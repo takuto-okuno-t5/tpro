@@ -37,6 +37,7 @@ function annotation = trapezoidBehaviorClassifier(handles)
     beMinLv = readTproConfig('beMinLv', 2);
     beDuration = round(readTproConfig('beDuration', 5/60) * fps);
     beDurationSM = round(readTproConfig('beDurationSM', 5/60) * fps);
+    beDurationSleep = round(readTproConfig('beDurationSleep', 300) * fps);
     beJumpLv = readTproConfig('beJumpLv', 63);
     beJumpAcc = readTproConfig('beJumpAcc', 40);
     beRight = readTproConfig('beRight', 21);
@@ -45,6 +46,7 @@ function annotation = trapezoidBehaviorClassifier(handles)
     beWalkGap = round(readTproConfig('beWalkGap', 5/60) * fps);
     beSWalkLv = readTproConfig('beSWalkLv', 4);
     beSWalkGap = round(readTproConfig('beSWalkGap', 5/60) * fps);
+    beSleepGap = round(readTproConfig('beSleepGap', 5/60) * fps);
     beClimb = readTproConfig('beClimb', 0.92);
     beClimbLv = readTproConfig('beClimbLv', 11);
     beClimbGap = round(readTproConfig('beClimbGap', 8/60) * fps);
@@ -95,6 +97,10 @@ function annotation = trapezoidBehaviorClassifier(handles)
     smove = beWalkFilter(lv, updown, beSWalkLv, beMinLv, beSmallSlope);
     smove = beDurationFilter(smove, beDurationSM); % duration filter: >= 5 frames
 
+    % ----- sleep -----
+    sleep = beWalkFilter(lv, updown, beMinLv, 0, beSleepGap);
+    sleep = beDurationFilter(sleep, beDurationSleep); % duration filter: >= 5 frames
+
     % ----- grooming -----
     groom = beGroomingFilter(rWingAngle, lWingAngle, rwav, lwav, lv, beWingAngle, beWingAngleV, beSWalkLv);
     groom = beGapFilter(groom, beGroomingGap); % long gap filter
@@ -109,5 +115,6 @@ function annotation = trapezoidBehaviorClassifier(handles)
     annotation(climb==1) = 4; % BE_CLIBM
     annotation(groom==1) = 9; % BE_GROOMING
     annotation(right==1) = 3; % BE_RIGHT
+    annotation(sleep==1) = 10; % BE_SLEEP
     annotation(jump==1)  = 1; % BE_JUMP
 end
