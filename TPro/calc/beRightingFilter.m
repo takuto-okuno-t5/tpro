@@ -15,6 +15,9 @@ function be_mat = beRightingFilter(side, updown, lv, max_side, min_side, min_lv)
                 end
                 lp = i;
             end
+            if isnan(lv(i,fn))
+                lp = i;
+            end
         end
     end
     be_mat(lv<min_lv) = 0;

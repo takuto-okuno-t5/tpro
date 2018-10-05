@@ -18,6 +18,9 @@ function be_mat = beJumpFilter(lv, updown, threshold, acc_threshold)
                 end
                 lp = i;
             end
+            if isnan(lv(i,fn))
+                lp = i;
+            end
         end
     end
 end

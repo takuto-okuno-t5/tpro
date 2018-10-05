@@ -32,7 +32,8 @@ function annotation = trapezoidBehaviorClassifier(handles)
 
     frame_num = size(lv, 1);
     fly_num = size(lv, 2);
-    annotation = zeros(frame_num,fly_num);
+    annotation = nan(frame_num,fly_num);
+    annotation(~isnan(lv)) = 0;
 
     beMinLv = readTproConfig('beMinLv', 2);
     beDuration = round(readTproConfig('beDuration', 5/60) * fps);

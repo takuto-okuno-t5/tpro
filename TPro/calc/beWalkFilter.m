@@ -23,6 +23,9 @@ function be_mat = beWalkFilter(lv, updown, max_lv, min_lv, slope_th)
                 end
                 lp = i;
             end
+            if isnan(lv(i,fn))
+                lp = i;
+            end
         end
     end
 end
