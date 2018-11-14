@@ -298,7 +298,7 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hhpc' % head to head polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240); % TODO: not good ...
+            data = zeros(240,240,3); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
@@ -311,7 +311,7 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hapc' % head to ass polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240); % TODO: not good ...
+            data = zeros(240,240,3); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
@@ -324,22 +324,32 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hcpc' % head to centroid polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240); % TODO: not good ...
+            data = zeros(240,240,3); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
                 hPc = load([jtrxPath 'head_pc.mat']);
                 data = data + hPc.pc_data{9};
             end
+            data = data ./ (length(idx)*100);
+            data(data>1) = 1;
+            data = convertColor(data,[1,0.9,0.6,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
             figure; title(fnames{idx(1),2});
-            imshow(data ./ (length(idx)*100)); % normalized intensity
+            imshow(data); % normalized intensity
+            % color bar
+            colbar = zeros(240,10,3);
+            for j=1:240
+                colbar(j,:,1) = (240-j+1)/240;
+            end
+            colbar = convertColor(colbar,[1,0.9,0.6,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
+            figure;imshow(colbar);
         end
     otherwise
         disp(['unsupported data type : ' handles.analyseSrc]);
         return;
     end
     % save data as text
-    if ~isempty(handles.export)
+    if ~isempty(handles.export) && iscell(data)
         outputPath = [handles.export '/'];
         dataFileName = [outputPath data{1,1} '_' handles.analyseSrc];
         saveNxNcellText(dataFileName, [], data);
