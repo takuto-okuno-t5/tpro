@@ -5,9 +5,9 @@ function data = processDataByCommand(ops, data, fpsNum)
         frameNum = size(data,1);
         flyNum = size(data,2);
         op = ops{j};
-        prestr3 = extractBefore(op,4);
+        prestr3 = op(1:3);
         if length(op) > 5
-            prestr5 = extractBefore(op,6);
+            prestr5 = op(1:5);
         else
             prestr5 = [];
         end
@@ -15,25 +15,26 @@ function data = processDataByCommand(ops, data, fpsNum)
         % check operation string
         if strcmp(prestr3, 'col') > 0
             % check column operation
-            af = extractAfter(op,3);
+            af = op(4:end);
             if strfind(af,'sum') > 0
-                colop = extractBefore(af,4);
+                colop = af(1:3);
             elseif strfind(af,'mean') > 0
-                colop = extractBefore(af,5);
+                colop = af(1:4);
             elseif strfind(af,'min') > 0
-                colop = extractBefore(af,4);
+                colop = af(1:3);
             elseif strfind(af,'max') > 0
-                colop = extractBefore(af,4);
+                colop = af(1:3);
             elseif strfind(af,'count') > 0
-                colop = extractBefore(af,6);
+                colop = af(1:5);
             elseif strfind(af,'median') > 0
-                colop = extractBefore(af,7);
+                colop = af(1:6);
             else
                 continue;
             end
-            if strfind(af,'/') > 0
-                cycleStr = extractAfter(af,'/');
-                colopval = extractBefore(af,'/');
+            k = strfind(af,'/');
+            if k > 0
+                cycleStr = af(k+1:end);
+                colopval = af(1:k-1);
             else
                 cycleStr = [];
                 colopval = af;
@@ -41,9 +42,9 @@ function data = processDataByCommand(ops, data, fpsNum)
 
             % check cycle
             if strfind(cycleStr,'sec') > 0
-                cycle = floor(fpsNum * str2num(extractBefore(cycleStr,'sec')));
+                cycle = floor(fpsNum * str2num(cycleStr(1:strfind(cycleStr,'sec')-1)));
             elseif strfind(cycleStr,'frame') > 0
-                cycle = str2num(extractBefore(cycleStr,'frame'));
+                cycle = str2num(cycleStr(1:strfind(cycleStr,'frame')-1));
             else
                 cycle = frameNum;
             end
