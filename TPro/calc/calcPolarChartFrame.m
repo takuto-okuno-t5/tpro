@@ -32,6 +32,10 @@ function [hhPx, haPx, hcPx, hhHist, haHist, hcHist, hx, hy, ax, ay] = calcPolarC
     dist2 = pdist(pts2);
     dist2 = squareform(dist2); % make square
     hcdist = dist1(1:fn,(fn+1):fn*2); % head to centroid
+    for i=1:fn % remove fly's own centroid & ass
+        hadist(i,i) = 0;
+        hcdist(i,i) = 0;
+    end
 
     % find head to head / ass
     idx = find(hhdist<r & hhdist>0);

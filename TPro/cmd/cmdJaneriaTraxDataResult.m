@@ -298,7 +298,7 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hhpc' % head to head polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240,3); % TODO: not good ...
+            data = zeros(240,240,1); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
@@ -311,7 +311,7 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hapc' % head to ass polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240,3); % TODO: not good ...
+            data = zeros(240,240,1); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
@@ -324,7 +324,7 @@ function cmdJaneriaTraxDataResult(handles)
     case 'gal4hcpc' % head to centroid polar chart
         for i=1:gmax
             idx = find(gids==i);
-            data = zeros(240,240,3); % TODO: not good ...
+            data = zeros(240,240,1); % TODO: not good ...
             for j=1:length(idx)
                 % load head_pc.mat file
                 jtrxPath = [handles.janeriaTrxPath '/' fnames{idx(j),1} '/'];
