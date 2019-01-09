@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 20-Jun-2018 19:54:35
+    % Last Modified by GUIDE v2.5 09-Jan-2019 14:05:59
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -123,6 +123,15 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.isModified = false;
     sharedInst.editMode = 1; % select / add mode
     sharedInst.findType = 0;
+
+    % load patch point file
+    patchFileName = [videoPaths{rowNum} videoFiles{rowNum} '_tpro/patch_points.csv'];
+    if exist(patchFileName, 'file')
+        patchTable = readtable(patchFileName);
+        sharedInst.patch_pt = table2array(patchTable);
+    else
+        sharedInst.patch_pt = [];
+    end
 
     % fix old parameters
     if sharedInst.mmPerPixel <= 0
@@ -296,7 +305,8 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
 
     % load last time data
     resultNames = {'aggr_voronoi_result', 'aggr_ewd_result', 'aggr_pdbscan_result', 'aggr_md_result', 'aggr_hwmd_result', 'aggr_grid_result', ...
-        'aggr_ewd_result_tracking', 'nn_cluster_result_tracking', 'aggr_dcd_result', 'aggr_dcd_result_tracking'};
+        'aggr_ewd_result_tracking', 'nn_cluster_result_tracking', 'aggr_dcd_result', 'aggr_dcd_result_tracking', 'distance_from_point_result', ...
+        'distance_from_point_result_tracking'};
     for i=1:length(resultNames)
         fname = [sharedInst.confPath 'multi/' resultNames{i} '.mat'];
         if exist(fname, 'file')
@@ -2468,6 +2478,31 @@ function Untitled_38_Callback(hObject, eventdata, handles)
     save([sharedInst.confPath 'multi/head_pc.mat'], 'pc_data');
 end
 
+% --------------------------------------------------------------------
+function Untitled_39_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_39 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
+
+    [means, results] = calcDistanceFromPointAllFly(X, Y, sharedInst.patch_pt(1,1),sharedInst.patch_pt(1,2));
+    means = means * sharedInst.mmPerPixel;
+    results = results * sharedInst.mmPerPixel;
+
+    % add result to axes & show in axes
+    cname = 'distance_from_point_result';
+    addResult2Axes(handles, means, cname, handles.popupmenu8);
+    addResult2Axes(handles, results, [cname '_tracking'], handles.popupmenu8);
+    result = means;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    result = results;
+    save([sharedInst.confPath 'multi/' cname '_tracking.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+end
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
 
@@ -2809,6 +2844,13 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
             end
         end
+    end
+    % show patch point
+    if strcmp(sharedInst.axesType1,'distance_from_point_result') || strcmp(sharedInst.axesType1,'distance_from_point_result_tracking')
+        % food patch
+        plot(sharedInst.patch_pt(:,1),sharedInst.patch_pt(:,2), 'or', 'Color','red', 'Marker','x');
+        height = sharedInst.patch_pt(:,3) / sharedInst.mmPerPixel;
+        scatter(sharedInst.patch_pt(:,1),sharedInst.patch_pt(:,2),height*height,'red','LineWidth',0.5); % the actual detecting
     end
     % show group line & number
     if ~isempty(sharedInst.group_keep_data) && ...

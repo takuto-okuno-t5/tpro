@@ -144,6 +144,13 @@ function cmdAnalyseDataAndExportResult(handles)
         else
             hPc = [];
         end
+        % load patch point result
+        matFile = [confPath 'multi/distance_from_point_result_tracking.mat'];
+        if exist(matFile,'file')
+            patchDist = load(matFile);
+        else
+            patchDist = [];
+        end
 
         % calc velocity etc
         if exist('keep_data', 'var')
@@ -212,6 +219,21 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'dcd'
             if ~isempty(dcd)
                 data = dcd.result;
+            end
+        case 'patchdistcalc'
+            patchFileName = [confPath 'patch_points.csv'];
+            if ~exist(patchFileName, 'file')
+                continue;
+            end
+            patchTable = readtable(patchFileName);
+            patch_pt = table2array(patchTable);
+            [means, result] = calcDistanceFromPointAllFly(keep_data{2}, keep_data{1}, patch_pt(1,1), patch_pt(1,2));
+            result = result * mmPerPixel;
+            save([confPath 'multi/distance_from_point_result_tracking.mat'], 'result');
+            disp(['calc patch distance : ' name]);
+        case 'patchdist'
+            if ~isempty(patchDist)
+                data = patchDist.result;
             end
         case 'group'
             if isempty(grp)
