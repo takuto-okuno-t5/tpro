@@ -97,6 +97,7 @@ handles.percentile = [];
 handles.merge = {};
 handles.maxFrame = 0; % for raster duration
 handles.janeriaTrxPath = {};
+handles.mergeMatData = {};
 
 % load command line input
 i = 1;
@@ -177,6 +178,8 @@ while true
         case {'--tempindex'}
             handles.tmpindex = str2num(varargin{i+1});
             i = i + 1;
+        case {'--mmerge'}
+            handles.mergeMatData = 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
@@ -203,6 +206,7 @@ while true
             disp('  --percentile nums   percentile columns of export data after join. [nums] are percent');
             disp('  --export path       export analysed data files on [path]');
             disp('  --jtrx path         janeria trx data [path]');
+            disp('  --mmerge            merge mat data');
             disp('  --tempindex num     template index [num] (along with background detection)');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
@@ -454,6 +458,9 @@ if handles.autodcd
 end
 if ~isempty(handles.analyseSrc)
     cmdAnalyseDataAndExportResult(handles)
+end
+if ~isempty(handles.mergeMatData)
+    cmdMatDataMerge(handles)
 end
 if handles.autofinish
     delete(hObject);
