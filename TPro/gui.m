@@ -98,6 +98,7 @@ handles.merge = {};
 handles.maxFrame = 0; % for raster duration
 handles.janeriaTrxPath = {};
 handles.mergeMatData = {};
+handles.extMatData = [];
 
 % load command line input
 i = 1;
@@ -180,6 +181,14 @@ while true
             i = i + 1;
         case {'--mmerge'}
             handles.mergeMatData = 1;
+        case {'--mext'}
+            C = strsplit(varargin{i+1},'/');
+            nums = [];
+            for j=1:length(C)
+                nums = [nums, str2num(C{j})];
+            end
+            handles.extMatData = nums;
+            i = i + 1;
         case {'-h','--help'}
             disp(['usage: ' exeName ' [options] movies ...']);
             disp('  -b, --batch file    batch csv [file]');
@@ -207,6 +216,7 @@ while true
             disp('  --export path       export analysed data files on [path]');
             disp('  --jtrx path         janeria trx data [path]');
             disp('  --mmerge            merge mat data');
+            disp('  --mext nums         extract mat (tracking) data by index [nums]');
             disp('  --tempindex num     template index [num] (along with background detection)');
             disp('  -h, --help          show tpro command line help');
             i = size(varargin, 2);
@@ -461,6 +471,9 @@ if ~isempty(handles.analyseSrc)
 end
 if ~isempty(handles.mergeMatData)
     cmdMatDataMerge(handles)
+end
+if ~isempty(handles.extMatData)
+    cmdMatDataExtract(handles)
 end
 if handles.autofinish
     delete(hObject);

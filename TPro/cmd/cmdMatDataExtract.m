@@ -1,5 +1,5 @@
 %%
-function cmdMatDataMerge(handles)
+function cmdMatDataExtract(handles)
     [videoPaths, videoFiles, tebleItems] = getInputList();
     if isempty(videoPaths)
         errordlg('please select movies before operation.', 'Error');
@@ -25,9 +25,10 @@ function cmdMatDataMerge(handles)
         records = [records; C];
     end
 
-    disp('start to merge mat data');
+    disp('start to extract mat (tracking) data');
     tic;
     % init output data
+    tidx = handles.extMatData;
     keep_data_out = {};
     assignCost_out = [];
     keep_count_out = [];
@@ -144,7 +145,7 @@ function cmdMatDataMerge(handles)
         end
         % track_#####_#####.mat
         for i=1:10
-            kd = keep_data{i};
+            kd = keep_data{i}(:,tidx);
             if i>length(keep_data_out)
                 keep_data_out{i} = kd;
             else
