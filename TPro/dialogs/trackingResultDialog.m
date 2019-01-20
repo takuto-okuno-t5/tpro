@@ -22,7 +22,7 @@ function varargout = trackingResultDialog(varargin)
 
     % Edit the above text to modify the response to help trackingResultDialog
 
-    % Last Modified by GUIDE v2.5 09-Jan-2019 14:05:59
+    % Last Modified by GUIDE v2.5 20-Jan-2019 18:22:54
 
     % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -209,6 +209,7 @@ function trackingResultDialog_OpeningFcn(hObject, eventdata, handles, varargin)
     sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
     sharedInst.nnAlgorithm = readTproConfig('nnAlgorithm', 'single'); %'single', 'average', 'ward';
     sharedInst.nnHeight = readTproConfig('nnHeight', 5);
+    sharedInst.dmGrid = readTproConfig('densityMapGrid', 2);
 
     % calc color map for ewd
     sharedInst.ewdColors = expandColor({[0 0 .45], [0 0 1], [1 0 0], [1 .7 .7]}, 100);
@@ -2502,6 +2503,34 @@ function Untitled_39_Callback(hObject, eventdata, handles)
     popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
 end
 
+% --------------------------------------------------------------------
+function Untitled_40_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_40 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    X = sharedInst.keep_data{2};
+    Y = sharedInst.keep_data{1};
+    img_h = sharedInst.img_h;
+    img_w = sharedInst.img_w;
+    grid = ceil(sharedInst.dmGrid / sharedInst.mmPerPixel);
+
+    results = calcDensityMapGrid(X, Y, img_w, img_h, grid, grid);
+
+    % add result to axes & show in axes
+    cname = 'density_map_grid_result';
+    addResult2Axes(handles, results, cname, handles.popupmenu8);
+    result = results;
+    save([sharedInst.confPath 'multi/' cname '.mat'], 'result');
+    popupmenu8_Callback(handles.popupmenu8, eventdata, handles);
+    % color bar
+    colbar = zeros(240,10,3);
+    for j=1:240
+        colbar(j,:,1) = (240-j+1)/240;
+    end
+    colbar = convertColor(colbar,[1,0.9,0.4,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
+    figure;imshow(colbar);
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utility functions
@@ -2546,6 +2575,24 @@ function showFrameInAxes(hObject, handles, frameNum)
         redImage = img(:,:,2);
         redImage = uint8(single(redImage).*(imcomplement(map*0.1)));
         img(:,:,2) = redImage;
+    end
+    if strcmp(sharedInst.axesType1,'density_map_grid_result')
+        w = ceil(sharedInst.dmGrid / sharedInst.mmPerPixel);
+        h = ceil(sharedInst.dmGrid / sharedInst.mmPerPixel);
+        gridDensity = getappdata(handles.figure1, 'density_map_grid_result');
+        gdMax = max(max(gridDensity));
+        map = zeros(img_h, img_w);
+        for i=1:size(gridDensity,2)
+            iEnd = min([i*h, img_h]);
+            for j=1:size(gridDensity,1)
+                jEnd = min([j*w, img_w]);
+                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i) * 0.015;
+            end
+        end
+        % to heat map
+        map(map>1) = 1;
+        img = convertColor(map,[1,0.9,0.4,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
+        map(sharedInst.roiMaskImage==0) = 0;
     end
 
     % show original image
