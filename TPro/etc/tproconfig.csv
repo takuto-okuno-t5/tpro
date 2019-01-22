@@ -52,4 +52,4 @@ groupRejectDist,700
 groupDuration,0
 interactAngle,75
 polarChartRadius,15
-densityMapGrid,1
+densityMapGrid,0.5

@@ -2528,7 +2528,7 @@ function Untitled_40_Callback(hObject, eventdata, handles)
     for j=1:240
         colbar(j,:,1) = (240-j+1)/240;
     end
-    colbar = convertColor(colbar,[1,0.9,0.4,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
+    colbar = convertColor(colbar,[1,0.9,0.6,0.2,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,1,0; 0,0,1; 0,0,0.1]);
     figure;imshow(colbar);
 end
 
@@ -2586,12 +2586,12 @@ function showFrameInAxes(hObject, handles, frameNum)
             iEnd = min([i*h, img_h]);
             for j=1:size(gridDensity,1)
                 jEnd = min([j*w, img_w]);
-                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i) * 0.015;
+                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i) * 0.0006;
             end
         end
         % to heat map
         map(map>1) = 1;
-        img = convertColor(map,[1,0.9,0.4,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,0,1; 0,0,0.1]);
+        img = convertColor(map,[1,0.9,0.6,0.2,0.1,0],[1,1,1; 1,1,0; 1,0,0; 0,1,0; 0,0,1; 0,0,0.1]);
         map(sharedInst.roiMaskImage==0) = 0;
     end
 
@@ -2812,7 +2812,11 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
 
     for fn = 1:flyNum
-        col = mod(fn,6)+1; %pick color
+        col = C_LIST(mod(fn,6)+1); %pick color
+        % show patch point
+        if strcmp(sharedInst.axesType1,'distance_from_point_result') || strcmp(sharedInst.axesType1,'distance_from_point_result_tracking')
+            col = [0.7, 0.7, 0.7];
+        end
 
         if sharedInst.listMode == 2 && listFly ~= fn
             continue; % show only one fly
@@ -2849,7 +2853,7 @@ function showFrameInAxes(hObject, handles, frameNum)
                 end
             end
             if sharedInst.lineLength > 0
-                plot(tmX, tmY, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                plot(tmX, tmY, '-', 'markersize', 1, 'color', col, 'linewidth', 1)  % rodent 1 instead of Cz
             end
 
             % show number
@@ -2880,7 +2884,7 @@ function showFrameInAxes(hObject, handles, frameNum)
                     end
                 end
                 if sharedInst.lineLength > 0
-                    plot(tmX, tmY, '-', 'markersize', 1, 'color', C_LIST(col), 'linewidth', 1)  % rodent 1 instead of Cz
+                    plot(tmX, tmY, '-', 'markersize', 1, 'color', col, 'linewidth', 1)  % rodent 1 instead of Cz
                 end
 
                 % show number
