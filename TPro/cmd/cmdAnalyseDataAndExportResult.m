@@ -755,6 +755,15 @@ function cmdAnalyseDataAndExportResult(handles)
                     outputPath = [handles.export '/'];
                     dataFileName = [outputPath name '_' filename '_roi' num2str(i) '_' handles.analyseSrc];
                 end
+                if ~isempty(handles.procOps)
+                    for j=1:length(handles.procOps)
+                        op = handles.procOps{j};
+                        op = strrep(op,'==','_');
+                        op = strrep(op,'>','_');
+                        op = strrep(op,'<','_');
+                        dataFileName = [dataFileName '_' op];
+                    end
+                end
                 disp(['exporting a file : ' dataFileName]);
                 saveNxNmatText(dataFileName, [], roiData{i});
             end
@@ -844,7 +853,17 @@ function cmdAnalyseDataAndExportResult(handles)
             joinHeader = {};
         end
         outputPath = [handles.export '/'];
-        dataFileName = [outputPath name '_' rangeName handles.analyseSrc postText];
+        dataFileName = [outputPath name '_' rangeName handles.analyseSrc];
+        if ~isempty(handles.procOps)
+            for j=1:length(handles.procOps)
+                op = handles.procOps{j};
+                op = strrep(op,'==','_');
+                op = strrep(op,'>','_');
+                op = strrep(op,'<','_');
+                dataFileName = [dataFileName '_' op];
+            end
+        end
+        dataFileName = [dataFileName postText];
         saveNxNmatText(dataFileName, joinHeader, joinData);
     end
 
