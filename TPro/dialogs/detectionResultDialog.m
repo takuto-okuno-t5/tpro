@@ -1037,9 +1037,7 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius
-        r = mm / sharedInst.mmPerPixel;
-        cnr = dcdCnRadius / sharedInst.mmPerPixel;
-        result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, cnr);
+        result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, mm, dcdCnRadius, sharedInst.mmPerPixel);
 
         % show in plot
         if lastMax < max(result)
@@ -1057,7 +1055,7 @@ function Untitled_22_Callback(hObject, eventdata, handles)
     % multi ROI
     if length(sharedInst.roiMasks) > 1
         for i = 1:length(sharedInst.roiMasks)
-            result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks{i}, r, cnr);
+            result = calcLocalDensityDcd(sharedInst.X, sharedInst.Y, sharedInst.roiMasks{i}, radius, dcdCnRadius, sharedInst.mmPerPixel);
             addResult2Axes(handles, result, [cname num2str(i)], handles.popupmenu4);
             save([sharedInst.confPath 'multi/' cname num2str(i) '.mat'], 'result');
         end
@@ -1537,8 +1535,8 @@ function Untitled_21_Callback(hObject, eventdata, handles)
     sharedInst.dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
 
-    r = sharedInst.dcdRadius / sharedInst.mmPerPixel;
-    cnr = sharedInst.dcdCnRadius / sharedInst.mmPerPixel;
+    r = sharedInst.dcdRadius;
+    cnr = sharedInst.dcdCnRadius;
     minV = 1.0062912 / (r*r*pi);
     maxTest = 100000;
     maxFly = 50;
@@ -1552,7 +1550,7 @@ function Untitled_21_Callback(hObject, eventdata, handles)
         [X, Y] = calcRandomDots(sharedInst.roiMasks{1}, 1, maxTest, i);
 
         % calc DCD
-        result = calcLocalDensityDcd(X, Y, sharedInst.roiMaskImage, r, cnr);
+        result = calcLocalDensityDcd(X, Y, sharedInst.roiMaskImage, r, cnr, sharedInst.mmPerPixel);
         %%minIdx = find(result < minV);
         %%minVRate(i) = length(minIdx) / maxTest;
         %%result(minIdx) = [];

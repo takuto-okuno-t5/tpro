@@ -1448,8 +1448,8 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    X = sharedInst.keep_data{2};
-    Y = sharedInst.keep_data{1};
+    X = sharedInst.keep_data{2} * sharedInst.mmPerPixel;
+    Y = sharedInst.keep_data{1} * sharedInst.mmPerPixel;
 
     % load latest config
     sharedInst.dcdRadius = readTproConfig('dcdRadius', 7.5);
@@ -1462,8 +1462,8 @@ function Untitled_13_Callback(hObject, eventdata, handles)
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
-        r = mm / sharedInst.mmPerPixel;
-        cnr = dcdCnRadius / sharedInst.mmPerPixel;
+        r = mm;
+        cnr = dcdCnRadius;
         [means, results] = calcLocalDensityDcdAllFly(X, Y, sharedInst.roiMaskImage, r, cnr);
 
         % show in plot
@@ -1507,8 +1507,8 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    X = sharedInst.keep_data{2};
-    Y = sharedInst.keep_data{1};
+    X = sharedInst.keep_data{2} * sharedInst.mmPerPixel;
+    Y = sharedInst.keep_data{1} * sharedInst.mmPerPixel;
     multiR = 2.5:0.5:10;
     dcdCnRadius = sharedInst.dcdCnRadius;
     t = round((sharedInst.frameNum - sharedInst.startFrame) / sharedInst.frameSteps) + 1;
@@ -1516,8 +1516,8 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
-    multiR = multiR / sharedInst.mmPerPixel;
-    cnR = dcdCnRadius / sharedInst.mmPerPixel;
+    multiR = multiR;
+    cnR = dcdCnRadius;
     results = calcLocalDensityDcdAllFlyMultiR(X, Y, sharedInst.roiMaskImage, multiR, cnR);
 
     % show in plot
@@ -1545,15 +1545,15 @@ function Untitled_8_Callback(hObject, eventdata, handles)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-    X = sharedInst.keep_data{2};
-    Y = sharedInst.keep_data{1};
+    X = sharedInst.keep_data{2} * sharedInst.mmPerPixel;
+    Y = sharedInst.keep_data{1} * sharedInst.mmPerPixel;
     radius = sharedInst.ewdRadius;
 
     % calc local density of ewd
     hFig = [];
     lastMax = 0;
     for mm=radius:5:radius % start and end value is just for debug
-        r = mm / sharedInst.mmPerPixel;
+        r = mm;
         [means, results] = calcLocalDensityEwdAllFly(X, Y, sharedInst.roiMaskImage, r);
 
         % show in plot
@@ -1598,6 +1598,8 @@ function Untitled_9_Callback(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
     areaMap = sharedInst.roiMaskImage;
+    X = sharedInst.keep_data{2} * sharedInst.mmPerPixel;
+    Y = sharedInst.keep_data{1} * sharedInst.mmPerPixel;
     radius = sharedInst.pdbscanRadius;
 
     % calc local density of pixel density-based scan
@@ -1610,8 +1612,8 @@ function Untitled_9_Callback(hObject, eventdata, handles)
                     'setappdata(gcbf,''canceling'',1)');
         setappdata(hWaitBar,'canceling',0)
 
-        r = mm / sharedInst.mmPerPixel;
-        result = calcLocalDensityPxScan(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, r, hWaitBar, areaMap);
+        r = mm;
+        result = calcLocalDensityPxScan(X, Y, sharedInst.roiMaskImage, r, hWaitBar, areaMap);
 
         % show in plot
         if lastMax < max(result)

@@ -211,9 +211,9 @@ function cmdAnalyseDataAndExportResult(handles)
                 data = be.annotation;
             end
         case 'dcdcalc'
-            r = dcdRadius / mmPerPixel;
-            cnr = dcdCnRadius / mmPerPixel;
-            [means, result] = calcLocalDensityDcdAllFly(keep_data{2}, keep_data{1}, [], r, cnr); % empty roiMask
+            X = keep_data{2} * mmPerPixel;
+            Y = keep_data{1} * mmPerPixel;
+            [means, result] = calcLocalDensityDcdAllFly(X, Y, [], dcdRadius, dcdCnRadius); % empty roiMask
             save([confPath 'multi/aggr_dcd_result_tracking.mat'], 'result');
             disp(['calc DCD : ' name]);
         case 'dcd'

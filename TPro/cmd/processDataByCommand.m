@@ -54,13 +54,13 @@ function data = processDataByCommand(ops, data, fpsNum)
             if strcmp(colop, 'count') > 0
                 % check column count operation
                 if strfind(colopval,'==') > 0
-                    val = str2num(extractAfter(colopval,'=='));
+                    val = str2num(colopval(strfind(colopval,'==')+2:end));
                     opn = 1;
                 elseif strfind(colopval,'>') > 0
-                    val = str2num(extractAfter(colopval,'>'));
+                    val = str2num(colopval(strfind(colopval,'>')+1:end));
                     opn = 2;
                 elseif strfind(colopval,'<') > 0
-                    val = str2num(extractAfter(colopval,'<'));                
+                    val = str2num(colopval(strfind(colopval,'<')+1:end));
                     opn = 3;
                 else
                     val = 0;
@@ -114,13 +114,13 @@ function data = processDataByCommand(ops, data, fpsNum)
             % check row count operation
             procData = nan(frameNum,1);
             if strfind(op,'==') > 0
-                val = str2num(extractAfter(op,'=='));
+                val = str2num(op(strfind(op,'==')+2:end));
                 opn = 1;
             elseif strfind(op,'>') > 0
-                val = str2num(extractAfter(op,'>'));
+                val = str2num(op(strfind(op,'>')+1:end));
                 opn = 2;
             elseif strfind(op,'<') > 0
-                val = str2num(extractAfter(op,'<'));                
+                val = str2num(op(strfind(op,'<')+1:end));
                 opn = 3;
             else
                 val = 0;

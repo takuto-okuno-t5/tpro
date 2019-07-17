@@ -36,8 +36,6 @@ function cmdCalcDcdAndExportResult(handles)
         name = records{data_th, 2};
         roiNum = records{data_th, 10};
         mmPerPixel = records{data_th, 9};
-        r = dcdRadius / mmPerPixel;
-        cnr = dcdCnRadius / mmPerPixel;
 
         % get path of output folder
         confPath = [videoPaths{data_th} videoFiles{data_th} '_tpro/'];
@@ -78,13 +76,15 @@ function cmdCalcDcdAndExportResult(handles)
         matFile = [confPath 'multi/detect_' filename,'.mat'];
         if exist(matFile,'file')
             load(matFile);
-            means = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
+            means = calcLocalDensityDcd(X, Y, [], dcdRadius, dcdCnRadius, mmPerPixel); % empty roiMask
             means = means';
         end
         matFile = [confPath 'multi/track_' filename,'.mat'];
         if exist(matFile,'file')
             load(matFile);
-            [means, results] = calcLocalDensityDcdAllFly(keep_data{2}, keep_data{1}, [], r, cnr); % empty roiMask
+            X = keep_data{2} * mmPerPixel;
+            Y = keep_data{1} * mmPerPixel;
+            [means, results] = calcLocalDensityDcdAllFly(X, Y, [], dcdRadius, dcdCnRadius); % empty roiMask
         end
 
         % save data as text

@@ -1,5 +1,5 @@
 % calculate local density (DCD)
-function result = calcLocalDensityDcd(CX, CY, roiMask, r, cnR)
+function result = calcLocalDensityDcd(CX, CY, roiMask, r, cnR, mmPerPixel)
     img_h = size(roiMask,1);
     img_w = size(roiMask,2);
     xsize = length(CX);
@@ -31,6 +31,8 @@ function result = calcLocalDensityDcd(CX, CY, roiMask, r, cnR)
                 fy(nanIdx) = NaN;
             end
         end
+        fx = fx * mmPerPixel;
+        fy = fy * mmPerPixel;
         [result(row_count), dcdfly] = calcLocalDensityDcdFrame(fy,fx,r,cnR);
     end
     time = toc;

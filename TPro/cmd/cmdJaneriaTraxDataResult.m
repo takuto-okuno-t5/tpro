@@ -79,11 +79,8 @@ function cmdJaneriaTraxDataResult(handles)
             [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
                 fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat([handles.janeriaTrxPath '/' fnames{i,1} '/'], 'registered_trx.mat', img_h);
 
-            r = dcdRadius / mmperpx;
-            cnr = dcdCnRadius / mmperpx;
-
             % calc DCD
-            means = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
+            means = calcLocalDensityDcd(X, Y, [], dcdRadius, dcdCnRadius, mmperpx); % empty roiMask
             count = count + 1;
 
             data{i,1} = fnames{i,2};
@@ -112,11 +109,8 @@ function cmdJaneriaTraxDataResult(handles)
                 [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
                     fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 
-                r = dcdRadius / mmperpx;
-                cnr = dcdCnRadius / mmperpx;
-
                 % calc DCD
-                means1 = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
+                means1 = calcLocalDensityDcd(X, Y, [], dcdRadius, dcdCnRadius, mmperpx); % empty roiMask
                 means = [means; means1];
                 count = count + 1;
             end
@@ -147,11 +141,8 @@ function cmdJaneriaTraxDataResult(handles)
                 [X, Y, keep_angle_sorted, keep_direction_sorted, keep_areas, keep_ecc_sorted, keep_wings_sorted, keep_gender, keep_data, keep_mean_blobmajor, keep_mean_blobminor, ...
                     fps, mmperpx, startframe, endframe, maxframe] = loadJaneriaTraxMat(jtrxPath, 'registered_trx.mat', img_h);
 
-                r = dcdRadius / mmperpx;
-                cnr = dcdCnRadius / mmperpx;
-
                 % calc DCD
-                means1 = calcLocalDensityDcd(X, Y, [], r, cnr); % empty roiMask
+                means1 = calcLocalDensityDcd(X, Y, [], dcdRadius, dcdCnRadius, mmperpx); % empty roiMask
                 means1m = mean(means1);
                 means = [means; means1m];
                 count = count + 1;
