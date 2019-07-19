@@ -166,6 +166,10 @@ function cmdAnalyseDataAndExportResult(handles)
             data = keep_data{2};
         case 'y'
             data = keep_data{1};
+        case 'vx'
+            data = keep_data{4};
+        case 'vy'
+            data = keep_data{3};
         case 'vxy'
             data = vxy;
         case 'dir'
