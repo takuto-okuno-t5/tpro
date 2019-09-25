@@ -48,8 +48,8 @@ function saveTrackingResultText(dataFileName, keep_data, end_row, flyNum, img_h,
         nanIdxX = find((X > img_w) | (X < 1));
         roiIdx = (X-1).*img_h + Y;
         roiIdx(isnan(roiIdx)) = 1; % TOOD: set dummy. this might be bad with empty ROI.
-        roiIdx(roiIdx > img_h*img_w) = 1; % remove outside of image
-        if isempty(roiMask)
+        roiIdx((roiIdx > img_h*img_w) | (roiIdx < 1)) = 1; % remove outside of image (bug fixed)
+        if isempty(roiMask) || isempty(roiIdx)
             roiIdx2 = [];
         else
             roiIdx2 = find(roiMask(roiIdx) <= 0);

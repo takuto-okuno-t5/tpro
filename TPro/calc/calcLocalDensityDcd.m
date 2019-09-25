@@ -17,7 +17,7 @@ function result = calcLocalDensityDcd(CX, CY, roiMask, r, cnR, mmPerPixel)
             nanIdxX = find((X > img_w) | (X < 1));
             roiIdx = (X-1).*img_h + Y;
             roiIdx(isnan(roiIdx)) = 1; % TOOD: set dummy. this might be bad with empty ROI.
-            roiIdx(roiIdx > img_h*img_w) = 1; % remove outside of image
+            roiIdx((roiIdx > img_h*img_w) | (roiIdx < 1)) = 1; % remove outside of image (bug fixed)
             nanIdx = find(roiMask(roiIdx) <= 0);
             if ~isempty(nanIdxY)
                 nanIdx = [nanIdx, nanIdxY];
