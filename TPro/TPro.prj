@@ -1,9 +1,9 @@
 <deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
-  <configuration build-checksum="2251512554" file="D:\tools\tprowork\program\TPro\TPro.prj" location="D:\tools\tprowork\program\TPro" name="TPro" preferred-package-location="D:\tools\tprowork\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="アプリケーション コンパイラ">
+  <configuration build-checksum="2312924975" file="D:\tools\tprowork\program\TPro\TPro.prj" location="D:\tools\tprowork\program\TPro" name="TPro" preferred-package-location="D:\tools\tprowork\program\TPro\TPro\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="アプリケーション コンパイラ">
     <param.appname>TPro</param.appname>
     <param.icon />
     <param.icons />
-    <param.version>1.4</param.version>
+    <param.version>1.5</param.version>
     <param.authnamewatermark>t.okuno, pudith</param.authnamewatermark>
     <param.email />
     <param.company>tanimoto lab. tohoku univ</param.company>
