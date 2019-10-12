@@ -92,6 +92,7 @@ handles.range = {};
 handles.join = [];
 handles.joinr = [];
 handles.procOps = {};
+handles.srcOps = {};
 handles.bgOp = {};
 handles.percentile = [];
 handles.merge = {};
@@ -146,6 +147,9 @@ while true
             i = i + 1;
         case {'--src'}
             handles.analyseSrc = varargin{i+1};
+            i = i + 1;
+        case {'--sop'}
+            handles.srcOps = [handles.srcOps, varargin{i+1}];
             i = i + 1;
         case {'--range'}
             handles.range = {varargin{i+1} varargin{i+2}};
@@ -206,6 +210,7 @@ while true
             disp('  --dcdp file         set dcd percentile map [file]');
             disp('  --src type          specify analysing data source (tracking data)');
             disp('                      [type] : x,y,vxy,dir,av,ecc,rwa,lwa,dcdcalc,dcd,gcalc,gtrack,group,gcount,becalc,be,chase, ...');
+            disp('  --sop op            options for data source (tracking data)');
             disp('  --range start end   analysing range of source data from [start] to [end]');
             disp('  --proc op           process analysed data by [op] operation');
             disp('                      [op] : sum,mean,max,min,count==N,nancount, ...');

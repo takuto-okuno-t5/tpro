@@ -214,6 +214,18 @@ function cmdAnalyseDataAndExportResult(handles)
             if ~isempty(be)
                 data = be.annotation;
             end
+        case 'bebybe'
+            if ~isempty(be)
+                tmp = be.annotation;
+                for j=1:length(handles.srcOps)
+                    op = str2num(handles.srcOps{j});
+                    idx = find(be.annotation == op);
+                    tmp(idx) = 1000;
+                end
+                data = be.annotation;
+                idx = find(tmp < 1000);
+                data(idx) = NaN;
+            end
         case 'dcdcalc'
             X = keep_data{2} * mmPerPixel;
             Y = keep_data{1} * mmPerPixel;
@@ -223,6 +235,18 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'dcd'
             if ~isempty(dcd)
                 data = dcd.result;
+            end
+        case 'dcdbybe'
+            if ~isempty(dcd) && ~isempty(be)
+                tmp = dcd.result;
+                for j=1:length(handles.srcOps)
+                    op = str2num(handles.srcOps{j});
+                    idx = find(be.annotation == op);
+                    tmp(idx) = 1;
+                end
+                data = dcd.result;
+                idx = find(tmp < 1);
+                data(idx) = NaN;
             end
         case 'patchdistcalc'
             patchFileName = [confPath 'patch_points.csv'];
@@ -858,6 +882,12 @@ function cmdAnalyseDataAndExportResult(handles)
         end
         outputPath = [handles.export '/'];
         dataFileName = [outputPath name '_' rangeName handles.analyseSrc];
+        if ~isempty(handles.srcOps)
+            for j=1:length(handles.srcOps)
+                op = handles.srcOps{j};
+                dataFileName = [dataFileName op];
+            end
+        end
         if ~isempty(handles.procOps)
             for j=1:length(handles.procOps)
                 op = handles.procOps{j};

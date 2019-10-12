@@ -56,6 +56,12 @@ function data = processDataByCommand(ops, data, fpsNum)
                 if strfind(colopval,'==') > 0
                     val = str2num(colopval(strfind(colopval,'==')+2:end));
                     opn = 1;
+                elseif strfind(colopval,'>=') > 0
+                    val = str2num(colopval(strfind(colopval,'>=')+2:end));
+                    opn = 4;
+                elseif strfind(colopval,'<=') > 0
+                    val = str2num(colopval(strfind(colopval,'<=')+2:end));
+                    opn = 5;
                 elseif strfind(colopval,'>') > 0
                     val = str2num(colopval(strfind(colopval,'>')+1:end));
                     opn = 2;
@@ -80,6 +86,10 @@ function data = processDataByCommand(ops, data, fpsNum)
                             procData(i,fn) = length(find(data(bg:en,fn)>val));
                         case 3
                             procData(i,fn) = length(find(data(bg:en,fn)<val));
+                        case 4
+                            procData(i,fn) = length(find(data(bg:en,fn)>=val));
+                        case 5
+                            procData(i,fn) = length(find(data(bg:en,fn)<=val));
                         end
                     end
                 end
@@ -116,6 +126,12 @@ function data = processDataByCommand(ops, data, fpsNum)
             if strfind(op,'==') > 0
                 val = str2num(op(strfind(op,'==')+2:end));
                 opn = 1;
+            elseif strfind(op,'>=') > 0
+                val = str2num(op(strfind(op,'>=')+2:end));
+                opn = 4;
+            elseif strfind(op,'<=') > 0
+                val = str2num(op(strfind(op,'<=')+2:end));
+                opn = 5;
             elseif strfind(op,'>') > 0
                 val = str2num(op(strfind(op,'>')+1:end));
                 opn = 2;
@@ -135,6 +151,10 @@ function data = processDataByCommand(ops, data, fpsNum)
                     procData(i) = length(find(data(i,:)>val));
                 case 3
                     procData(i) = length(find(data(i,:)<val));
+                case 4
+                    procData(i) = length(find(data(i,:)>=val));
+                case 5
+                    procData(i) = length(find(data(i,:)<=val));
                 end
             end
         else
