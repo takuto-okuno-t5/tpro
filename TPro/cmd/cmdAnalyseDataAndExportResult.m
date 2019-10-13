@@ -226,6 +226,22 @@ function cmdAnalyseDataAndExportResult(handles)
                 idx = find(tmp < 1000);
                 data(idx) = NaN;
             end
+        case 'bebydcd'
+            if ~isempty(dcd) && ~isempty(be)
+                tmp = be.annotation;
+                for j=1:length(handles.srcOps)
+                    op = str2num(handles.srcOps{j});
+                    idx = find(be.annotation == op);
+                    tmp(idx) = 1000;
+                end
+                data = be.annotation;
+                idx = find(tmp < 1000);
+                data(idx) = NaN;
+                dcdlow = str2num(handles.srcOps{1});
+                dcdhigh = str2num(handles.srcOps{2});
+                idx = find(dcd.result < dcdlow | dcd.result > dcdhigh);
+                data(idx) = NaN;
+            end
         case 'dcdcalc'
             X = keep_data{2} * mmPerPixel;
             Y = keep_data{1} * mmPerPixel;
@@ -247,6 +263,27 @@ function cmdAnalyseDataAndExportResult(handles)
                 data = dcd.result;
                 idx = find(tmp < 1);
                 data(idx) = NaN;
+            end
+        case 'dcdhistbybe'
+            if ~isempty(dcd) && ~isempty(be)
+                tmp = dcd.result;
+                for j=1:length(handles.srcOps)
+                    op = str2num(handles.srcOps{j});
+                    idx = find(be.annotation == op);
+                    tmp(idx) = 1;
+                end
+                tmp2 = dcd.result;
+                idx = find(tmp < 1);
+                tmp2(idx) = NaN;
+                data = zeros(16,1);
+                base = 0.002;
+                step = 0.0005;
+                for j=1:length(data)
+                    low = base + (j-1)*step;
+                    high = low + step;
+                    idx = find(tmp2 >= low & tmp2 < high);
+                    data(j) = length(idx);
+                end
             end
         case 'patchdistcalc'
             patchFileName = [confPath 'patch_points.csv'];
