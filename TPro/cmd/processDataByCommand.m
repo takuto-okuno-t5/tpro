@@ -120,6 +120,81 @@ function data = processDataByCommand(ops, data, fpsNum)
                     end
                 end
             end
+        elseif strcmp(prestr3, 'all') > 0
+            % check all matrix operation
+            af = op(4:end);
+            if strfind(af,'sum') > 0
+                colop = af(1:3);
+            elseif strfind(af,'mean') > 0
+                colop = af(1:4);
+            elseif strfind(af,'min') > 0
+                colop = af(1:3);
+            elseif strfind(af,'max') > 0
+                colop = af(1:3);
+            elseif strfind(af,'count') > 0
+                colop = af(1:5);
+            elseif strfind(af,'median') > 0
+                colop = af(1:6);
+            else
+                continue;
+            end
+            
+            procData = nan(1,1);
+
+            if strcmp(colop, 'count') > 0
+                % check column count operation
+                if strfind(colopval,'==') > 0
+                    val = str2num(colopval(strfind(colopval,'==')+2:end));
+                    opn = 1;
+                elseif strfind(colopval,'>=') > 0
+                    val = str2num(colopval(strfind(colopval,'>=')+2:end));
+                    opn = 4;
+                elseif strfind(colopval,'<=') > 0
+                    val = str2num(colopval(strfind(colopval,'<=')+2:end));
+                    opn = 5;
+                elseif strfind(colopval,'>') > 0
+                    val = str2num(colopval(strfind(colopval,'>')+1:end));
+                    opn = 2;
+                elseif strfind(colopval,'<') > 0
+                    val = str2num(colopval(strfind(colopval,'<')+1:end));
+                    opn = 3;
+                else
+                    val = 0;
+                    opn = 2;
+                end
+                
+                switch opn
+                    case 1
+                        procData = length(find(data(:,:)==val));
+                    case 2
+                        procData = length(find(data(:,:)>val));
+                    case 3
+                        procData = length(find(data(:,:)<val));
+                    case 4
+                        procData = length(find(data(:,:)>=val));
+                    case 5
+                        procData = length(find(data(:,:)<=val));
+                end
+            else
+                switch colop
+                case 'sum'
+                    procData = nansum(nansum(data));
+                case 'mean'
+                    total = nansum(nansum(data));
+                    count = length(find(~isnan(data)));
+                    procData = total / count;
+%                case 'median'
+%                    procData = nanmedian(data,'all');
+                case 'min'
+                    procData = nanmin(nanmin(data));
+                case 'max'
+                    procData = nanmax(nanmax(data));
+                case 'nancount'
+                    procData = length(find(isnan(data)));
+                otherwise
+                    procData = [];
+                end
+            end
         elseif strcmp(prestr5, 'count') > 0
             % check row count operation
             procData = nan(frameNum,1);
