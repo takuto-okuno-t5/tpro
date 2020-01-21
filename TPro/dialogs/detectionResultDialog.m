@@ -22,7 +22,7 @@ function varargout = detectionResultDialog(varargin)
 
 % Edit the above text to modify the response to help detectionResultDialog
 
-% Last Modified by GUIDE v2.5 14-Mar-2018 17:37:48
+% Last Modified by GUIDE v2.5 21-Jan-2020 22:49:56
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -1464,6 +1464,39 @@ function Untitled_15_Callback(hObject, eventdata, handles)
     showFrameInAxes(hObject, handles, sharedInst.frameNum);
 end
 
+
+% --------------------------------------------------------------------
+function Untitled_35_Callback(hObject, eventdata, handles)
+    % hObject    handle to Untitled_35 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    % hObject    handle to Untitled_15 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
+    beWalkLv = readTproConfig('beWalkLv', 8);
+    maxV = beWalkLv / sharedInst.mmPerPixel / sharedInst.fpsNum;
+
+    % input dot number
+    [dlg, dotNum] = inputPointNumberDialog();
+    delete(dlg);
+
+    dotNum = str2num(dotNum);
+    if isempty(dotNum) || dotNum < 0
+        return;
+    end
+
+    [X, Y] = calcRandomMove(sharedInst.roiMasks{1}, sharedInst.startFrame, sharedInst.endFrame, dotNum, maxV);
+    sharedInst.X = X;
+    sharedInst.Y = Y;
+
+    sharedInst.isModified = true;
+    set(handles.pushbutton6, 'Enable', 'on');
+    set(handles.Untitled_27, 'Enable', 'on');
+    setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
+    showFrameInAxes(hObject, handles, sharedInst.frameNum);
+end
+
 % --------------------------------------------------------------------
 function Untitled_19_Callback(hObject, eventdata, handles)
     % hObject    handle to Untitled_19 (see GCBO)
@@ -2052,3 +2085,4 @@ function showFrameInAxes(hObject, handles, frameNum)
     end
     guidata(hObject, handles);    % Update handles structure
 end
+
