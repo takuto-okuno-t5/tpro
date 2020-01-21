@@ -1,5 +1,5 @@
 % ----- calculate local density (frame) -----
-function [result, gridDensity] = calcLocalDensityGridFrame(x, y, gridAreas, img_w, img_h, width, height)
+function [result, gridDensity] = calcLocalDensityGridFrame(x, y, gridAreas, img_w, img_h, width, height, mmPerPixel)
     map = zeros(img_h, img_w);
     for i=1:length(x)
         map(y(i),x(i)) = 1;
@@ -9,7 +9,7 @@ function [result, gridDensity] = calcLocalDensityGridFrame(x, y, gridAreas, img_
     counts = zeros(1,sum(sum(gridAreas>0)));
     gridDensity = gridAreas;
     gridDensity(:,:) = 0;
-    boxArea = width * height;
+    boxArea = (width * mmPerPixel) * (height * mmPerPixel);
     k = 1;
     for i=1:width:img_w
         iEnd = min([i+width-1, img_w]);

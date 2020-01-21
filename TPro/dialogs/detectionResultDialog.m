@@ -1426,7 +1426,7 @@ function Untitled_14_Callback(hObject, eventdata, handles)
     % calc local density of Harmonically Weighted Mean Distance
     w = 10 / sharedInst.mmPerPixel;
     h = 10 / sharedInst.mmPerPixel;
-    result = calcLocalDensityGrid(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, w, h);
+    result = calcLocalDensityGrid(sharedInst.X, sharedInst.Y, sharedInst.roiMaskImage, w, h, sharedInst.mmPerPixel);
     % show in plot
     plotWithNewFigure(handles, result, max(result), 0, []);
     
@@ -1920,13 +1920,13 @@ function showFrameInAxes(hObject, handles, frameNum)
         w = mm / sharedInst.mmPerPixel;
         h = mm / sharedInst.mmPerPixel;
         gridAreas = getGridAreas(sharedInst.roiMaskImage, img_w, img_h, w, h);
-        [result, gridDensity] = calcLocalDensityGridFrame(round(X), round(Y), gridAreas, img_w, img_h, w, h);
+        [result, gridDensity] = calcLocalDensityGridFrame(round(X), round(Y), gridAreas, img_w, img_h, w, h, sharedInst.mmPerPixel);
         map = zeros(img_h, img_w);
         for i=1:size(gridDensity,2)
             iEnd = min([i*h, img_h]);
             for j=1:size(gridDensity,1)
                 jEnd = min([j*w, img_w]);
-                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i)*w*h*0.2;
+                map(((i-1)*h+1):iEnd, ((j-1)*w+1):jEnd) = gridDensity(j,i)*mm*mm*0.2;
             end
         end
         map(sharedInst.roiMaskImage==0) = 0;

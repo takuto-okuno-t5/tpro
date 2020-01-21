@@ -1,5 +1,5 @@
 % calculate local density (HWMD)
-function result = calcLocalDensityGrid(X, Y, roiMask, width, height)
+function result = calcLocalDensityGrid(X, Y, roiMask, width, height, mmPerPixel)
     img_h = size(roiMask, 1);
     img_w = size(roiMask, 2);
     xsize = length(X);
@@ -19,7 +19,7 @@ function result = calcLocalDensityGrid(X, Y, roiMask, width, height)
             fy(idx) = [];
         end
 
-        result(row_count) = calcLocalDensityGridFrame(fx, fy, gridAreas, img_w, img_h, width, height);
+        result(row_count) = calcLocalDensityGridFrame(fx, fy, gridAreas, img_w, img_h, width, height, mmPerPixel);
     end
     time = toc;
     disp(['calcLocalDensityGrid ... done : ' num2str(time) 's']);
