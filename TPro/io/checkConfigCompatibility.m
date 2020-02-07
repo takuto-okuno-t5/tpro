@@ -19,4 +19,7 @@ function outConf = checkConfigCompatibility(inConf)
     if length(outConf) < 44 % auto 1st frame
         outConf = [outConf, '-', 0, '-', 0];
     end
+    if length(outConf) < 48 % body-side detection
+        outConf = [outConf, 0, 0, 0, 0, 0];
+    end
 end

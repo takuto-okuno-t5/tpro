@@ -5,7 +5,8 @@ function [status, B] = createConfigFiles(name, frameNum, frameRate, tmpl, i, out
          0, 0, 0, 0, ... % sharp and contrast
          0, 0, 0, 0, 0, ... % template matching
          0, 0, 0, 0, 0, 0, ... % wing detection
-         '-', 0, '-', 0 ... % auto 1st frame
+         '-', 0, '-', 0, ... % auto 1st frame
+         0, 0, 0, 0, 0  ... % body-side detection
          };
     if ~isempty(tmpl)
         if size(tmpl,1) >= i
