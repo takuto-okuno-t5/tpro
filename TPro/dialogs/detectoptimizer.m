@@ -1174,16 +1174,18 @@ function Untitled_12_Callback(hObject, eventdata, handles)
     else
         img = applyBackgroundSub(handles, sharedInst.originalImage);
     end
-    [dlg, colMin, colMax, rate] = wingDetectionOptionDialog({ 
+    [dlg, colMin, colMax, rate, ignoreEccTh] = wingDetectionOptionDialog({ 
         num2str(sharedInst.wingColorMin), num2str(sharedInst.wingColorMax), num2str(sharedInst.wingRadiusRate), ...
         img, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.blobAreas, ...
-        sharedInst.blobCenterPoints, sharedInst.blobMajorAxis, sharedInst.blobOrient, sharedInst.blobEcc ...
+        sharedInst.blobCenterPoints, sharedInst.blobMajorAxis, sharedInst.blobOrient, sharedInst.blobEcc, ...
+        num2str(sharedInst.ignoreEccTh) ...
         });
     delete(dlg);
 
     sharedInst.wingColorMin = str2num(colMin);
     sharedInst.wingColorMax = str2num(colMax);
     sharedInst.wingRadiusRate = str2num(rate);
+    sharedInst.ignoreEccTh = str2num(ignoreEccTh);
     if ~isempty(colMax)
         sharedInst.isModified = true;
         setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance

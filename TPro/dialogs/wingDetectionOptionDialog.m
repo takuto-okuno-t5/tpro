@@ -22,7 +22,7 @@ function varargout = wingDetectionOptionDialog(varargin)
 
 % Edit the above text to modify the response to help wingDetectionOptionDialog
 
-% Last Modified by GUIDE v2.5 11-Feb-2018 00:02:45
+% Last Modified by GUIDE v2.5 09-Feb-2020 22:02:01
 
 % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -69,6 +69,7 @@ function wingDetectionOptionDialog_OpeningFcn(hObject, eventdata, handles, varar
     handles.blobMajorAxis = c{9};
     handles.blobOrient = c{10};
     handles.blobEcc = c{11};
+    handles.ignoreEccTh = str2num(c{12});
     handles.boxSize = int32(int32(nanmean(handles.blobMajorAxis) * 1.5) / 16) * 16 + 16;
     handles.flyId = 1;
 
@@ -79,6 +80,7 @@ function wingDetectionOptionDialog_OpeningFcn(hObject, eventdata, handles, varar
     set(handles.edit1, 'String', handles.wingColorMin);
     set(handles.edit2, 'String', handles.wingColorMax);
     set(handles.edit3, 'String', handles.rate);
+    set(handles.edit4, 'String', handles.ignoreEccTh);
 
     showAxisImage(handles);
 
@@ -98,6 +100,7 @@ function varargout = wingDetectionOptionDialog_OutputFcn(hObject, eventdata, han
     varargout{2} = get(handles.edit1, 'String');
     varargout{3} = get(handles.edit2, 'String');
     varargout{4} = get(handles.edit3, 'String');
+    varargout{5} = get(handles.edit4, 'String');
 end
 
 
@@ -220,6 +223,29 @@ function edit3_CreateFcn(hObject, eventdata, handles)
     end
 end
 
+
+function edit4_Callback(hObject, eventdata, handles)
+    % hObject    handle to edit4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+    handles.ignoreEccTh = str2num(get(hObject, 'String'));
+    handles = recalcWings(hObject, handles);
+    showAxisImage(handles);
+end
+
+% --- Executes during object creation, after setting all properties.
+function edit4_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to edit4 (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: edit controls usually have a white background on Windows.
+    %       See ISPC and COMPUTER.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+end
+
 % ----------------------------------------------------------------------
 
 function handles = recalcWings(hObject, handles)
@@ -228,7 +254,7 @@ function handles = recalcWings(hObject, handles)
     redImage = uint8(single(handles.step2Image) + single(handles.wingImage.*0.6));
     handles.step2wingImg = cat(3, redImage, handles.step2Image, handles.step2Image);
 
-    params = { handles.wingColorMin, handles.wingColorMax, handles.rate, 1, 10, 0.75 };
+    params = { handles.wingColorMin, handles.wingColorMax, handles.rate, 1, 10, handles.ignoreEccTh };
     [keep_direction, keep_angle, keep_wings] = PD_direction3(handles.step2Image, handles.blobAreas, handles.blobCenterPoints, handles.blobMajorAxis, handles.blobOrient, handles.blobEcc, params);
     handles.keep_direction = keep_direction;
     handles.keep_angle = keep_angle;
@@ -267,3 +293,4 @@ function showAxisImage(handles)
 
     set(handles.text7, 'String', ['fly=' num2str(handles.flyId)]);
 end
+

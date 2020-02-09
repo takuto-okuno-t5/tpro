@@ -9,5 +9,5 @@ function wingImage = applyWingFilter(img, wingColorMin, wingColorMax)
     % blur and cut again
     wingImage = imgaussfilt(wingImage, 1);
     wingImage(wingImage < wingColorMin) = 0;
-    wingImage(wingImage >= wingColorMin) = 255;
+    wingImage(wingImage > 0) = 255;
 end
