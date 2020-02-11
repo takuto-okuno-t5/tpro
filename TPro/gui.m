@@ -1647,6 +1647,7 @@ exportMd = readTproConfig('exportMinDistance', 0);
 dcdRadius = readTproConfig('dcdRadius', 7.5);
 dcdCnRadius = readTproConfig('dcdCnRadius', 2.5);
 exportTrackingText = readTproConfig('exportTrackingText', 1);
+flipRangeMax = readTproConfig('trackingFlipRange', 1);
 
 % set recursion limit
 set(0,'RecursionLimit',RECURSION_LIMIT);
@@ -2232,7 +2233,7 @@ for data_th = 1:size(records,1)
     beJumpLv = readTproConfig('beJumpLv', 63);
     vxy = calcVxy(keep_data{3}, keep_data{4}) * fpsNum * mmPerPixel;
     headAngle = calcDir(keep_data{5}, keep_data{6});
-    [headAngle, keep_data] = fixHeadAndWingAngle(vxy, keep_data{7}, headAngle, keep_data, beJumpLv, ignoreEccTh, fpsNum, start_frame);
+    [headAngle, keep_data] = fixHeadAndWingAngle(vxy, keep_data{7}, headAngle, keep_data, beJumpLv, ignoreEccTh, fpsNum, start_frame, flipRangeMax);
 
     % save keep_data
     save(strcat(confPath,'multi/track_',filename,'.mat'), 'keep_data', 'assignCost', 'trackHistory', '-v7.3');

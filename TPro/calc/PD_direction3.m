@@ -93,8 +93,8 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         % decide front & back side
         frontTotal = sum(sum(colors(:,1:floor(colLen/4)))) + sum(sum(colors(:,floor(colLen/4*3)+1:colLen)));
         backTotal = sum(sum(colors(:,floor(colLen/4)+1:floor(colLen/4*3))));
-idx = find(colors(2:3,:)>0);
-disp(['flynum=' num2str(i) ' : ' num2str(size(idx)) ' : ' num2str(sum(sum(colors(2:3,:)))) ' : ' num2str(blobEcc(i))]);
+%idx = find(colors(2:3,:)>0);
+%disp(['flynum=' num2str(i) ' : ' num2str(size(idx)) ' : ' num2str(sum(sum(colors(2:3,:)))) ' : ' num2str(blobEcc(i))]);
         if frontTotal > backTotal
             vec = -vec;
             angle = angle + 180;

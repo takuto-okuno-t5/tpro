@@ -30,9 +30,4 @@ function sharedInst = getVideoConfigValues(sharedInst, records)
     sharedInst.auto1st1val = getVideoConfigValue(records, 45, 0);
     sharedInst.auto1st2 = getVideoConfigValue(records, 46, '-');
     sharedInst.auto1st2val = getVideoConfigValue(records, 47, 0);
-    sharedInst.bodyColorMin = getVideoConfigValue(records, 48, 0);
-    sharedInst.bodyColorMax = getVideoConfigValue(records, 49, 216);
-    sharedInst.bodyRadiusRate = getVideoConfigValue(records, 50, 0.4);
-    sharedInst.bodyColorRange = getVideoConfigValue(records, 51, 1);
-    sharedInst.bodyCircleStep = getVideoConfigValue(records, 52, 10);
 end

@@ -1,12 +1,12 @@
 %%
-function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_data, vTh, eccTh, fps, startFrame)
+function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_data, vTh, eccTh, fps, startFrame, maxRange)
     % init
     headAngle = headAngleIn;
     rWingAngle = keep_data{9};
     lWingAngle = keep_data{10};
     frame_num = size(headAngle, 1);
     fly_num = size(headAngle, 2);
-    range = int32(fps * 5); % maximus duration of angle flip (5 sec)
+    range = int32(fps * maxRange); % maximum duration of angle flip
 
     % get jumping and climing peak to reset head angle
     v(v>=vTh) = 0;

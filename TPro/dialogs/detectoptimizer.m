@@ -178,11 +178,6 @@ function detectoptimizer_OpeningFcn(hObject, eventdata, handles, varargin)
         sharedInst.wingRadiusRate = cf.wingRadiusRate;
         sharedInst.wingColorRange = cf.wingColorRange;
         sharedInst.wingCircleStep = cf.wingCircleStep;
-        sharedInst.bodyColorMin = cf.bodyColorMin;
-        sharedInst.bodyColorMax = cf.bodyColorMax;
-        sharedInst.bodyRadiusRate = cf.bodyRadiusRate;
-        sharedInst.bodyColorRange = cf.bodyColorRange;
-        sharedInst.bodyCircleStep = cf.bodyCircleStep;
         sharedInst.ignoreEccTh = cf.ignoreEccTh;
         sharedInst.auto1st1 = cf.auto1st1;
         sharedInst.auto1st1val = cf.auto1st1val;
@@ -1249,37 +1244,6 @@ function Untitled_17_Callback(hObject, eventdata, handles)
     sharedInst.xlimit = [1, sharedInst.img_w];
     sharedInst.ylimit = [1, sharedInst.img_h];
     setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-    showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
-end
-
-% --------------------------------------------------------------------
-function Untitled_18_Callback(hObject, eventdata, handles)
-    % hObject    handle to Untitled_18 (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
-
-    if ~isempty(sharedInst.step2Image) && (ndims(sharedInst.step2Image) > 1) % check cache
-        img = sharedInst.step2Image;
-    else
-        img = applyBackgroundSub(handles, sharedInst.originalImage);
-    end
-    [dlg, colMin, colMax, rate] = sideDetectionOptionDialog({ 
-        num2str(sharedInst.bodyColorMin), num2str(sharedInst.bodyColorMax), num2str(sharedInst.bodyRadiusRate), ...
-        img, sharedInst.detectedPointX, sharedInst.detectedPointY, sharedInst.blobAreas, ...
-        sharedInst.blobCenterPoints, sharedInst.blobMajorAxis, sharedInst.blobOrient, sharedInst.blobEcc ...
-        });
-    delete(dlg);
-
-    sharedInst.bodyColorMin = str2num(colMin);
-    sharedInst.bodyColorMax = str2num(colMax);
-    sharedInst.bodyRadiusRate = str2num(rate);
-    if ~isempty(colMax)
-        sharedInst.isModified = true;
-        setappdata(handles.figure1,'sharedInst',sharedInst); % set shared instance
-        set(handles.pushbutton4, 'Enable', 'on');
-        set(handles.Untitled_6, 'Enable', 'on');
-    end
     showFrameInAxes(hObject, handles, sharedInst.imageMode, sharedInst.frameNum);
 end
 
