@@ -3,6 +3,7 @@ function annotation = trapezoidBehaviorClassifier(handles)
     if isfield(handles, 'figure1')
         sharedInst = getappdata(handles.figure1,'sharedInst'); % get shared
         fps = sharedInst.fpsNum;
+        mmPerPixel = sharedInst.mmPerPixel;
         lv = sharedInst.vxy;
         updown = sharedInst.updownVxy;
         av = sharedInst.av;
@@ -12,8 +13,12 @@ function annotation = trapezoidBehaviorClassifier(handles)
         lWingAngle = sharedInst.lWingAngle;
         rwav = sharedInst.rWingAngleV;
         lwav = sharedInst.lWingAngleV;
+        dir = sharedInst.dir;
+        x = sharedInst.keep_data{2}(:,:);
+        y = sharedInst.keep_data{1}(:,:);
     else
         fps = handles.fpsNum;
+        mmPerPixel = handles.mmPerPixel;
         lv = handles.vxy;
         updown = handles.updownVxy;
         av = handles.av;
@@ -23,6 +28,9 @@ function annotation = trapezoidBehaviorClassifier(handles)
         lWingAngle = handles.lWingAngle;
         rwav = handles.rWingAngleV;
         lwav = handles.lWingAngleV;
+        dir = handles.dir;
+        x = handles.keep_data{2}(:,:);
+        y = handles.keep_data{1}(:,:);
     end
 
     accSide = calcDifferential2(side);
@@ -56,10 +64,17 @@ function annotation = trapezoidBehaviorClassifier(handles)
     bePivotGap = round(readTproConfig('bePivotGap', 5/60) * fps);
     beSharpSlope = readTproConfig('beSharpSlope', 19);
     beSmallSlope = readTproConfig('beSmallSlope', 99);
-    beWingAngle = readTproConfig('beWingAngle', 12.5);
+    beWingAngle = readTproConfig('beWingAngle', 18);
     beWingAngleV = readTproConfig('beWingAngleV', 7.5);
     beGroomingGap = round(readTproConfig('beGroomingGap', 1.0) * fps);
     beDurationGm = round(readTproConfig('beDurationGm', 0.2) * fps);
+    beCourtShipWAng = readTproConfig('beCourtShipWAng', 24);
+    beCourtShipWAngV = readTproConfig('beCourtShipWAngV', 7.5);
+    beCourtShipDist = readTproConfig('beCourtShipDist', 6) / mmPerPixel;
+    beCourtShipDir = readTproConfig('beCourtShipDir', 45);
+    beCourtShipLv = readTproConfig('beCourtShipLv', 32);
+    beCourtShipDuration = round(readTproConfig('beCourtShipDuration', 0.2) * fps);
+    beCourtShipGap = round(readTproConfig('beCourtShipGap', 1.0) * fps);
 
     lv(lv <= beMinLv) = 0;  % need to cut noise ...
 
@@ -103,9 +118,14 @@ function annotation = trapezoidBehaviorClassifier(handles)
     sleep = beDurationFilter(sleep, beDurationSleep); % duration filter: >= 5 frames
 
     % ----- grooming -----
-    groom = beGroomingFilter(rWingAngle, lWingAngle, rwav, lwav, lv, beWingAngle, beWingAngleV, beSWalkLv);
+    groom = beGroomingFilter(rWingAngle, lWingAngle, rwav, lwav, lv, beWingAngle, beWingAngleV, beMinLv);
     groom = beGapFilter(groom, beGroomingGap); % long gap filter
     groom = beDurationFilter(groom, beDurationGm); % duration filter
+
+    % ----- courtship -----
+    court = beCourtShipFilter(x, y, lv, dir, rWingAngle, lWingAngle, rwav, lwav, beCourtShipWAng, beCourtShipWAngV, beCourtShipLv, beCourtShipDist, beCourtShipDir);
+    court = beGapFilter(court, beCourtShipGap); % long gap filter
+    court = beDurationFilter(court, beCourtShipDuration); % duration filter
 
     % ----- classifying -----
     annotation(smove==1) = 8; % BE_SMALL_MOVE
@@ -115,6 +135,7 @@ function annotation = trapezoidBehaviorClassifier(handles)
     annotation(pivot==1) = 5; % BE_PIVOT
     annotation(climb==1) = 4; % BE_CLIBM
     annotation(groom==1) = 9; % BE_GROOMING
+    annotation(court==1) = 11; % BE_COURTSHIP
     annotation(right==1) = 3; % BE_RIGHT
     annotation(sleep==1) = 10; % BE_SLEEP
     annotation(jump==1)  = 1; % BE_JUMP

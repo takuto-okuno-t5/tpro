@@ -35,7 +35,7 @@ beChaseMinDist,8
 beChaseMinDir,30
 beChaseDuration,0.166
 beChaseGap,0.166
-beWingAngle,12.5
+beWingAngle,18
 beWingAngleV,7.5
 beGroomingGap,1
 beDurationGm,0.2
@@ -53,3 +53,10 @@ groupDuration,0
 interactAngle,75
 polarChartRadius,15
 densityMapGrid,0.5
+beCourtShipWAng,30
+beCourtShipWAngV,7.5
+beCourtShipDist,6
+beCourtShipDir,45
+beCourtShipLv,32
+beCourtShipDuration,0.2
+beCourtShipGap,1
