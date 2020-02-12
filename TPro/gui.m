@@ -1753,9 +1753,14 @@ for data_th = 1:size(records,1)
         angle_track(:,1:szMax) = keep_angle_sorted{frame_start};
     end
     % wings
-    wings_track = nan(2, MAX_FLIES, 'single'); % initialize the direction
+    wings_track = nan(2, MAX_FLIES, 'single'); % initialize
     if exist('keep_wings_sorted', 'var')
-        direction_track(:,1:size(keep_wings_sorted{frame_start},2)) = keep_wings_sorted{frame_start};
+        wings = keep_wings_sorted{frame_start};
+        wings_track = nan(size(wings,1), MAX_FLIES, 'single'); % initialize
+        wings_track(:,1:size(wings,2)) = wings;
+        if size(wings,1) > 2 % for compatibility
+            KEEP_DATA_MAX = 12;
+        end
     end
     nancount = zeros(1,MAX_FLIES); % counting NaN each fly
     strk_trks = zeros(1, MAX_FLIES);  % counter of how many strikes a track has gotten
@@ -2088,8 +2093,12 @@ for data_th = 1:size(records,1)
         keep_data{7}(t,1:flyNum) = ecc_track(1,1:flyNum);     % ellipse body ecc
         keep_data{8}(t,1:flyNum) = angle_track(1,1:flyNum);   % ellipse body angle (-90 to 90)
         keep_data{9}(t,1:flyNum) = wings_track(1,1:flyNum);   % fly's right wing angle
-        keep_data{10}(t,1:flyNum) = wings_track(2,1:flyNum);  % fly's left wing angle        
-
+        keep_data{10}(t,1:flyNum) = wings_track(2,1:flyNum);  % fly's left wing angle
+        if size(wings_track,1) > 2
+            keep_data{11}(t,1:flyNum) = wings_track(3,1:flyNum);   % fly's right wing angle (reverse side)
+            keep_data{12}(t,1:flyNum) = wings_track(4,1:flyNum);  % fly's left wing angle (reverse side)
+        end
+        
         if ~isempty(Q_loc_meas)
 
             %find the new detections. basically, anything that doesn't get assigned is a new tracking

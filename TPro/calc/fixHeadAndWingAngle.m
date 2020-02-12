@@ -4,6 +4,10 @@ function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_
     headAngle = headAngleIn;
     rWingAngle = keep_data{9};
     lWingAngle = keep_data{10};
+    if size(keep_data,2) > 10
+        rWingAngleR = keep_data{11};
+        lWingAngleR = keep_data{12};
+    end
     frame_num = size(headAngle, 1);
     fly_num = size(headAngle, 2);
     range = int32(fps * maxRange); % maximum duration of angle flip
@@ -69,13 +73,22 @@ function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_
             headAngle(flipRange,i) = mod(headAngle(flipRange,i)+180,360);
             keep_data{5}(flipRange,i) = -keep_data{5}(flipRange,i);
             keep_data{6}(flipRange,i) = -keep_data{6}(flipRange,i);
-            if (isnan(rwflip(flipIdx)) || rwflip(flipIdx)) && (isnan(lwflip(flipIdx)) || lwflip(flipIdx))
-                rWingAngle(flipRange,i) = mod(rWingAngle(flipRange,i)+180,360);
-                lWingAngle(flipRange,i) = mod(lWingAngle(flipRange,i)+180,360);
+            if size(keep_data,2) > 10
+                tmpRWin = rWingAngle(flipRange,i);
+                tmpLWin = lWingAngle(flipRange,i);
+                rWingAngle(flipRange,i) = mod(rWingAngleR(flipRange,i)+180,360);
+                lWingAngle(flipRange,i) = mod(lWingAngleR(flipRange,i)+180,360);
+                rWingAngleR(flipRange,i) = tmpRWin;
+                lWingAngleR(flipRange,i) = tmpLWin;
             else
-                tmp = rWingAngle(flipRange,i);
-                rWingAngle(flipRange,i) = lWingAngle(flipRange,i);
-                lWingAngle(flipRange,i) = tmp;
+                if (isnan(rwflip(flipIdx)) || rwflip(flipIdx)) && (isnan(lwflip(flipIdx)) || lwflip(flipIdx))
+                    rWingAngle(flipRange,i) = mod(rWingAngle(flipRange,i)+180,360);
+                    lWingAngle(flipRange,i) = mod(lWingAngle(flipRange,i)+180,360);
+                else
+                    tmp = rWingAngle(flipRange,i);
+                    rWingAngle(flipRange,i) = lWingAngle(flipRange,i);
+                    lWingAngle(flipRange,i) = tmp;
+                end
             end
             disp(['flip head & wing : fly=' num2str(i) ' frame=' num2str(startFrame+flipIdx-1) ' to ' num2str(startFrame+flipEndIdx-2)]);
             st = flipEndIdx+1;
@@ -92,5 +105,9 @@ function [headAngle, keep_data] = fixHeadAndWingAngle(v, ecc, headAngleIn, keep_
     lWingAngle = mod(lWingAngle + lwflip .* 180, 360);
     keep_data{9} = rWingAngle;
     keep_data{10} = lWingAngle;
+    if size(keep_data,2) > 10
+        keep_data{11} = rWingAngleR;
+        keep_data{12} = lWingAngleR;
+    end
 end
 
