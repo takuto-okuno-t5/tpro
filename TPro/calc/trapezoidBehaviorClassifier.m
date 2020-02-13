@@ -29,8 +29,8 @@ function annotation = trapezoidBehaviorClassifier(handles)
         rwav = handles.rWingAngleV;
         lwav = handles.lWingAngleV;
         dir = handles.dir;
-        x = handles.keep_data{2}(:,:);
-        y = handles.keep_data{1}(:,:);
+        x = handles.x;
+        y = handles.y;
     end
 
     accSide = calcDifferential2(side);

@@ -195,6 +195,9 @@ function cmdAnalyseDataAndExportResult(handles)
         case 'becalc'
             trackingInfo = struct;
             trackingInfo.fpsNum = fpsNum;
+            trackingInfo.mmPerPixel = mmPerPixel;
+            trackingInfo.x = keep_data{2}(:,:);
+            trackingInfo.y = keep_data{1}(:,:);
             trackingInfo.vxy = vxy;
             trackingInfo.accVxy = accVxy;
             trackingInfo.updownVxy = updownVxy;
