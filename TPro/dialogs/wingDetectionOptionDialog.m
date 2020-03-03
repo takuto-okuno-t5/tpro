@@ -289,6 +289,10 @@ function showAxisImage(handles)
     rightWingDir = angleToDirection(handles.keep_wings(1,flyId), wingLength);
     quiver(trimSize/2, trimSize/2, leftWingDir(:,1), leftWingDir(:,2), 0, 'y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
     quiver(trimSize/2, trimSize/2, rightWingDir(:,1), rightWingDir(:,2), 0, 'g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+    leftWingDir = angleToDirection(handles.keep_wings(4,flyId), wingLength);
+    rightWingDir = angleToDirection(handles.keep_wings(3,flyId), wingLength);
+    quiver(trimSize/2, trimSize/2, leftWingDir(:,1), leftWingDir(:,2), 0, ':y', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
+    quiver(trimSize/2, trimSize/2, rightWingDir(:,1), rightWingDir(:,2), 0, ':g', 'MaxHeadSize',0, 'LineWidth',0.2)  %line
     hold off;
 
     set(handles.text7, 'String', ['fly=' num2str(handles.flyId)]);

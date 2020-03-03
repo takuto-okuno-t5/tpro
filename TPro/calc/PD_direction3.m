@@ -68,7 +68,9 @@ function [ keep_direction, keep_angle, keep_wings ] = PD_direction3(step2Image, 
         % find wings both head & tail side (head angle might be flipped by tracking)
         keep_wings(1:2,i) = findWingAngle(angle, colors, step);
 
+        colors2(:,19:36) = colors(:,1:18);
+        colors2(:,1:18) = colors(:,19:36);
         angle = mod(angle + 180, 360);
-        keep_wings(3:4,i) = findWingAngle(angle, colors, step);
+        keep_wings(3:4,i) = findWingAngle(angle, colors2, step);
     end
 end

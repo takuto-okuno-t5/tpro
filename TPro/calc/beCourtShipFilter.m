@@ -8,8 +8,8 @@ function courtship = beCourtShipFilter(x, y, lv, dir, rWingAngle, lWingAngle, rw
 
     rwav = abs(rwav);
     lwav = abs(lwav);
-    be_rmat(rWingAngle >= waTh & rwav >= wavTh & (isnan(lwav) | lwav < wavTh*2) & lv <= lvTh) = 1;
-    be_lmat(lWingAngle >= waTh & lwav >= wavTh & (isnan(rwav) | rwav < wavTh*2) & lv <= lvTh) = 1;
+    be_rmat(rWingAngle >= waTh & (isnan(lwav) | lwav < wavTh*2) & lv <= lvTh) = 1;
+    be_lmat(lWingAngle >= waTh & (isnan(rwav) | rwav < wavTh*2) & lv <= lvTh) = 1;
     be_mat = be_rmat | be_lmat;
 
     % check distance and angle

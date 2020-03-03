@@ -55,8 +55,8 @@ polarChartRadius,15
 densityMapGrid,0.5
 beCourtShipWAng,30
 beCourtShipWAngV,7.5
-beCourtShipDist,6
+beCourtShipDist,8
 beCourtShipDir,45
 beCourtShipLv,32
-beCourtShipDuration,0.2
-beCourtShipGap,1
+beCourtShipDuration,0.1
+beCourtShipGap,0.3
